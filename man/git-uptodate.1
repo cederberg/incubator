@@ -1,0 +1,37 @@
+.TH git-uptodate 1 "November 2025" "git-uptodate"
+.SH NAME
+git-uptodate \- print branch, stash, and working tree status for one or more repositories
+.SH SYNOPSIS
+.B git-uptodate
+.RI [ directory ... ]
+.SH DESCRIPTION
+.B git-uptodate
+prints local repository status including tracked and untracked changes,
+stashes, and branch divergence for every Git repository found in the
+specified directories. Before reporting ahead/behind counts it runs
+.B git remote update --prune
+to ensure fresh upstream information. When no directories are supplied the
+current working directory is scanned.
+.
+.SH OPTIONS
+.TP
+.I directory
+One or more directories to scan recursively for Git repositories. If none
+are given the current directory is used.
+.TP
+.B -h , --help
+Show usage information.
+.SH EXIT STATUS
+Returns zero on success, non-zero if an error occurs.
+.SH EXAMPLES
+.TP
+.B git-uptodate
+Scan the current directory.
+.TP
+.B git-uptodate ~/src
+Scan all repositories under \fI~/src\fP.
+.TP
+.B git uptodate
+Invoke as a \fBgit\fP subcommand.
+.SH SEE ALSO
+.BR git (1)

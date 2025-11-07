@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+#
+# Prints branch, stash, and working tree status for one or more repositories.
+# Fetches the remotes to report up-to-date ahead/behind file counts for each
+# branch.
+#
+# Syntax: git-uptodate [<dir>...]
+#
+# Arguments:
+#   <dir>...       - The directories to scan (current directory if not specified)
+#
+
+PROGRAM=$0
+BASEDIR=$(realpath . 2>/dev/null)
+COLOR_ERR="$(tput setaf 1; tput bold)"
+COLOR_WARN="$(tput setaf 3)"
+COLOR_OK="$(tput setaf 2; tput bold)"
+COLOR_GREY="$(tput setaf 7)"
+COLOR_OFF="$(tput sgr0)"
+
+error() {
+    echo "${COLOR_ERR}ERROR:${COLOR_OFF}" "$@" >&2
+}
+
+warn() {
+    echo "${COLOR_WARN}WARNING:${COLOR_OFF}" "$@" >&2
+}
+
+usage() {
+    while IFS= read -r LINE ; do
+        [[ ${LINE:0:1} == "#" ]] || break
+        echo "${LINE:2}" >&2
+    done < <(tail -n +3 "${PROGRAM}")
+    [[ $# -gt 0 ]] && error "$@"
+    exit 1
+}
+
+repo-name() {
+    local REPO="${PWD#${BASEDIR}/}"
+    [[ "${REPO}" == "${PWD}" ]] && REPO="${PWD##*/}"
+    echo -n "${REPO}"
+}
+
+print-branch() {
+    local BRANCH=$1 UPSTREAM=$2 ACTIVE=$3 AHEAD BEHIND
+    AHEAD=$(git rev-list --count "${UPSTREAM}..${BRANCH}")
+    BEHIND=$(git rev-list --count "${BRANCH}..${UPSTREAM}")
+    printf '%s• %-20.20s%s%s --> %-38.38s %s[%s ahead, %s behind]%s\n' \
+        $([[ "${ACTIVE}" == 1 ]] && echo -n "${COLOR_OK}" || echo -n "${COLOR_OFF}") \
+        "${BRANCH}" \
+        "${COLOR_OFF}" \
+        "${COLOR_GREY}" \
+        "${UPSTREAM}" \
+        $([[ $((AHEAD + BEHIND)) -gt 0 ]] && echo -n "${COLOR_ERR}" || echo -n "${COLOR_GREY}") \
+        "${AHEAD}" \
+        "${BEHIND}" \
+        "${COLOR_OFF}"
+}
+
+print-detached() {
+    local DETACHED
+    DETACHED=$(git branch --points-at HEAD | cut -c 3-)
+    printf '%s• %-20.20s%s %-40.40s%s\n' \
+        "${COLOR_OK}" \
+        "HEAD" \
+        "${COLOR_GREY}" \
+        "${DETACHED}" \
+        "${COLOR_OFF}"
+}
+
+print-stash() {
+    local STASH=$1 LOG=$2 FILES INSERTS DELETES
+    IFS=',' read -r FILES INSERTS DELETES <<< "$(git stash show "${STASH}" --shortstat)"
+    FILES=${FILES## }
+    FILES=${FILES%% *}
+    INSERTS=${INSERTS## }
+    INSERTS=${INSERTS%% *}
+    DELETES=${DELETES## }
+    DELETES=${DELETES%% *}
+    printf '%s• %-20.20s%s # %-40.40s [%s files, +%s/-%s lines]%s\n' \
+        "${COLOR_WARN}" \
+        "${STASH}" \
+        "${COLOR_GREY}" \
+        "${LOG}" \
+        "${FILES:-0}" \
+        "${INSERTS:-0}" \
+        "${DELETES:-0}" \
+        "${COLOR_OFF}"
+}
+
+print-repo() {
+    local LINE MODIFIED UNTRACKED CURRENT ACTIVE
+    LINE="──── $(repo-name) ──────────────────────────────────────────────────────"
+    echo "${LINE:0:60}"
+    git remote update --prune >/dev/null
+    MODIFIED=$(git ls-files --modified 2>/dev/null | wc -l | tr -d ' ')
+    UNTRACKED=$(git ls-files --others --exclude-standard 2>/dev/null | wc -l | tr -d ' ')
+    if [[ $((MODIFIED + UNTRACKED)) -gt 0 ]] ; then
+        echo -n "${COLOR_ERR}[!]${COLOR_OFF} "
+        [[ "${MODIFIED}" -eq 0 ]] || echo -n "${MODIFIED} file(s) modified"
+        [[ "${MODIFIED}" -gt 0 && "${UNTRACKED}" -gt 0 ]] && echo -n ", "
+        [[ "${UNTRACKED}" -eq 0 ]] || echo -n "${UNTRACKED} file(s) untracked"
+        echo
+    fi
+    CURRENT=$(git branch --show-current)
+    if [[ -z "$CURRENT" ]] ; then
+        print-detached
+    fi
+    git for-each-ref refs/heads --format="%(refname:short) %(upstream:short)" | while read -r BRANCH UPSTREAM ; do
+        ACTIVE=$([[ "${BRANCH}" == "${CURRENT}" ]] && echo 1 || echo 0)
+        print-branch "${BRANCH}" "${UPSTREAM}" "${ACTIVE}"
+    done
+    git stash list --format="%gd %gs" | while read -r STASH LOG ; do
+        print-stash "${STASH}" "${LOG#*: }"
+    done
+    printf "\n"
+}
+
+print-all-repos() {
+    local DIR=$1
+    find "${DIR}" -name .git -type d | while read -r REPO ; do
+        (
+            cd "$(dirname "${REPO}")"
+            print-repo "${ARG}"
+        )
+    done
+}
+
+ARGS=("$@")
+if [[ ${#ARGS[@]} -eq 0 ]] ; then
+    ARGS=(".")
+elif [[ "${ARGS[0]}" == "-h" || "${ARGS[0]}" == "--help" ]] ; then
+    usage
+fi
+for ARG in "${ARGS[@]}" ; do
+    if [[ -d "${ARG}" ]] ; then
+        print-all-repos "${ARG}"
+    else
+        warn "${ARG}: no such directory"
+    fi
+done
