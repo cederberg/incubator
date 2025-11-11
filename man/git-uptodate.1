@@ -3,24 +3,28 @@
 git-uptodate \- print branch, stash, and working tree status for one or more repositories
 .SH SYNOPSIS
 .B git-uptodate
+.RI [ options ]
 .RI [ directory ... ]
 .SH DESCRIPTION
 .B git-uptodate
 prints local repository status including tracked and untracked changes,
-stashes, and branch divergence for every Git repository found in the
-specified directories. Before reporting ahead/behind counts it runs
+stashes, and branch divergence for for one or more repositories. Remotes
+are always refreshed via
 .B git remote update --prune
-to ensure fresh upstream information. When no directories are supplied the
+so ahead/behind counts are accurate. When no directories are supplied the
 current working directory is scanned.
 .
 .SH OPTIONS
 .TP
+.B -h, --help
+Show usage information and exit.
+.TP
+.B --pull
+Attempt to fast-forward merge the current branch after updating remotes.
+.TP
 .I directory
 One or more directories to scan recursively for Git repositories. If none
 are given the current directory is used.
-.TP
-.B -h , --help
-Show usage information.
 .SH EXIT STATUS
 Returns zero on success, non-zero if an error occurs.
 .SH EXAMPLES
@@ -31,7 +35,7 @@ Scan the current directory.
 .B git-uptodate ~/src
 Scan all repositories under \fI~/src\fP.
 .TP
-.B git uptodate
-Invoke as a \fBgit\fP subcommand.
+.B git uptodate -- --pull
+Run through the \fBgit\fP front end and fast-forward the active branches.
 .SH SEE ALSO
 .BR git (1)

@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 #
 # Prints branch, stash, and working tree status for one or more repositories.
-# Fetches the remotes to report up-to-date ahead/behind file counts for each
-# branch.
 #
-# Syntax: git-uptodate [<dir>...]
+# Syntax: git-uptodate [<options>] [<dir>...]
 #
 # Arguments:
+#   -h, --help     - Show usage information
+#   --pull         - Fast-forward merge the latest changes (if possible)
 #   <dir>...       - The directories to scan (current directory if not specified)
 #
+# Always updates the remotes to report accurate ahead/behind file counts
+# for each branch. Optionally the current branch can also be fast-forward merged
+# with the latest changes (if possible).
 
 PROGRAM=$0
 BASEDIR=$(realpath . 2>/dev/null)
@@ -17,6 +20,7 @@ COLOR_WARN="$(tput setaf 3)"
 COLOR_OK="$(tput setaf 2; tput bold)"
 COLOR_GREY="$(tput setaf 7)"
 COLOR_OFF="$(tput sgr0)"
+PULL=false
 
 error() {
     echo "${COLOR_ERR}ERROR:${COLOR_OFF}" "$@" >&2
@@ -93,6 +97,7 @@ print-repo() {
     LINE="──── $(repo-name) ──────────────────────────────────────────────────────"
     echo "${LINE:0:60}"
     git remote update --prune >/dev/null 2>&1
+    ${PULL} && git pull --ff-only >/dev/null 2>&1
     MODIFIED=$(git ls-files --modified 2>/dev/null | wc -l | tr -d ' ')
     UNTRACKED=$(git ls-files --others --exclude-standard 2>/dev/null | wc -l | tr -d ' ')
     if [[ $((MODIFIED + UNTRACKED)) -gt 0 ]] ; then
@@ -116,26 +121,18 @@ print-repo() {
     printf "\n"
 }
 
-print-all-repos() {
-    local DIR=$1
-    find "${DIR}" -name .git -type d | while read -r REPO ; do
-        (
-            cd "$(dirname "${REPO}")"
-            print-repo "${ARG}"
-        )
-    done
-}
-
-ARGS=("$@")
-if [[ ${#ARGS[@]} -eq 0 ]] ; then
-    ARGS=(".")
-elif [[ "${ARGS[0]}" == "-h" || "${ARGS[0]}" == "--help" ]] ; then
+if [[ "$1" == "-h" || "$1" == "--help" ]] ; then
     usage
+elif [[ "$1" == "--pull" ]] ; then
+    PULL=true
+    shift
 fi
-for ARG in "${ARGS[@]}" ; do
-    if [[ -d "${ARG}" ]] ; then
-        print-all-repos "${ARG}"
-    else
-        warn "${ARG}: no such directory"
-    fi
+if [[ $# -eq 0 ]] ; then
+    set -- "."
+fi
+find "$@" -name .git -type d -exec dirname '{}' \; | while read -r REPO ; do
+    (
+        cd "${REPO}"
+        print-repo
+    )
 done
