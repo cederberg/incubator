@@ -93,19 +93,21 @@ print-stash() {
 }
 
 print-repo() {
-    local LINE MODIFIED UNTRACKED CURRENT ACTIVE
+    local LINE STAGED MODIFIED UNTRACKED CURRENT ACTIVE
     LINE="──── $(repo-name) ──────────────────────────────────────────────────────"
     echo "${LINE:0:60}"
     git remote update --prune >/dev/null 2>&1
     ${PULL} && git pull --ff-only >/dev/null 2>&1
+    STAGED=$(git diff --cached --name-only 2>/dev/null | wc -l | tr -d ' ')
     MODIFIED=$(git ls-files --modified 2>/dev/null | wc -l | tr -d ' ')
     UNTRACKED=$(git ls-files --others --exclude-standard 2>/dev/null | wc -l | tr -d ' ')
-    if [[ $((MODIFIED + UNTRACKED)) -gt 0 ]] ; then
-        echo -n "${COLOR_ERR}[!]${COLOR_OFF} "
-        [[ "${MODIFIED}" -eq 0 ]] || echo -n "${MODIFIED} file(s) modified"
-        [[ "${MODIFIED}" -gt 0 && "${UNTRACKED}" -gt 0 ]] && echo -n ", "
-        [[ "${UNTRACKED}" -eq 0 ]] || echo -n "${UNTRACKED} file(s) untracked"
-        echo
+    local PARTS=()
+    [[ "${STAGED}" -gt 0 ]] && PARTS+=("${STAGED} staged")
+    [[ "${MODIFIED}" -gt 0 ]] && PARTS+=("${MODIFIED} modified")
+    [[ "${UNTRACKED}" -gt 0 ]] && PARTS+=("${UNTRACKED} untracked")
+    if [[ ${#PARTS[@]} -gt 0 ]] ; then
+        local JOINED=$(printf ", %s" "${PARTS[@]}")
+        echo "${COLOR_ERR}[!]${COLOR_OFF} ${JOINED:2} file(s)"
     fi
     CURRENT=$(git branch --show-current)
     if [[ -z "$CURRENT" ]] ; then
