@@ -2,7 +2,6 @@
 name: archive-conversation
 description: Extracts and structures knowledge from a conversation for persistent storage.
 synonyms: [summarize session, save conversation, archive chat]
-version: 1.0.0
 ---
 
 # archive-conversation

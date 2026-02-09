@@ -2,7 +2,6 @@
 name: update-knowledge-base
 description: Extracts knowledge from a series of summarized conversations.
 synonyms: [summarize knowledge, save knowledge, sync knowledge, update brain]
-version: 1.0.0
 ---
 
 # update-knowledge-base
@@ -18,14 +17,15 @@ Trigger this skill when the user requests to "update knowledge",
 ## Processing Logic
 
 Read input conversation summaries from `.agent/memory/conversation-*` in
-batches of maximum 10 files. Don't process files older (see file name)
-than the knowledge-base (see last updated field). Process files in order,
-the oldest first.
+batches of maximum 10 files. Don't process files from days prior (see file
+names) to the last modified date of the knowledge-base (see field at top).
+Be sure to include all files from the same date as the last modified date.
+Process files in order, the oldest first.
 
-The goal is to synthesize these into the `.agent/memory/KNOWLEDGE-BASE.md`
-file that will serve as a permanent context for an agent working on this
-project. If such a file exist, its knowledge should be updated (not
-deleted).
+The goal is to synthesize important knowledge and lessons into the
+`.agent/memory/KNOWLEDGE-BASE.md` file. This serves as a permanent context for
+an agent working on this project. If such a file exist, its knowledge should be
+updated (not deleted).
 
 ## Instructions:
 
@@ -34,9 +34,10 @@ deleted).
   conflicting technical truths, use the most recent as the source of truth.
 - **Categorize:** Use the taxonomy provided by the output template.
 - **Prune:** Remove information that is no longer relevant or has been
-  superseded by newer entries.
+  superseded by newer entries. Exclude details that can easily be found in
+  source code or config.
 - **Generate:** Produce a high-density Markdown file optimized for LLM
-  "System Prompt" injection.
+  "System Prompt" injection. Keep it brief, max 100-200 lines.
 
 ## Output Template
 
