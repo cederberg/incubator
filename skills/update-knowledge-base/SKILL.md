@@ -17,7 +17,7 @@ architectural decisions.
 1. Read `.agent/memory/KNOWLEDGE-BASE.md` (if it exists).
 2. Identify `.agent/memory/conversation-YYYY-MM-DD-HHMM.md` files to process
 3. Ignore files strictly older than the KNOWLEDGE-BASE modified date
-4. Read files chronologically (oldest first)
+4. Read files chronologically (oldest first) in batches of 5
 5. Synthesize a new `KNOWLEDGE-BASE.md` by merging new insights into the
    existing categories.
 
