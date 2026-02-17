@@ -20,3 +20,10 @@ Update your `PATH`/`MANPATH` if needed in `~/.zshrc`:
 export PATH="$HOME/.local/bin:$PATH"
 export MANPATH="$HOME/.local/share/man:$MANPATH"
 ```
+
+## Agent Skills
+
+- **archive-conversation**: Extracts and structures knowledge from a
+  conversation for persistent storage.
+- **update-knowledge-base**: Distills interaction history into a high-density
+  system prompt.
