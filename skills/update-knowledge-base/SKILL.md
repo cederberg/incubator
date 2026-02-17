@@ -1,43 +1,45 @@
 ---
 name: update-knowledge-base
-description: Extracts knowledge from a series of summarized conversations.
+description: Distills interaction history into a high-density system prompt.
 synonyms: [summarize knowledge, save knowledge, sync knowledge, update brain]
 ---
 
 # update-knowledge-base
 
 ## Preconditions
-- Existing conversation summaries exist in one or more
-  `.agent/memory/conversation-YYYY-MM-DD-HHMM.md` (or json) files.
+- Existing conversation summaries exist in `.agent/memory/conversation-*.md`.
 
 ## Activation
-Trigger this skill when the user requests to "update knowledge",
-"save knowledge", or at the conclusion of a significant milestone.
+Trigger when the user requests to "update knowledge" or after significant
+architectural decisions.
 
 ## Processing Logic
+1. Read `.agent/memory/KNOWLEDGE-BASE.md` (if it exists).
+2. Identify `.agent/memory/conversation-YYYY-MM-DD-HHMM.md` files to process
+3. Ignore files strictly older than the KNOWLEDGE-BASE modified date
+4. Read files chronologically (oldest first)
+5. Synthesize a new `KNOWLEDGE-BASE.md` by merging new insights into the
+   existing categories.
 
-Read input conversation summaries from `.agent/memory/conversation-*` in
-batches of maximum 10 files. Don't process files from days prior (see file
-names) to the last modified date of the knowledge-base (see field at top).
-Be sure to include all files from the same date as the last modified date.
-Process files in order, the oldest first.
+## Extraction Rules
+- **Permanence:** Only extract information that remains true over time. Ignore
+  transient debugging steps.
+- **Novelty:** Exclude standard documentation/practices. Only record
+  project-specific deviations.
+- **Conflict:** Newer conversation summaries supersede older Knowledge Base
+  entries.
+- **Redundancy:** Do not document what is already enforced by code/linters.
+- **Density:** The final file should be < 100 lines. Aggressive pruning is
+  required.
 
-The goal is to synthesize important knowledge and lessons into the
-`.agent/memory/KNOWLEDGE-BASE.md` file. This serves as a permanent context for
-an agent working on this project. If such a file exist, its knowledge should be
-updated (not deleted).
+## Style Guide (Strict High-Density)
+- **Imperative:** "Use X" (not "The user wants X", not "It was decided to use X").
+- **Categorized:** Start bullets with **Topic:** (e.g., **Testing:**, **Naming:**).
+- **Compressed:** Remove filler words. Max 1 line per fact.
 
-## Instructions:
-
-- **De-duplicate:** Identify overlapping facts or rules.
-- **Conflict Resolution:** If conversation A and conversation B provide
-  conflicting technical truths, use the most recent as the source of truth.
-- **Categorize:** Use the taxonomy provided by the output template.
-- **Prune:** Remove information that is no longer relevant or has been
-  superseded by newer entries. Exclude details that can easily be found in
-  source code or config.
-- **Generate:** Produce a high-density Markdown file optimized for LLM
-  "System Prompt" injection. Keep it brief, max 100-200 lines.
+## Transformation Examples
+> *Input:* "I want us to switch to using `vitest` instead of `jest` for speed."
+> *Output:* **Testing:** Use `vitest` instead of `jest`.
 
 ## Output Template
 
@@ -45,15 +47,13 @@ updated (not deleted).
 > *Last Updated: [Date]*
 >
 > ## 🛠 System Architecture
-> - [Fact 1]
-> - [Fact 2]
+> - **[Component]:** [Brief architectural decision/pattern]
 >
-> ## 📋 Rules, Constraints & Preferences
-> - Always use [Library/Method] for [Task].
-> - Never [Action] because [Reason].
+> ## 📋 Development Constraints
+> - **[Topic]:** [Strict rule, e.g. "Values must be immutable"]
 >
-> ## 🧠 Heuristics & Suggestions
-> - When [Scenario X] occurs, the solution is usually [Y].
+> ## 🧠 Operational Workflow
+> - **[Process]:** [Workflow steps, deployment notes, or "things to remember"]
 >
-> ## ⏳ Pending Context
-> - [Unresolved items from the last 2-3 sessions]
+> ## ⚡ Project Preferences
+> - **[Preference]:** [Specific stylistic or behavior preference]
