@@ -63,13 +63,30 @@ Use this structure as the canonical starting point. Add or remove sections to ma
 
 ---
 
-## [Main Process Name]
+## Status Lifecycles
 
-**Purpose:** Describe the system's core processing behavior — what happens to data as it moves through the system.
+**Purpose:** Describe the named states a key entity can occupy and what observable conditions trigger each transition.
+
+**Structure:** One H3 subsection per stateful entity type (e.g., "Order Status", "Account Status").
+
+**Content per subsection:**
+- One sentence: what the entity is and why its state matters.
+- A table or diagram: named states and the observable conditions that trigger each transition.
+- Note: for terminal states, mutually exclusive states, or states with special operational significance.
+
+**Exclude:** Internal triggers (method calls, scheduler invocations, database writes). Document the observable business event that causes each transition, not the mechanism that executes it.
+
+---
+
+## [Process Name]
+
+**Purpose:** Describe one of the system's named processes — what happens to data as it moves through it.
+
+**Repeat** this section for each distinct named process the system performs. Use one section per process, not one section for all. Minor, background, and administrative processes belong in Other Processes, not here.
 
 **Structure:** One H3 subsection per named processing step, in execution order.
 
-**Naming:** Use the actual step names as they would be recognized by someone operating the system (e.g., "Number Lookup", "Country Verification", "Duplicate Event Filtering").
+**Naming:** Name the section after the process as an operator would recognise it (e.g., "Number Portability Processing", "Subscription Provisioning"). Name each H3 after its step (e.g., "Validation", "Number Assignment", "Confirmation").
 
 **Content per subsection:**
 - One paragraph: what happens in this step, in terms of inputs, action, and outcome.
@@ -82,19 +99,20 @@ Use this structure as the canonical starting point. Add or remove sections to ma
 
 ## Other Processes
 
-**Purpose:** Describe background, maintenance, or administrative processes that don't fit the main pipeline.
+**Purpose:** Describe minor background, maintenance, or administrative processes. A process belongs here if it does not constitute a primary user- or system-facing operation.
 
-**Structure:** H4 (`####`) subsections (these are subordinate to the main sections, not peers).
+**Structure:** H3 (`###`) subsections, one per process.
 
-**Content:** Same rules as main process sections, but typically shorter (one paragraph + any needed list).
+**Content:** Same rules as process sections, but typically shorter — one paragraph and any needed list.
 
-**Examples:** GDPR data purge, deduplication tables, operator data maintenance.
+**Examples:** GDPR data purge, deduplication cleanup, operator data maintenance, template refresh.
 
 ---
 
 ## Notes on Section Ordering
 
-- Introduction → Inbound Data → Outbound Data → Concepts → Processing → Other Processes is the default order.
+- Introduction → Inbound Data → Outbound Data → Concepts & Definitions → Status Lifecycles → [Process sections] → Other Processes is the default order.
+- Include as many process sections as the system warrants. Order them by significance — the primary process first.
 - If a concept is only used in one section, it may be defined inline there rather than in Concepts & Definitions.
 - If Outbound Data is trivial (one destination, obvious contract), it may be folded into the Introduction.
 - Do not create a section just to have it. Omit sections with nothing to say.

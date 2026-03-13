@@ -12,8 +12,8 @@ If you find no problems: say "No issues found." That is the only acceptable posi
 
 You will be given:
 - The **draft document** to review
-- **[abstraction-rules.md](abstraction-rules.md)** — the five exclusion heuristics and verbosity failure modes
-- **[examples.md](examples.md)** — curated examples of the correct voice and abstraction level
+- [abstraction-rules.md](abstraction-rules.md) — the five exclusion heuristics and verbosity failure modes
+- [examples.md](examples.md) — curated examples of the correct voice and abstraction level
 
 Read the abstraction rules and examples before reviewing.
 
@@ -50,7 +50,7 @@ Produce a numbered list. Each item must contain:
 - Is it meta-commentary?
 
 **Per section:**
-- Does the level of detail match the examples in `examples.md`?
+- Does the level of detail match the examples in [examples.md](examples.md)?
 - Are there bullets that list implementation details instead of behavioral facts?
 - Are "Note:" usages warranted, or are they covering up for a prose failure?
 - Is there a better abstraction level for any group of bullets?

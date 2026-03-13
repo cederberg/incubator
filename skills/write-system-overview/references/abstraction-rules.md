@@ -43,13 +43,13 @@ If yes: exclude it.
 
 > "Am I explaining how the system does something, rather than what it does?"
 
-If yes: rewrite it as what, or exclude it.
+If yes: rewrite it as what, or exclude it. Note that state transitions and observable triggers describe what the system does.
 
 **Examples:**
-- "The system calls `LookupService.findAccount(id)` via HTTP GET and parses the JSON response" — fails. This is how.
-- "The system looks up the account details using the entity ID from the event" — passes. This is what.
+- "The system calls `LookupService.findAccount(id)` via HTTP GET and parses the JSON response" — fails.
+- "The system looks up the account details using the entity ID from the event" — passes.
 - "The deduplication check compares the event timestamp to the previous event's `processed_at` column" — fails.
-- "Events are ignored if a matching event was processed less than 24 hours ago" — passes.
+- "An order moves to PENDING when the request is accepted, and to RELEASED when it is cancelled or expires" — passes.
 
 ### 4. The Platform Test
 

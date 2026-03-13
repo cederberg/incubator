@@ -7,16 +7,13 @@ description: Writes a concise system overview for a technically literate audienc
 
 ## What This Produces
 
-A Markdown document with the following properties:
-- Describes what the system does and how data flows through it
-- Names external systems, data contracts, named concepts, and processing behavior
-- Excludes class names, method names, configuration values, SQL schemas, and framework detail
-- Written in present tense, third person, with no hedging and no justification prose
-- Follows the structure: Introduction → Inbound Data → Outbound Data → Concepts → Processing → Other
+A concise Markdown system overview for a technically literate audience.
 
-See [references/examples.md](references/examples.md) for concrete examples of the target style.
+## Your Role
 
-## Workflow: Four Phases, Multiple Sub-Agents
+You are the workflow manager. You launch sub-agents and confirm that each phase has produced non-empty output. You do not read reference files, research files, or drafts yourself. Pass file paths to sub-agents and let them read what they need.
+
+## Workflow: Five Phases, Multiple Sub-Agents
 
 **This workflow requires separate sub-agents for each phase. Do not combine them.**
 
@@ -24,107 +21,105 @@ Context growth degrades style adherence. Self-review is attachment-biased. Mode 
 
 ---
 
-### Phase 0: Discovery
+### Phase 1: Discovery
 
-Before launching researchers, run a **single lightweight discovery agent**. Its only job is to enumerate the system's subsystems and major modules so that researcher scopes can be assigned without gaps.
+Create a unique working directory and capture its path:
 
-The discovery agent should:
-- List all application modules or services (e.g. API layer, worker, inbound processor, batch jobs)
-- List the names of all external systems referenced in config, code, or comments
-- Produce a short flat list — no descriptions, no detail
+```
+WORK_DIR=$(mktemp -d)
+```
 
-Use this manifest to define the researcher scopes in Phase 1. This prevents an entire subsystem from being silently skipped.
+Pass `$WORK_DIR` to all sub-agents so they read and write from the same location.
+
+Run a **single lightweight discovery agent**. Its job is to enumerate the system's components, integrations, and existing documentation so that researcher scopes can be assigned without gaps.
+
+The discovery agent writes its output to `$WORK_DIR/discovery.md` with three sections:
+
+- **Modules & Services** — all application modules, services, or major components (e.g. API layer, worker, inbound processor, batch jobs). One line each, no descriptions.
+- **External Systems** — all external systems referenced in config, code, or comments. One line each, no descriptions.
+- **Documentation & Specs** — any existing documentation files worth consulting: READMEs, OpenAPI/WSDL specs, architecture docs, wikis, significant configuration files. One line each with relative path.
+
+**Read `$WORK_DIR/discovery.md`** and use it to define researcher scopes in Phase 2.
 
 ---
 
-### Phase 1: Research
-
-Create a shared temporary directory for research output:
-
-```
-mkdir -p /tmp/overview-research
-```
+### Phase 2: Research
 
 Launch **multiple researcher sub-agents in parallel**, each scoped to a distinct topic. Typical scopes:
 
 | Agent | Scope | Output file |
 |---|---|---|
-| Researcher A | Topology & actors — external systems, infrastructure components, data flow direction | `/tmp/overview-research/topology.md` |
-| Researcher B | Data contracts — fields exchanged per actor (inbound/outbound), reliability notes | `/tmp/overview-research/contracts.md` |
-| Researcher C | Processing logic — named steps, sequence, business rules, filter conditions, outcomes | `/tmp/overview-research/processing.md` |
-| Researcher D | Vocabulary — named concepts: enums, status values, message types, event types, variants | `/tmp/overview-research/vocabulary.md` |
+| Researcher A | Topology & actors — external systems, infrastructure components, data flow direction | `$WORK_DIR/topology.md` |
+| Researcher B | Data contracts — fields exchanged per actor (inbound/outbound), reliability notes | `$WORK_DIR/contracts.md` |
+| Researcher C | Processing logic — named steps, sequence, business rules, filter conditions, outcomes | `$WORK_DIR/processing.md` |
+| Researcher D | Vocabulary — named concepts: enums, status values, message types, event types, variants | `$WORK_DIR/vocabulary.md` |
 
-Adapt scopes to the actual system using the discovery manifest. For a small system, two researchers may suffice. For a large system, add more.
+Adapt scopes to the actual system using `$WORK_DIR/discovery.md`. For a small system, two researchers may suffice. For a large system, add more.
 
-**Each researcher:**
-- Reads the codebase (or designated source material)
-- Follows instructions in [references/researcher.md](references/researcher.md)
-- **Writes its full facts document to its assigned output file** — it does not return a summary
-- Must NOT write documentation prose or make architectural judgments
+Each researcher follows [references/researcher.md](references/researcher.md) and receives `$WORK_DIR/discovery.md` to orient themselves before reading the codebase. Each writes its full output to its assigned file.
 
-After all researchers complete, read each output file from `/tmp/overview-research/` before proceeding to Phase 2.
+After all researchers complete, confirm each output file is non-empty using `wc -c` before proceeding.
 
 ---
 
-### Phase 2: Write
+### Phase 3: Outline
+
+Launch a **single outliner sub-agent** with:
+- [references/outliner.md](references/outliner.md)
+- `references/structure-template.md`
+- All Phase 2 output files from `$WORK_DIR/`
+
+The outliner writes a document skeleton to `$WORK_DIR/outline.md`.
+
+---
+
+### Phase 4: Write
 
 Launch a **single writer sub-agent** with:
-- All researcher fact documents from Phase 1 (read from `/tmp/overview-research/`)
-- [references/writer.md](references/writer.md) — writer instructions
-- [references/structure-template.md](references/structure-template.md) — document structure
-- [references/style-guide.md](references/style-guide.md) — sentence and formatting rules
-- [references/abstraction-rules.md](references/abstraction-rules.md) — what to include/exclude
-- [references/examples.md](references/examples.md) — target voice and abstraction level
+- [references/writer.md](references/writer.md)
+- `references/structure-template.md`
+- `references/style-guide.md`
+- `references/abstraction-rules.md`
+- `references/examples.md`
+- `$WORK_DIR/outline.md`
+- All Phase 2 output files from `$WORK_DIR/`
 
-The writer produces a draft document and writes it to `/tmp/overview-research/draft.md`. It must not consult the codebase. Missing facts become `[MISSING: ...]` placeholders.
+The writer fills in the outline section by section and writes the draft to `$WORK_DIR/draft.md`.
 
 ---
 
-### Phase 3: Review
+### Phase 5: Review
 
 Launch a **single reviewer sub-agent** with:
-- The draft document from `/tmp/overview-research/draft.md`
-- [references/reviewer.md](references/reviewer.md) — reviewer instructions
-- [references/abstraction-rules.md](references/abstraction-rules.md) — the rules to enforce
-- [references/examples.md](references/examples.md) — the correct abstraction level
+- [references/reviewer.md](references/reviewer.md)
+- `references/abstraction-rules.md`
+- `references/examples.md`
+- `$WORK_DIR/draft.md`
 
-The reviewer produces a numbered list of specific issues: exact text quoted, rule violated, fix instruction. It must not rewrite the document. It must not praise.
+Read the reviewer's output. If it finds issues:
+1. Launch a **new writer sub-agent** with the draft, the numbered review output, and the same file paths as Phase 4
+2. Instruct it to address each numbered issue and overwrite `$WORK_DIR/draft.md`
+3. Launch a **new reviewer sub-agent** to check the result
 
----
-
-### Iteration
-
-If the review finds issues:
-1. Launch a **new writer sub-agent** (fresh context) with the draft from `/tmp/overview-research/draft.md`, the numbered review output, and all Phase 2 inputs
-2. Instruct it to address each numbered issue and write the updated draft back to `/tmp/overview-research/draft.md`
-3. Launch a **new reviewer sub-agent** to check the updated draft
-
-One review cycle is typically sufficient. If issues persist after two cycles, review the research documents — the root cause is usually a missing or incorrectly scoped research finding.
+One review cycle is typically sufficient.
 
 ---
 
 ### Final Output
 
-Once the review passes (or after two cycles), copy `/tmp/overview-research/draft.md` to the project root as `OVERVIEW.md` — or to the path explicitly requested by the user. Do not leave the final document in `/tmp/`.
+Once the review passes, copy `$WORK_DIR/draft.md` to `OVERVIEW.md` in the project root, or to the path requested by the user.
 
 ---
-
-## Abstraction Level: The Key Constraint
-
-The most common failure mode is including implementation detail. The target reader is a technically literate non-developer: ops engineer, QA, compliance auditor, or new team member who did not write the code.
-
-The five exclusion heuristics and verbosity failure modes are in [references/abstraction-rules.md](references/abstraction-rules.md). The writer and reviewer must both load this file.
-
-The short version: document **what** the system does, not **how** it does it. If a sentence would only make sense to someone who has read the source code, it does not belong in the overview.
 
 ## Reference Files
 
 | File | Used By | Purpose |
 |---|---|---|
-| [references/researcher.md](references/researcher.md) | Researcher agents | Output format and extraction rules |
-| [references/writer.md](references/writer.md) | Writer agent | Writing instructions and input usage |
-| [references/reviewer.md](references/reviewer.md) | Reviewer agent | Review posture and output format |
-| [references/style-guide.md](references/style-guide.md) | Writer | Sentence rules, formatting, anti-patterns |
-| [references/structure-template.md](references/structure-template.md) | Writer | Section order and per-section guidance |
-| [references/abstraction-rules.md](references/abstraction-rules.md) | Writer + Reviewer | What to include/exclude; heuristics |
-| [references/examples.md](references/examples.md) | Writer + Reviewer | Target voice; annotated correct examples |
+| `references/researcher.md` | Researcher agents | Output format and extraction rules |
+| `references/outliner.md` | Outliner agent | Section selection, subsection naming, ordering rules |
+| `references/writer.md` | Writer agent | Writing instructions and input usage |
+| `references/reviewer.md` | Reviewer agent | Review posture and output format |
+| `references/style-guide.md` | Writer | Sentence rules, formatting, anti-patterns |
+| `references/structure-template.md` | Outliner + Writer | Section order and per-section guidance |
+| `references/abstraction-rules.md` | Writer + Reviewer | What to include/exclude; heuristics |
+| `references/examples.md` | Writer + Reviewer | Target voice; annotated correct examples |
