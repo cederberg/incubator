@@ -133,6 +133,78 @@ Example annotation pattern (from current `examples.md`):
 
 Assemble 3–4 curated excerpts with annotations. Present to user for sign-off before finalising.
 
+---
+
+#### Phase 0a findings (completed)
+
+Steps 1–2 are complete. Four examples were selected from a shortlist of ten candidates.
+
+**Selected examples:**
+
+| | Project | URL | Strengths | Gaps |
+|--|---------|-----|-----------|------|
+| ✅ | **age** | https://github.com/FiloSottile/age/blob/main/README.md | Clean structure, good demo | No license or build sections; too many emojis |
+| ✅ | **restic** | https://github.com/restic/restic/blob/master/README.md | Demo, design principles, license, docs links | 3 badges + sponsor logo |
+| ✅ | **watchexec** | https://github.com/watchexec/watchexec/blob/main/README.md | Only 2 badges; demo, docs links | No license section; 1 inline image (repology) |
+| ✅ | **direnv** | https://github.com/direnv/direnv/blob/master/README.md | Demo, how-it-works explanation, license, docs links | 4 badges |
+
+**Rejected candidates and why:**
+
+- `ripgrep`, `bat`, `fd`, `httpie` — too long; badge walls; irrelevant per-distro install tables; inlined images
+- `gh` — marketing-heavy
+- `sqlite` — not a CLI-tool README pattern
+- `curl` — no markdown structure; too terse
+- `tmux` — plain text, not markdown; no demo
+- `git` — no demo; almost no structure
+- `jq` — no demo (nearly selected; good structure and linking)
+- `syncthing` — no intro or install demo
+- `nnn`, `miller`, `zstd` — excessive badges, HTML, embedded images
+- `mosh` — no license; no demo
+- `just` — 40+ per-package-manager install entries; too long
+- `tig` — AsciiDoc; no demo; no license
+- `caddy` — no embedded demo; no license section; multiple badges and a logo
+
+**User guidance (distilled from the selection session):**
+
+These preferences must inform the `structure-template.md`, `examples.md`, and `reviewer-checklist.md` for the readme mode.
+
+*Format:*
+- Markdown required — plain text is not acceptable
+- Markdown features are expected: headers, bullet lists, numbered steps, fenced code blocks
+- "Text-based" means no HTML, no embedded images, no badge walls — not an excuse to omit structure
+- No HTML anywhere in the document
+
+*Badges:*
+- Acceptable in small numbers (2–4 at the top); more than ~4 is too many
+- Badge walls, badge-heavy sections, and per-metric vanity badges are not acceptable
+
+*Images:*
+- No inline images — including screenshots, GIFs, embedded videos, or third-party badge images (e.g. repology)
+- A project logo at the very top is marginal; do not treat it as a model behaviour
+
+*Required content:*
+- Brief intro that states what the project does (factual, not a tagline)
+- Quick-start demo with real commands and real or representative output
+- Install instructions (minimal; steps only; no per-distro table)
+- License
+- Link(s) to full documentation
+
+*Prohibited content:*
+- Per-distro or per-package-manager install tables
+- Embedded images, GIFs, or video links
+- Origin story or "why we built this" sections
+- Design philosophy sections (unless brief and directly useful to a user)
+- Emojis
+- Contributor lists, sponsor sections, or social proof elements
+- Any section with no content relevant to a user
+
+*Scope and length:*
+- Primarily targeted at users, not contributors
+- Not a single-page documentation site — depth belongs in linked external docs
+- A short contributing paragraph or link is acceptable; a full contributing guide is not
+
+---
+
 #### 0b. utility-command examples
 
 Same six-step process. Candidate sources:
