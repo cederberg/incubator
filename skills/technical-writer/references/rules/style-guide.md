@@ -24,7 +24,7 @@ No first person in either voice. Never "we", "our", or "I".
 - Do not exceed ~20 words per sentence. Split long sentences at natural boundaries.
 - No hedging words: "typically", "usually", "generally", "in most cases", "often". Either the rule applies or the exception is worth its own sentence.
 - No filler openers: "It is worth noting that…", "It should be mentioned that…", "As you can see…" — cut entirely.
-- No justification prose. State what the system does or what the rule requires. Include rationale only when it determines how to apply the rule to cases not listed. Never "This was designed for…" or "The reason we do X is…"
+- No justification prose. State what the system does or what the rule requires. Never "This was designed for…" or "The reason we do X is…"
 
 ## Paragraph Rules
 
@@ -37,7 +37,10 @@ No first person in either voice. Never "we", "our", or "I".
 ### Bold Marks
 - Use bold to mark a name or label: a defined term, a named mode, a named category. Bold only nouns or noun phrases — items that could appear in an index.
 - Do not use bold for emphasis. If a sentence needs emphasis, rewrite it.
-- Legitimate uses: term in a definition list (`- **COMPLETED** — Processing succeeded`), named option introduced inline (`**Structural** — run the reviewer…`), category label in a rule list (`**Permanence:** Only extract…`).
+- Legitimate uses:
+  - **Definition list term** — `- **COMPLETED** — Processing succeeded`
+  - **Named option inline** — `**Structural** — run the reviewer…`
+  - **Category label** — `**Permanence:** Only extract…`
 
 ### Note Usage
 - Use "Note:" for a caveat or exception that would require a parenthetical or subordinate clause mid-sentence to include inline.
