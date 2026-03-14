@@ -39,9 +39,9 @@ No first person in either voice. Never "we", "our", or "I".
 - Bold only nouns or noun phrases — items that could appear in an index.
 - Do not use bold for emphasis. If a sentence needs emphasis, rewrite it.
 - Legitimate uses:
-  - **Definition list term** — `- **COMPLETED** — Processing succeeded`
-  - **Named option inline** — `**Structural** — run the reviewer…`
-  - **Category label** — `**Permanence:** Only extract…`
+  - `- **COMPLETED** — Processing succeeded` (definition list term)
+  - `**Structural** — run the reviewer…` (named option inline)
+  - `**Permanence:** Only extract…` (category label)
 
 ### Note Usage
 - Use "Note:" for a caveat or exception. Use it only when including the information inline would require a parenthetical or subordinate clause.
