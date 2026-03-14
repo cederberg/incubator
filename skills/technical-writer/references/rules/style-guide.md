@@ -2,8 +2,6 @@
 
 ## Voice and Tense
 
-Choose one voice for each document.
-
 - **Documentation voice** — for documents that describe a system, process, or artifact
   - **Subject** — the thing being documented
   - **Form** — present tense, third person, active voice
@@ -16,7 +14,7 @@ Choose one voice for each document.
   - **Example** — "Split the paragraph." "Remove it."
   - **Avoid** — "The draft should be overwritten with the revised version."
 
-No first person in either voice. Never "we", "our", or "I".
+Choose one voice for each document. No first person in either voice. Never "we", "our", or "I".
 
 ## Sentence Rules
 
@@ -30,7 +28,7 @@ No first person in either voice. Never "we", "our", or "I".
 ## Paragraph Rules
 
 - Use two to four sentences per paragraph.
-- Write one idea per paragraph. Split paragraphs that contain unrelated ideas.
+- Write one idea per paragraph; split any paragraph that contains two.
 - No transition sentences between paragraphs ("Now that we've covered X, let's look at Y…").
 
 ## Formatting
@@ -45,27 +43,27 @@ No first person in either voice. Never "we", "our", or "I".
   - `**Permanence:** Only extract…` (category label)
 
 ### Note Usage
-- Use "Note:" for caveats or exceptions that would otherwise require a parenthetical or subordinate clause. Do not use it to explain why a rule exists.
+- Use "Note:" for caveats or exceptions that break prose flow if written inline. Do not use it to explain why a rule exists.
 - Max two "Note:" entries per section.
 - Format: `Note that <fact>.` — a complete sentence.
 
 ### Tables
-- Use tables for matrix relationships only: when two named dimensions interact (e.g. event type × message type).
-- Do not use tables for simple lists that happen to have two columns.
+- Use tables for matrix relationships only (e.g. event type × message type).
+- Do not use tables for lists with two columns.
 
 ### ASCII Diagrams
 - Use ASCII diagrams for system topology and state machines.
 - Do not use ASCII diagrams for data structures, call sequences, or class hierarchies.
 
 ### Lists
-- Use bullet lists for finite sets of named things: statuses, message types, fields.
+- Use bullet lists for sets of named things: statuses, message types, fields.
 - Use numbered lists for ordered sequences: processing steps, priority tiers, resolution cases.
 - Use at most two levels of bullets. Do not nest a sub-bullet under another sub-bullet.
-- Each bullet in a named-item list follows this format: **Name** — short description. No trailing period.
+- Each bullet in a named-item list follows this format: `**Name** — short description` No trailing period.
 
 ## Terminology
 
-- Introduce each concept with one name at its definition or first use. Reference it by that name thereafter.
+- Introduce each concept with one name in a definitions list or when first used. Reference it by that name thereafter.
 - Never paraphrase a named thing after its introduction. Example: "Delivery Gateway" not "the delivery service".
 
 ## Section Headings
