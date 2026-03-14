@@ -83,11 +83,13 @@ Three modes cover every relevant state of `AGENTS.md`: it exists and is current;
 >
 > | Mode | Description |
 > |---|---|
-> | **update** | Updates AGENTS.md |
-> | **research** | Researches the project |
-> | **realign** | Realigns the file |
+> | **update** | Updates an existing AGENTS.md to reflect recent code changes |
+> | **research** | Performs a full project analysis to build a new AGENTS.md |
+> | **realign** | Restructures an existing AGENTS.md that has become stale or bloated |
+>
+> Default mode: **update**
 
-The agent version states what each mode does rather than when to use it, and omits the default label. A reader cannot determine which mode to choose without already knowing the answer.
+The agent version renames the column "Description" and populates it with what each mode does rather than when to use it. The reader must already understand the difference between "sync recent changes" and "full analysis" to know which applies to their situation. The default is moved to a separate line below the table where it is easily skipped. Both failures compound: a reader who cannot identify their own situation from the descriptions will also miss the fallback.
 
 ---
 
