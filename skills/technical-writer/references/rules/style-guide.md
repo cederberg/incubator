@@ -12,7 +12,7 @@
 - Sentences should not exceed ~20 words. Split long sentences at natural boundaries.
 - No hedging words: "typically", "usually", "generally", "in most cases", "often". Either the rule applies or the exception is worth its own sentence.
 - No filler openers: "It is worth noting that…", "It should be mentioned that…", "As you can see…" — cut entirely.
-- No justification prose. The doc states what the system does, not why it was designed that way. Not "This is done because…" — that belongs in an ADR, not a system overview.
+- No justification prose. State what the system does or what the rule requires. Exception: include rationale when it determines how to apply the rule to cases not listed. Never "This was designed for…" or "The reason we do X is…"
 
 ## Paragraph Rules
 
@@ -23,8 +23,9 @@
 ## Formatting
 
 ### Bold
-- Bold is for defined terms appearing in a definition list: `- **COMPLETED** - Processing succeeded`
-- Bold is not for general emphasis. If a sentence needs emphasis, rewrite it.
+- Bold marks a name or label: a defined term, a named mode, a named category. The bolded item must be a noun or noun phrase — something that could appear in an index.
+- Bold is not for emphasis. If a sentence needs emphasis, rewrite it.
+- Legitimate uses: term in a definition list (`- **COMPLETED** — Processing succeeded`), named option introduced inline (`**Structural** — run the reviewer…`), category label in a rule list (`**Permanence:** Only extract…`).
 
 ### Note:
 - Use "Note:" for a caveat or exception that cannot be folded into the main text without disrupting flow.
@@ -48,9 +49,9 @@
 
 ## Terminology
 
-- Use the system's own names consistently. A thing has one name throughout the document.
-- Introduce a named concept once (in its definition section or on first use) and then reference it by name.
-- External systems are proper nouns: use their real names consistently. Never "the delivery service" after Delivery Gateway has been introduced.
+- Use the document's own names consistently. A named concept has one name throughout.
+- Introduce each name once (in its definition or on first use) and reference it by name thereafter.
+- Named things are never paraphrased after introduction. Not "the research step" after Phase 2: Research has been named. Not "the delivery service" after Delivery Gateway has been named.
 
 ## Section Headings
 
