@@ -9,6 +9,7 @@ The goal is to generalise the skill into `technical-writer` with named modes, wh
 **Modes planned:**
 - `system-overview` — the current skill, migrated
 - `readme` — project-level README
+- `generic` — user-supplied topics and template; no pre-authored mode files
 
 ---
 
@@ -16,12 +17,14 @@ The goal is to generalise the skill into `technical-writer` with named modes, wh
 
 ### What varies per mode
 
-| Artifact | Role |
-|---|---|
-| `topics.md` | What researchers look for; the discovery lens for this document type |
-| `template.md` | Section inventory, per-section content guidance, ordering rules |
-| `examples.md` | Curated real examples with annotation of *why* they work; primary calibration for the writer and reviewer |
-| `checklist.md` | Structural invariants to verify: section ordering, required elements, disallowed patterns |
+| Artifact | Role | Required |
+|---|---|---|
+| `topics.md` | What researchers look for; the discovery lens for this document type | Yes |
+| `template.md` | Section inventory, per-section content guidance, ordering rules | Yes |
+| `examples.md` | Curated real examples with annotation of *why* they work; primary calibration for the writer and reviewer | No — writer falls back to template + style guide alone if absent |
+| `checklist.md` | Structural invariants to verify: section ordering, required elements, disallowed patterns | No — reviewer uses only shared per-sentence checklist if absent |
+
+For `system-overview` and `readme`, all four files are pre-authored and live in `references/modes/<mode>/`. For `generic`, the user supplies `topics.md` and `template.md` content at invocation time; `examples.md` and `checklist.md` are optional and may not be provided.
 
 ### What is shared
 
@@ -229,6 +232,7 @@ Work from `skills/write-system-overview/references/` into `skills/technical-writ
 **`roles/writer.md`** — copy, then edit:
 - Remove: "All external systems named in processing or data sections must appear in the post-diagram bullet list in the Introduction. Do not reference a system for the first time mid-document." (system-overview specific)
 - The template and examples references remain; the agent will receive the mode-specific versions
+- Add a note that `examples.md` may not be present; when absent, the writer uses the template and style guide as the sole calibration
 
 **`roles/reviewer.md`** — copy, then edit:
 - Remove the entire "Structural checklist" block (the four checkboxes for section ordering, diagram rules, external systems, acronyms)
@@ -319,6 +323,29 @@ The five-phase structure is otherwise unchanged. Update the Reference Files tabl
 **Mode inference heuristic** (for cases where the user does not name a mode):
 - "write a README" / "document this project" → `readme`
 - "write a system overview" / "document this system" / default → `system-overview`
+- User explicitly names `generic`, or provides their own topics/template structure → `generic`
+
+**Review variant:**
+
+When the user provides an existing document to review, SKILL.md must ask (or accept as an explicit flag): structural check or accuracy check?
+
+- **Structural** — skip research and outline; run the reviewer agent directly on the existing document using the mode's `checklist.md` and shared style rules. No codebase access required.
+- **Accuracy** — run the full pipeline, but seed the writer with the existing document as a baseline draft rather than starting from blank. Research checks whether the document's claims reflect current reality.
+
+Mode is inferred or specified as normal. The review variant does not introduce a new mode.
+
+---
+
+**Generic mode invocation contract:**
+
+The `generic` mode has no pre-authored files in `references/modes/`. Instead, SKILL.md must instruct the skill to:
+
+1. Extract or request the research topics from the user's description — what areas to investigate, what the document should cover
+2. Extract or request the document structure — section names, ordering, and per-section guidance
+3. Materialise these as the researcher's `topics.md` and the writer's `template.md` inputs for that run
+4. Proceed identically to any other mode from that point
+
+If the user provides neither topics nor structure, the skill must ask before proceeding — generic mode without these inputs produces a worse outcome than a clarification question.
 
 ---
 
@@ -326,7 +353,8 @@ The five-phase structure is otherwise unchanged. Update the Reference Files tabl
 
 1. Run the skill in `system-overview` mode on a known system (the original test case if available) and confirm output quality is unchanged
 2. Run the skill in `readme` mode on a simple project with a weak or missing README; verify output structure and voice match the calibrated examples
-3. For each run: confirm the reviewer's structural checklist items are being evaluated (check reviewer output for explicit checklist language)
+3. Run the skill in `generic` mode with an ad-hoc topic description and document structure; verify the pipeline runs correctly without pre-authored mode files
+4. For each run: confirm the reviewer's structural checklist items are being evaluated (check reviewer output for explicit checklist language)
 
 ---
 
@@ -355,6 +383,6 @@ Phase 6 ──────┘── validation
 
 **Example quality is the primary risk.** The `examples.md` files are not decoration — they are the primary calibration mechanism for the writer agent. If the examples are generic or mediocre, the output will be generic and mediocre regardless of how precise the other reference files are. Phase 0 must not be rushed.
 
-**Mode inference must fail loudly.** If the skill cannot determine the mode, it must ask the user rather than defaulting silently. A README written with `system-overview` structure, or a system overview written with `readme` brevity, is a worse outcome than a clarification question.
+**Mode inference must fail loudly.** If the skill cannot determine the mode, it must ask the user rather than defaulting silently. A README written with `system-overview` structure, or a system overview written with `readme` brevity, is a worse outcome than a clarification question. `generic` must never be inferred silently — it is only used when the user explicitly requests it or provides their own structure.
 
 **The system-overview mode must not regress.** Migrating to the new structure must produce output indistinguishable from the current skill. Phase 6 step 1 is a regression check, not just a smoke test.
