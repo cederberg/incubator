@@ -147,7 +147,7 @@ The outliner writes a document skeleton to `$WORK_DIR/outline.md`.
 
 Launch a **single writer sub-agent** with:
 - `references/roles/writer.md`
-- The mode's `template.md`
+- `$MODE_DIR/template.md`
 - `references/rules/style-guide.md`
 - `$WORK_DIR/outline.md`
 - All Phase 2 output files from `$WORK_DIR/`
