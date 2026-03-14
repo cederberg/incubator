@@ -45,7 +45,7 @@
 - Bullet lists for finite sets of named things: statuses, message types, fields.
 - Numbered lists for ordered sequences: processing steps, priority tiers, resolution cases.
 - No nested bullets beyond one level deep.
-- Each bullet: bold name, dash, short description. No trailing period.
+- Each bullet that introduces a named item: bold name, dash, short description. No trailing period.
 
 ## Terminology
 
