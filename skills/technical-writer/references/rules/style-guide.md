@@ -22,14 +22,14 @@
 
 ## Formatting
 
-### Bold
+### Bold Marks
 - Bold marks a name or label: a defined term, a named mode, a named category. The bolded item must be a noun or noun phrase — something that could appear in an index.
 - Bold is not for emphasis. If a sentence needs emphasis, rewrite it.
 - Legitimate uses: term in a definition list (`- **COMPLETED** — Processing succeeded`), named option introduced inline (`**Structural** — run the reviewer…`), category label in a rule list (`**Permanence:** Only extract…`).
 
 ### Note Usage
 - Use "Note:" for a caveat or exception that would require a parenthetical or subordinate clause mid-sentence to include inline.
-- Two is the maximum per section.
+- Two "Note:" entries is the maximum per section.
 - Format: `Note that <fact>.` — a complete sentence, not a fragment.
 - Do not use "Note:" to explain why a rule exists.
 
