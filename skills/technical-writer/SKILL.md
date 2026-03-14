@@ -22,15 +22,15 @@ If the user specifies a mode, use it. Otherwise, infer from the request:
 - "write a system overview" / "document this system" / "write an overview" → `system-overview`
 - User explicitly names `generic`, or provides their own topics/template structure → `generic`
 
-**`generic` is never inferred silently.** Only use it when the user explicitly requests it or supplies their own document structure. A document written with a mismatched mode structure is a worse outcome than a clarification question.
+`generic` is never inferred silently. Only use it when the user explicitly requests it or supplies their own document structure.
 
-**If the mode cannot be determined from the request:** ask the user before proceeding.
+If the mode cannot be determined from the request, ask the user before proceeding.
 
 ## Review Variant
 
 When the user provides an **existing document** to review rather than asking for a new one to be written, ask (or accept as an explicit flag):
 
-- **Structural** — run the reviewer directly on the existing document using the mode's `checklist.md` and shared style rules. No codebase access required.
+- **Structural** — run the reviewer directly on the existing document using the mode's `checklist.md` and shared style rules. The codebase is not consulted.
 - **Accuracy** — run the full pipeline seeded with the existing document as the baseline draft. Research checks whether the document's claims reflect current reality.
 
 Mode is inferred or specified as normal. The review variant does not change the mode — it changes how the pipeline is entered.
@@ -51,7 +51,7 @@ You are the workflow manager. You launch sub-agents and confirm that each phase 
 
 ## Workflow: Five Phases, Multiple Sub-Agents
 
-**This workflow requires separate sub-agents for each phase. Do not combine them.**
+This workflow requires separate sub-agents for each phase. Do not combine them.
 
 Context growth degrades style adherence. Self-review is attachment-biased. Mode collapse (researching while writing, validating instead of critiquing) is the primary cause of poor output. Separate sub-agents with isolated contexts solve all three problems.
 
@@ -69,7 +69,7 @@ Pass `$WORK_DIR` and `$MODE_DIR` to all sub-agents so they read from consistent 
 
 ### Phase 1: Discovery
 
-Run a **single lightweight discovery agent**. Its job is to enumerate the project's components, integrations, and existing documentation so that researcher scopes can be assigned without gaps.
+Run a **single lightweight discovery agent**. Its job is to enumerate the project's components, integrations, and existing documentation.
 
 The discovery agent writes its output to `$WORK_DIR/discovery.md` with three sections:
 
@@ -77,7 +77,7 @@ The discovery agent writes its output to `$WORK_DIR/discovery.md` with three sec
 - **External Systems** — all external systems referenced in config, code, or documentation. One line each, no descriptions.
 - **Documentation & Specs** — any existing documentation files worth consulting: READMEs, OpenAPI/WSDL specs, architecture docs, wikis, significant configuration files. One line each with relative path.
 
-**Read `$WORK_DIR/discovery.md`** and use it to define researcher scopes in Phase 2.
+Read `$WORK_DIR/discovery.md` and use it to define researcher scopes in Phase 2.
 
 ---
 
@@ -114,7 +114,7 @@ Each researcher:
 
 **generic:** derive scope assignments from the topics in `$WORK_DIR/topics.md`. Assign one researcher per topic; name output files after the topic.
 
-Adapt scopes to the actual project using `$WORK_DIR/discovery.md`. For a small project, two or three researchers may suffice.
+Adapt scopes to the actual project using `$WORK_DIR/discovery.md`. For a small project, two or three researchers suffice.
 
 After all researchers complete, confirm each output file is non-empty using `wc -c` before proceeding.
 
@@ -164,7 +164,7 @@ Read the reviewer's output. If it finds issues:
 2. Instruct it to address each numbered issue and overwrite `$WORK_DIR/draft.md`
 3. Launch a **new reviewer sub-agent** to check the result
 
-One review cycle is typically sufficient.
+Repeat up to 3 cycles. Stop when the reviewer finds no issues or the cycle limit is reached.
 
 ---
 
@@ -184,13 +184,13 @@ Use the path requested by the user if they specified one.
 
 ## Generic Mode
 
-The `generic` mode has a pre-authored `template.md` and `checklist.md` in `references/modes/generic/`. There is no pre-authored `topics.md` — the user must supply the research topics, as they define what the document covers.
+The `generic` mode has a pre-authored `template.md` and `checklist.md` in `references/modes/generic/`. There is no pre-authored `topics.md` — the user must supply the research topics.
 
 Before starting Phase 1:
 
-1. **Extract research topics** from the user's description — what areas to investigate, what the document should cover. If the user has not provided topics, ask: "What areas should the researchers investigate?" before proceeding.
+1. Extract research topics from the user's description — what areas to investigate, what the document should cover. If the user has not provided topics, ask: "What areas should the researchers investigate?" before proceeding.
 
-2. **Materialise** the topics as `$WORK_DIR/topics.md` in the same format as other `topics.md` files.
+2. Materialise the topics as `$WORK_DIR/topics.md` in the same format as other `topics.md` files.
 
 3. Proceed identically to any other mode from Phase 1 onward:
    - Use `$WORK_DIR/topics.md` as the researcher scope file
@@ -198,7 +198,7 @@ Before starting Phase 1:
    - Use `references/modes/generic/checklist.md` for the reviewer
    - No `examples.md` is provided unless the user supplies one
 
-**If the user provides no topics, ask before proceeding.** Generic mode without research topics produces a worse outcome than a clarification question.
+If the user provides no topics, ask before proceeding.
 
 ---
 
