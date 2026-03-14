@@ -2,9 +2,13 @@
 
 ## Voice and Tense
 
-- Present tense, third person: "The system receives…", "Each event contains…"
-- Active voice. Not "Events are checked by the system" but "The system checks events."
-- No first person. Never "we", "our", or "I".
+Two voices apply depending on document type. Choose one; do not mix within a document.
+
+**Documentation voice** — for documents that describe a system, process, or artifact. The subject is the thing being documented. Use present tense, third person, active voice: "The system receives…", "Each event contains…", "The gateway forwards the message." Not "Events are checked by the system."
+
+**Instructional voice** — for documents that prescribe behaviour for a practitioner. The subject is the action or rule. Use imperative mood: "Split the paragraph." "Remove it." "Never paraphrase named things after introduction." Do not convert imperatives into passive declarations to satisfy the Documentation voice rule.
+
+No first person in either voice. Never "we", "our", or "I".
 
 ## Sentence Rules
 

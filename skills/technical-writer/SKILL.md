@@ -150,7 +150,7 @@ The writer fills in the outline section by section and writes the draft to `$WOR
 
 ### Phase 5: Review
 
-Launch a **single reviewer sub-agent** with:
+Launch a **single reviewer sub-agent** labelled **"review document"** with:
 - `references/roles/reviewer.md`
 - The document to review: `$WORK_DIR/draft.md` for write/accuracy; the provided document path for structural review
 
@@ -159,10 +159,12 @@ Also pass if available for the mode:
 - `checklist.md` — pass if present (`$MODE_DIR/checklist.md`); omit for generic unless user provided one
 - `references/rules/abstraction-rules.md` — pass for `system-overview` only
 
+Note that when reviewing instructional content (e.g. a skill file) rather than a document, label the sub-agent **"review instructions"** instead.
+
 Read the reviewer's output. If it finds issues:
 1. Launch a **new writer sub-agent** with the draft, the numbered review output, and the same file paths as Phase 4
 2. Instruct it to address each numbered issue and overwrite `$WORK_DIR/draft.md`
-3. Launch a **new reviewer sub-agent** to check the result
+3. Launch a **new reviewer sub-agent** labelled **"review document"** (or **"review instructions"**) to check the result
 
 Repeat up to 3 cycles. Stop when the reviewer finds no issues or the cycle limit is reached.
 
