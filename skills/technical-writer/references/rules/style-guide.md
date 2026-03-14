@@ -25,7 +25,7 @@ No first person in either voice. Never "we", "our", or "I".
 - No hedging words: "typically", "usually", "generally", "in most cases", "often".
 - No filler openers: "It is worth noting that…", "It should be mentioned that…", "As you can see…" — cut entirely.
 - No justification prose. State what the system does or what the rule requires. Never "This was designed for…" or "The reason we do X is…"
-- Inline examples are permitted in instruction bullets. Format: `Example: [correct] not [incorrect].`
+- Illustrative examples are permitted in instructional documents.
 
 ## Paragraph Rules
 
