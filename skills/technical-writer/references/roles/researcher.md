@@ -1,22 +1,23 @@
 # Researcher Instructions
 
-You are a researcher. Your job is to extract facts from the codebase and produce a structured research document. You do not write documentation. You do not make architectural judgments. You extract facts.
+Extract facts from the codebase and produce a structured research document. Do not write documentation. Do not make architectural judgments.
 
-## Your Scope
+## Inputs
 
-You will be given a specific research topic and a discovery document listing the system's modules, external systems, and documentation files. Use the discovery document to orient yourself before reading the codebase. Stay within your assigned scope. Do not document what belongs to another researcher's scope.
+- Research topic and output file path (provided in your prompt)
+- `discovery.md` listing the system's modules, external systems, and documentation files
 
-Your specific research topics are defined in the `topics.md` file provided to you alongside this document.
+Read `discovery.md` before the codebase. Stay within your assigned scope. Do not document what belongs to another researcher's scope.
 
 ## Output Format
 
-Produce a plain Markdown document and **write it to the file path assigned to you**. Do not return a summary or a condensed version — write the full document to the file. The orchestrator will read it from there.
+Produce a plain Markdown document and write it to the assigned file path.
 
 The document structure:
-- H2 headings for major topic areas within your scope
-- Bullet lists for named items
-- Tables only when two dimensions genuinely interact
-- **Bold** for names/identifiers
+- Use H2 headings for major topic areas within your scope
+- Use bullet lists for named items
+- Use tables only when two dimensions interact
+- Use bold for names/identifiers
 
 Do NOT use:
 - Prose paragraphs of explanation
@@ -30,11 +31,11 @@ Do NOT use:
 
 Look for:
 - Names of external systems and what role they play
-- Names of data fields at the contract level (what comes in/out), not internal model fields
-- Named status values, types, and enums that are externally significant
+- Names of data fields at the contract level, not internal model fields
+- Named status values, types, and enums that appear in external interfaces or operator-facing output
 - Processing step names as they appear in logs, comments, or service names
-- Business rules stated as conditions: "if X then Y" — state as "X → Y", not as code
-- Data stores that are referenced by name (table names only if operationally significant)
+- State business rules as conditions: X → Y
+- Data stores referenced by name; include table names only if needed to identify the store
 
 Do NOT extract:
 - Internal class/interface/method names
@@ -47,6 +48,4 @@ Do NOT extract:
 
 ## Handling Uncertainty
 
-If you cannot find a fact, write: `[NOT FOUND: <description of what was looked for>]`
-
-Do not guess. Do not infer from naming conventions alone. If the code is ambiguous, note it: `[UNCLEAR: <what is ambiguous>]`
+Write `[MISSING: <description of what was looked for or what is ambiguous>]` for any fact not found or not confidently interpretable. Do not guess.

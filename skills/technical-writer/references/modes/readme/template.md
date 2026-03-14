@@ -67,7 +67,7 @@ Use this structure as the canonical starting point. Include only sections that h
 - Steps to build and run tests.
 - Nothing beyond what is needed to run `make test` or equivalent.
 
-**Omit this section entirely** if the intended audience is users only, or if a CONTRIBUTING.md covers this.
+**Omit this section entirely** if the intended audience is users only, or if a DEVELOPMENT.md or BUILD.md covers this.
 
 ---
 
@@ -98,6 +98,5 @@ Use this structure as the canonical starting point. Include only sections that h
 ## Notes on Section Ordering
 
 - Name & one-liner → Install → Usage → Configuration → Development → Contributing → License is the default order.
-- Configuration and Development may be omitted if not applicable.
 - Do not create a section just to have it. Omit sections with nothing to say.
 - A short "See also" or "Documentation" link may be added after Usage if the project has substantial external documentation.

@@ -14,7 +14,7 @@
   - **Example** — "Split the paragraph." "Remove it."
   - **Avoid** — "The draft should be overwritten with the revised version."
 
-Choose one voice for each document. No first person in either voice. Never "we", "our", or "I".
+Choose one voice for each document. No first person in either voice (i.e. never "we", "our", or "I").
 
 ## Sentence Rules
 
@@ -22,8 +22,8 @@ Choose one voice for each document. No first person in either voice. Never "we",
 - Do not exceed ~20 words per sentence.
 - No hedging words: "typically", "usually", "generally", "in most cases", "often".
 - No filler openers: "It is worth noting that…", "It should be mentioned that…", "As you can see…"
-- No justification prose. State what the system does or what the rule requires. Never "This was designed for…" or "The reason we do X is…"
-- Clarifications and illustrative examples are permitted in instructional documents.
+- No justification prose. State what something does or what it requires. Never "This was designed for…" or "The reason we do X is…"
+- Instructional documents may include illustrative examples or clarification sentences.
 
 ## Paragraph Rules
 
@@ -33,7 +33,7 @@ Choose one voice for each document. No first person in either voice. Never "we",
 
 ## Formatting
 
-### Bold Marks
+### Bold Usage
 - Use bold to mark a name or label: a defined term, a named mode, a named category.
 - Bold only nouns or noun phrases — items that could appear in an index.
 - Do not use bold for emphasis. If a sentence needs emphasis, rewrite it.
@@ -43,8 +43,8 @@ Choose one voice for each document. No first person in either voice. Never "we",
   - `**Permanence:** Only extract…` (category label)
 
 ### Note Usage
-- Use "Note:" for caveats or exceptions that break prose flow. Do not use it to explain why a rule exists.
-- Max two "Note:" entries per section.
+- Use notes for caveats or exceptions that break prose flow. Do not use notes to explain why a rule exists.
+- Max two notes per section.
 - Format as a complete sentence, i.e. `Note that <fact>.`
 
 ### Tables
@@ -58,7 +58,7 @@ Choose one voice for each document. No first person in either voice. Never "we",
 ### Lists
 - Use bullet lists for sets of named things: statuses, message types, fields.
 - Use numbered lists for ordered sequences: processing steps, priority tiers, resolution cases.
-- Use at most two levels of bullets. Do not nest a sub-bullet under another sub-bullet.
+- Use at most two levels of bullets.
 - Each bullet in a named-item list follows this format: `**Name** — short description` (no trailing period)
 
 ## Terminology

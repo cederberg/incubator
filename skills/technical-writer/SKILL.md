@@ -50,7 +50,7 @@ Mode is inferred or specified as normal. The review variant does not change the 
 
 ## Your Role
 
-You are the workflow manager. You launch sub-agents and confirm that each phase has produced non-empty output. You do not read reference files, research files, or drafts yourself. Pass file paths to sub-agents and let them read what they need.
+You are the workflow manager. You launch sub-agents and confirm that each phase has produced non-empty output. You do not read reference files, research files, or drafts yourself, except where explicitly instructed to. Pass file paths to sub-agents and let them read what they need.
 
 ## Workflow: Five Phases, Multiple Sub-Agents
 
@@ -61,7 +61,7 @@ Context growth degrades style adherence. Self-review is attachment-biased. Mode 
 Set the mode path variable once and use it throughout:
 
 ```
-MODE=<detected-mode>           # system-overview, readme, skill-writer, or generic
+MODE=<detected-mode>
 MODE_DIR=references/modes/$MODE
 WORK_DIR=$(mktemp -d)
 ```
@@ -86,47 +86,13 @@ Read `$WORK_DIR/discovery.md` and use it to define researcher scopes in Phase 2.
 
 ### Phase 2: Research
 
-Launch **multiple researcher sub-agents in parallel**, each scoped to a distinct topic from the mode's `topics.md`.
+Read `$MODE_DIR/topics.md` to determine researcher assignments. Each researcher has a separate assigned topic name, description and output file.
 
-Each researcher:
-- Follows `references/roles/researcher.md`
-- Receives `$WORK_DIR/discovery.md` to orient themselves
-- Receives the mode's `topics.md` to understand their scope
-- Writes its full output to an assigned file in `$WORK_DIR/`
-
-**Typical scope assignments by mode:**
-
-**system-overview:**
-
-| Agent | Scope | Output file |
-|---|---|---|
-| Researcher A | Topology & actors | `$WORK_DIR/topology.md` |
-| Researcher B | Data contracts | `$WORK_DIR/contracts.md` |
-| Researcher C | Processing logic | `$WORK_DIR/processing.md` |
-| Researcher D | Vocabulary | `$WORK_DIR/vocabulary.md` |
-
-**readme:**
-
-| Agent | Scope | Output file |
-|---|---|---|
-| Researcher A | Purpose & audience | `$WORK_DIR/purpose.md` |
-| Researcher B | Setup & prerequisites | `$WORK_DIR/setup.md` |
-| Researcher C | Usage | `$WORK_DIR/usage.md` |
-| Researcher D | Configuration | `$WORK_DIR/config.md` |
-| Researcher E | Contribution & support | `$WORK_DIR/contributing.md` |
-
-**skill-writer:**
-
-| Agent | Scope | Output file |
-|---|---|---|
-| Researcher A | Task, activation & modes | `$WORK_DIR/task.md` |
-| Researcher B | Workflow & input/output contracts | `$WORK_DIR/workflow.md` |
-
-Use two researchers for skills with multiple modes or sub-agent workflows. Use one researcher for single-step skills with no modes.
-
-**generic:** derive scope assignments from the topics in `$WORK_DIR/topics.md`. Assign one researcher per topic; name output files after the topic.
-
-Adapt scopes to the actual project using `$WORK_DIR/discovery.md`. For a small project, two or three researchers suffice.
+Launch one researcher sub-agent per assignment **in parallel** with:
+- `references/roles/researcher.md`
+- The assigned topic name and description
+- The output file path (`$WORK_DIR/<output-file>`)
+- `$WORK_DIR/discovery.md`
 
 After all researchers complete, confirm each output file is non-empty using `wc -c` before proceeding.
 
@@ -138,6 +104,7 @@ Launch a **single outliner sub-agent** with:
 - `references/roles/outliner.md`
 - `$MODE_DIR/template.md`
 - All Phase 2 output files from `$WORK_DIR/`
+- The output file path (`$WORK_DIR/outline.md`)
 
 The outliner writes a document skeleton to `$WORK_DIR/outline.md`.
 
@@ -147,14 +114,13 @@ The outliner writes a document skeleton to `$WORK_DIR/outline.md`.
 
 Launch a **single writer sub-agent** with:
 - `references/roles/writer.md`
-- `$MODE_DIR/template.md`
 - `references/rules/style-guide.md`
+- `references/rules/abstraction-rules.md` (if in `system-overview` mode)
+- `$MODE_DIR/template.md`
+- `$MODE_DIR/examples.md` (if it exists)
 - `$WORK_DIR/outline.md`
 - All Phase 2 output files from `$WORK_DIR/`
-
-Also pass if available for the mode:
-- `examples.md` — pass if present (`$MODE_DIR/examples.md`); omit for generic unless the user provided one
-- `references/rules/abstraction-rules.md` — pass for `system-overview` only
+- The output file path (`$WORK_DIR/draft.md`)
 
 The writer fills in the outline section by section and writes the draft to `$WORK_DIR/draft.md`.
 
@@ -164,12 +130,11 @@ The writer fills in the outline section by section and writes the draft to `$WOR
 
 Launch a **single reviewer sub-agent** labelled **"review document"** with:
 - `references/roles/reviewer.md`
-- The document to review: `$WORK_DIR/draft.md` for write/accuracy; the provided document path for structural review
-
-Also pass if available for the mode:
-- `examples.md` — pass if present; omit for generic unless user provided one
-- `checklist.md` — pass if present (`$MODE_DIR/checklist.md`); omit for generic unless user provided one
-- `references/rules/abstraction-rules.md` — pass for `system-overview` only
+- `references/rules/style-guide.md`
+- `references/rules/abstraction-rules.md` (if in `system-overview` mode)
+- `$MODE_DIR/checklist.md` (if it exists)
+- `$MODE_DIR/examples.md` (if it exists)
+- The document to review: `$WORK_DIR/draft.md` or the provided document path
 
 Note that when reviewing instructional content (e.g. a skill file) rather than a document, label the sub-agent **"review instructions"** instead. When the skill being reviewed references other files as sub-agent inputs (role files, rule files, mode files), pass those referenced files to the reviewer as well so it can verify the instructions are consistent with them.
 
@@ -184,7 +149,7 @@ Repeat up to 3 cycles. Stop when the reviewer finds no issues or the cycle limit
 
 ### Final Output
 
-Once the review passes, copy `$WORK_DIR/draft.md` to the appropriate output path:
+Once the review is finished, copy `$WORK_DIR/draft.md` to the appropriate output path:
 
 | Mode | Default output path |
 |---|---|
@@ -194,6 +159,8 @@ Once the review passes, copy `$WORK_DIR/draft.md` to the appropriate output path
 | `generic` | path specified by user |
 
 Use the path requested by the user if they specified one.
+
+After copying, scan the final document for `[MISSING: ...]` markers. If any are found, list them for the user verbatim and note that they represent gaps the research could not resolve. The user decides how to handle them.
 
 ---
 
@@ -211,8 +178,6 @@ Before starting Phase 1:
 
 **Phase 1 override:** The general Phase 1 instructions (enumerate modules, external systems, documentation files) do not apply. Instead, the discovery agent reads the user's description and any existing skill files in the project directory. It writes `$WORK_DIR/discovery.md` with three sections: the task the skill must perform, the activation conditions mentioned, and any output artifacts or file paths specified.
 
-Phase 2 passes `references/modes/skill-writer/topics.md` to both researchers. Researcher A takes topics 1–3 (task, activation, modes); Researcher B takes topics 4–6 (workflow, input/output contracts, reference file requirements).
-
 Phase 5 uses the **"review instructions"** label and receives `references/modes/skill-writer/examples.md` and `references/modes/skill-writer/checklist.md`.
 
 ### Reviewing an existing skill
@@ -228,21 +193,13 @@ When the user provides an existing `SKILL.md` to review, use the structural revi
 
 ## Generic Mode
 
-The `generic` mode has a pre-authored `template.md` and `checklist.md` in `references/modes/generic/`. There is no pre-authored `topics.md` — the user must supply the research topics.
-
 Before starting Phase 1:
 
-1. Extract research topics from the user's description — what areas to investigate, what the document should cover. If the user has not provided topics, ask: "What areas should the researchers investigate?" before proceeding.
+1. Extract research topics from the user's description. If the user has not provided topics, ask: "What areas should the researchers investigate?" before proceeding.
 
-2. Materialise the topics as `$WORK_DIR/topics.md` in the same format as other `topics.md` files.
+2. Materialise them into `$WORK_DIR/topics.md` following the format in `$MODE_DIR/topics.md`.
 
-3. Proceed identically to any other mode from Phase 1 onward:
-   - Use `$WORK_DIR/topics.md` as the researcher scope file
-   - Use `references/modes/generic/template.md` as the document structure
-   - Use `references/modes/generic/checklist.md` for the reviewer
-   - No `examples.md` is provided unless the user supplies one
-
-If the user provides no topics, ask before proceeding.
+Proceed identically to any other mode from Phase 1 onward.
 
 ---
 
@@ -263,9 +220,9 @@ If the user provides no topics, ask before proceeding.
 
 | File | Required | Used By | Purpose |
 |---|---|---|---|
-| `topics.md` | Yes | Researcher agents | Research scope definitions for this document type |
+| `topics.md` | Yes | Workflow manager | Researcher assignments: topic descriptions and output file paths |
 | `template.md` | Yes | Outliner + Writer | Section order and per-section content guidance |
 | `examples.md` | No | Writer + Reviewer | Target voice; annotated correct examples |
 | `checklist.md` | No | Reviewer | Structural invariants to verify |
 
-For `generic` mode, `template.md` and `checklist.md` are pre-authored in `references/modes/generic/`. `topics.md` is materialised into `$WORK_DIR/` from the user's input at invocation time. `examples.md` is not provided unless the user supplies one.
+For `generic` mode, all four files are pre-authored in `references/modes/generic/`. `topics.md` serves as a template — the manager materialises the user's topics into `$WORK_DIR/topics.md` following its format. `examples.md` is not provided unless the user supplies one.

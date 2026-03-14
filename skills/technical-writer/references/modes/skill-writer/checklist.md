@@ -1,6 +1,11 @@
 # Structural Checklist: Skill File
 
-Verify each item explicitly.
+## Structure
+
+- [ ] Skill body opens with an H1 heading matching the `name` frontmatter field
+- [ ] Section order: H1 → Modes + Mode Detection (multi-mode) or Activation (single-mode) → Preconditions (if present) → Your Role (if orchestrator) → Workflow → Output → Reference Files (if present)
+- [ ] Workflow section is present
+- [ ] Output section is present
 
 ## Frontmatter
 
@@ -24,22 +29,19 @@ Verify each item explicitly.
 ## Workflow
 
 - [ ] Workflow steps are numbered or named phases; no prose narrative substitutes for ordered steps
-- [ ] Every sub-agent phase specifies the agent's role, the inputs passed to it, and the output file it writes
+- [ ] Every sub-agent phase specifies the agent's role, the inputs passed to it, and the artifact or output it produces
 - [ ] Any review-revise loop states a maximum number of cycles
-- [ ] If sub-agents are used: a rationale for phase isolation is present when the phase could plausibly be merged with an adjacent phase without apparent loss
+- [ ] If sub-agents are used: a rationale for phase isolation is present when the phase could plausibly be merged with an adjacent phase
 
 ## Output
 
-- [ ] Every artifact the skill produces has an exact file path, naming convention, or output template with explicit placeholders
-- [ ] If a `$WORK_DIR` pattern is used: it is set once and referenced consistently
+- [ ] Every artifact has an exact file path, naming convention, or output template
 
 ## Reference Files
 
-- [ ] Every file delegated to a sub-agent appears in a Reference Files table with consumer and purpose
-- [ ] No file path is hardcoded in instructions where the path should vary by mode or invocation
+- [ ] Every file delegated to a sub-agent appears in a Reference Files table (columns: File, Consumer, Purpose)
+- [ ] File paths that vary by mode or invocation are named as variables, not hardcoded strings
 
 ## Quality
 
-- [ ] No sentence explains the rationale for a design decision ("This is done because…", "The reason for X is…", "X exists to prevent…")
-- [ ] No hedging language anywhere in the instruction body: "typically", "usually", "generally", "in most cases", "often"
-- [ ] No section is present that has nothing to say
+- [ ] No section is empty or consists only of placeholder text

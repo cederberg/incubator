@@ -2,7 +2,7 @@
 
 These four excerpts are taken from READMEs selected for their quality. Each illustrates something that prose rules alone cannot fully convey. Study the voice, the density of content, and — most importantly — what is *absent*.
 
-The target voice for README is more concise than system-overview. Less background, no topology, no definitions section. The reader wants to know what it does and how to use it, fast.
+The target voice for README is concise and direct. The reader wants to know what it does and how to use it, fast.
 
 ---
 
