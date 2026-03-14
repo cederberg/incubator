@@ -2,7 +2,7 @@
 
 ## Voice and Tense
 
-Do not mix voices in a single document.
+Choose one voice for each document.
 
 - **Documentation voice** — for documents that describe a system, process, or artifact
   - **Subject** — the thing being documented
@@ -21,14 +21,15 @@ No first person in either voice. Never "we", "our", or "I".
 ## Sentence Rules
 
 - Every sentence must be load-bearing. If removing it changes nothing, remove it.
-- Do not exceed ~20 words per sentence. Split long sentences at natural boundaries.
-- No hedging words: "typically", "usually", "generally", "in most cases", "often". State exceptions as separate sentences.
+- Do not exceed ~20 words per sentence.
+- No hedging words: "typically", "usually", "generally", "in most cases", "often".
 - No filler openers: "It is worth noting that…", "It should be mentioned that…", "As you can see…" — cut entirely.
 - No justification prose. State what the system does or what the rule requires. Never "This was designed for…" or "The reason we do X is…"
+- Inline examples are permitted in instruction bullets. Format: `Example: [correct] not [incorrect].`
 
 ## Paragraph Rules
 
-- Use two to four sentences per paragraph. Split any paragraph that exceeds four sentences.
+- Use two to four sentences per paragraph.
 - Write one idea per paragraph. Split paragraphs that contain unrelated ideas.
 - No transition sentences between paragraphs ("Now that we've covered X, let's look at Y…").
 
@@ -44,10 +45,9 @@ No first person in either voice. Never "we", "our", or "I".
   - `**Permanence:** Only extract…` (category label)
 
 ### Note Usage
-- Use "Note:" for a caveat or exception. Use it only when including the information inline would require a parenthetical or subordinate clause.
+- Use "Note:" for caveats or exceptions that would otherwise require a parenthetical or subordinate clause. Do not use it to explain why a rule exists.
 - Two "Note:" entries max per section.
 - Format: `Note that <fact>.` — a complete sentence.
-- Do not use "Note:" to explain why a rule exists.
 
 ### Tables
 - Use tables for matrix relationships only: when two named dimensions interact (e.g. event type × message type).
@@ -66,9 +66,11 @@ No first person in either voice. Never "we", "our", or "I".
 ## Terminology
 
 - Introduce each concept with one name at its definition or first use. Reference it by that name thereafter.
-- Never paraphrase a named thing after its introduction. Example: "Phase 2: Research" not "the research step"; "Delivery Gateway" not "the delivery service".
+- Never paraphrase a named thing after its introduction. Example: "Delivery Gateway" not "the delivery service".
 
 ## Section Headings
 
-- Use H2 (`##`) for major sections. Use H3 (`###`) for subsections. Do not use H4.
+- Use H2 (`##`) for major sections.
+- Use H3 (`###`) for subsections.
+- Do not use H4.
 - Write section headings as noun phrases. Not questions ("How Events Are Processed") or verb phrases ("Processing Events").
