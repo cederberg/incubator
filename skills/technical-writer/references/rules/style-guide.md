@@ -43,7 +43,7 @@ Choose one voice for each document. No first person in either voice. Never "we",
   - `**Permanence:** Only extract…` (category label)
 
 ### Note Usage
-- Use "Note:" for caveats or exceptions that break prose flow if written inline. Do not use it to explain why a rule exists.
+- Use "Note:" for caveats or exceptions that break prose flow. Do not use it to explain why a rule exists.
 - Max two "Note:" entries per section.
 - Format as a complete sentence, i.e. `Note that <fact>.`
 
