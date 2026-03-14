@@ -187,19 +187,21 @@ Use the path requested by the user if they specified one.
 
 ## Generic Mode
 
-The `generic` mode has no pre-authored mode files. Before starting Phase 1:
+The `generic` mode has a pre-authored `template.md` and `checklist.md` in `references/modes/generic/`. There is no pre-authored `topics.md` — the user must supply the research topics, as they define what the document covers.
 
-1. **Extract research topics** from the user's description — what areas to investigate, what the document should cover. If the user has not provided topics, ask: "What areas should the researchers investigate?"
+Before starting Phase 1:
 
-2. **Extract document structure** — section names, ordering, and per-section guidance. If the user has not described a structure, ask: "What sections should the document contain, and what should each cover?"
+1. **Extract research topics** from the user's description — what areas to investigate, what the document should cover. If the user has not provided topics, ask: "What areas should the researchers investigate?" before proceeding.
 
-3. **Materialise** these as files in `$WORK_DIR/`:
-   - Write topics to `$WORK_DIR/topics.md` in the same format as other `topics.md` files
-   - Write the document structure to `$WORK_DIR/template.md` in the same format as other `template.md` files
+2. **Materialise** the topics as `$WORK_DIR/topics.md` in the same format as other `topics.md` files.
 
-4. Proceed identically to any other mode from Phase 1 onward, using `$WORK_DIR/topics.md` and `$WORK_DIR/template.md` where other modes use `$MODE_DIR/` equivalents.
+3. Proceed identically to any other mode from Phase 1 onward:
+   - Use `$WORK_DIR/topics.md` as the researcher scope file
+   - Use `references/modes/generic/template.md` as the document structure
+   - Use `references/modes/generic/checklist.md` for the reviewer
+   - No `examples.md` is provided unless the user supplies one
 
-**If the user provides neither topics nor structure, ask before proceeding.** Generic mode without these inputs produces a worse outcome than a clarification question.
+**If the user provides no topics, ask before proceeding.** Generic mode without research topics produces a worse outcome than a clarification question.
 
 ---
 
@@ -225,4 +227,4 @@ The `generic` mode has no pre-authored mode files. Before starting Phase 1:
 | `examples.md` | No | Writer + Reviewer | Target voice; annotated correct examples |
 | `checklist.md` | No | Reviewer | Structural invariants to verify |
 
-For `generic` mode, `topics.md` and `template.md` are materialised into `$WORK_DIR/` at invocation time. `examples.md` and `checklist.md` are used only if the user supplies them.
+For `generic` mode, `template.md` and `checklist.md` are pre-authored in `references/modes/generic/`. `topics.md` is materialised into `$WORK_DIR/` from the user's input at invocation time. `examples.md` is not provided unless the user supplies one.
