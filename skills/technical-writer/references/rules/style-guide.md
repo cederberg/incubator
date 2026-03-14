@@ -25,7 +25,7 @@ No first person in either voice. Never "we", "our", or "I".
 - No hedging words: "typically", "usually", "generally", "in most cases", "often".
 - No filler openers: "It is worth noting that…", "It should be mentioned that…", "As you can see…" — cut entirely.
 - No justification prose. State what the system does or what the rule requires. Never "This was designed for…" or "The reason we do X is…"
-- Illustrative examples are permitted in instructional documents.
+- Clarifications and illustrative examples are permitted in instructional documents.
 
 ## Paragraph Rules
 
@@ -46,7 +46,7 @@ No first person in either voice. Never "we", "our", or "I".
 
 ### Note Usage
 - Use "Note:" for caveats or exceptions that would otherwise require a parenthetical or subordinate clause. Do not use it to explain why a rule exists.
-- Two "Note:" entries max per section.
+- Max two "Note:" entries per section.
 - Format: `Note that <fact>.` — a complete sentence.
 
 ### Tables
