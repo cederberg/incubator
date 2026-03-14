@@ -4,9 +4,17 @@
 
 Two voices apply depending on document type. Choose one; do not mix within a document.
 
-**Documentation voice** — for documents that describe a system, process, or artifact. The subject is the thing being documented. Use present tense, third person, active voice: "The system receives…", "Each event contains…", "The gateway forwards the message." Not "Events are checked by the system."
+- **Documentation voice** — for documents that describe a system, process, or artifact.
+  - Subject: the thing being documented
+  - Form: present tense, third person, active voice
+  - Example: "The system receives…", "The gateway forwards the message."
+  - Not: "Events are checked by the system."
 
-**Instructional voice** — for documents that prescribe behaviour for a practitioner. The subject is the action or rule. Use imperative mood: "Split the paragraph." "Remove it." "Never paraphrase named things after introduction." Do not convert imperatives into passive declarations to satisfy the Documentation voice rule.
+- **Instructional voice** — for documents that prescribe behaviour for a practitioner.
+  - Subject: the action or rule
+  - Form: imperative mood
+  - Example: "Split the paragraph." "Remove it."
+  - Not: passive declarations that satisfy the Documentation voice rule
 
 No first person in either voice. Never "we", "our", or "I".
 
