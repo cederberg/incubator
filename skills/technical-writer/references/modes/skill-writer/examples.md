@@ -6,26 +6,33 @@ These five excerpts are taken verbatim from real skill files. Each illustrates a
 
 ## Example 1: A Description That Separates Trigger from Anti-trigger
 
-**Source:** `claude-api` — frontmatter (`anthropics/skills`)
+**Source:** `docx` — frontmatter (`anthropics/skills`)
 
 ```yaml
-description: "Build apps with the Claude API or Anthropic SDK. TRIGGER when: code
-  imports `anthropic`/`@anthropic-ai/sdk`/`claude_agent_sdk`, or user asks to use
-  Claude API, Anthropic SDKs, or Agent SDK. DO NOT TRIGGER when: code imports
-  `openai`/other AI SDK, general programming, or ML/data-science tasks."
+description: "Use this skill whenever the user wants to create, read, edit, or
+  manipulate Word documents (.docx files). Triggers include: any mention of 'Word
+  doc', 'word document', '.docx', or requests to produce professional documents
+  with formatting like tables of contents, headings, page numbers, or letterheads.
+  Also use when extracting or reorganizing content from .docx files, inserting or
+  replacing images in documents, performing find-and-replace in Word files, working
+  with tracked changes or comments, or converting content into a polished Word
+  document. If the user asks for a 'report', 'memo', 'letter', 'template', or
+  similar deliverable as a Word or .docx file, use this skill. Do NOT use for
+  PDFs, spreadsheets, Google Docs, or general coding tasks unrelated to document
+  generation."
 ```
 
 **What this shows:**
 
-The description names two explicit signal categories. The "TRIGGER when" half lists observable conditions (import statements, explicit user intent) rather than paraphrasing the skill's title. The "DO NOT TRIGGER when" half lists the nearest confusable cases — adjacent tasks a model would otherwise route here. A description that only states what the skill does will misfire on near-neighbours; one that also states what it does not handle will not.
+The description names multiple layers of trigger signal: file-extension mentions (`.docx`), keyword phrases ("Word doc"), format-specific features (tables of contents, letterheads), specific operations (find-and-replace, tracked changes), and deliverable nouns ("report", "memo", "letter", "template"). Each layer catches a different user phrasing. The "Do NOT use for" clause names the nearest confusable formats — PDFs, spreadsheets, Google Docs — rather than generic exclusions like "unrelated tasks". A description that only states what the skill does will misfire on near-neighbours; one that lists observable triggers and names specific exclusions will not.
 
 **What an agent typically writes instead:**
 
 ```yaml
-description: Helps with Claude API development and SDK integration.
+description: Helps create and edit Word documents.
 ```
 
-The agent version states the skill's subject without naming any trigger conditions. Every Claude-adjacent request matches it equally, so the model cannot distinguish when to load it versus when not to.
+The agent version states the skill's subject without naming any trigger conditions. Every document-adjacent request matches it equally, so the model cannot distinguish when to load it versus when not to.
 
 ---
 
