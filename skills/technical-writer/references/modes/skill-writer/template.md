@@ -9,16 +9,47 @@ A SKILL.md file has two parts: frontmatter that tells Claude when to load the sk
 ```yaml
 ---
 name: skill-name
-description: One to two sentences — what the skill does and when to use it.
-synonyms: [trigger phrase, alternate phrase]
+description: What the skill does and when to use it. Max 1,024 characters.
 ---
 ```
 
-**`name`** — kebab-case identifier. Required.
+The frontmatter fields follow the [Agent Skills open standard](https://agentskills.io), which is supported across Claude Code, OpenAI Codex, and Cursor. Fields not in the core standard are noted as Claude Code–specific.
 
-**`description`** — what the skill does and the conditions that trigger it. Required. The description is the primary signal Claude uses for automatic activation; a description that states only what the skill does (not when) will be underused.
+### Core fields (standard)
 
-**`synonyms`** — additional user phrasings that invoke this skill. Optional; omit if the skill requires explicit invocation only.
+**`name`** — kebab-case, lowercase letters, numbers, and hyphens only, max 64 characters. If omitted, the skill directory name is used.
+
+**`description`** — what the skill does and the conditions that trigger it. Max 1,024 characters. This is the primary signal the agent uses for automatic activation. A description that states only what the skill does (not when) will be under-triggered. A description that also states when NOT to trigger will prevent misfires on near-neighbours.
+
+### Invocation control (Claude Code)
+
+**`disable-model-invocation: true`** — prevent Claude from loading this skill automatically. Use for workflows with side effects that should only run when you type `/skill-name`. Omit for skills that should activate from context.
+
+**`user-invocable: false`** — hide from the `/` menu. Use for background knowledge skills that Claude should load automatically but that have no meaningful user command. Omit for everything else.
+
+### Execution fields (Claude Code)
+
+**`context: fork`** — run the skill in an isolated subagent context. The skill body becomes the subagent's prompt; it has no access to the current conversation. Use when the skill must run without conversation history contaminating its output.
+
+**`agent`** — which subagent type to use when `context: fork` is set. Options: `Explore`, `Plan`, `general-purpose`, or any custom agent from `.claude/agents/`. Omit to use `general-purpose`.
+
+**`allowed-tools`** — tools Claude can use without per-use approval when this skill is active. Example: `Read, Grep, Glob` for a read-only skill.
+
+**`model`** — model to use when this skill runs. Omit to inherit the session model.
+
+**`argument-hint`** — hint shown during `/` autocomplete. Example: `[issue-number]` or `[filename] [format]`.
+
+**`hooks`** — lifecycle hooks scoped to this skill.
+
+### String substitutions (Claude Code)
+
+Use these in skill body content:
+
+- `$ARGUMENTS` — all text typed after `/skill-name`
+- `$ARGUMENTS[N]` or `$N` — specific argument by 0-based index
+- `${CLAUDE_SESSION_ID}` — current session identifier
+- `${CLAUDE_SKILL_DIR}` — absolute path to the skill's directory
+- `` !`command` `` — run a shell command before the skill loads; output replaces the placeholder
 
 ---
 

@@ -4,114 +4,148 @@ These five excerpts are taken verbatim from real skill files. Each illustrates a
 
 ---
 
-## Example 1: A Mode Table That Answers Three Questions Per Row
+## Example 1: A Description That Separates Trigger from Anti-trigger
 
-**Source:** `technical-writer` — Modes section
+**Source:** `claude-api` — frontmatter (`anthropics/skills`)
 
-> | Mode | When to use | Output |
-> |---|---|---|
-> | `system-overview` | Document an internal system for a technically literate audience | `OVERVIEW.md` in project root |
-> | `readme` | Write or rewrite a project-level README | `README.md` in project root |
-> | `generic` | User supplies their own topics and document structure | Path specified by user |
+```yaml
+description: "Build apps with the Claude API or Anthropic SDK. TRIGGER when: code
+  imports `anthropic`/`@anthropic-ai/sdk`/`claude_agent_sdk`, or user asks to use
+  Claude API, Anthropic SDKs, or Agent SDK. DO NOT TRIGGER when: code imports
+  `openai`/other AI SDK, general programming, or ML/data-science tasks."
+```
 
 **What this shows:**
 
-Every row answers three questions — what to call this mode, when to choose it, and what it produces. The "When to use" column is a condition, not a description of the output. The "Output" column is an exact path or convention, not a category. No row overlaps with another: the three conditions are mutually exclusive.
+The description names two explicit signal categories. The "TRIGGER when" half lists observable conditions (import statements, explicit user intent) rather than paraphrasing the skill's title. The "DO NOT TRIGGER when" half lists the nearest confusable cases — adjacent tasks a model would otherwise route here. A description that only states what the skill does will misfire on near-neighbours; one that also states what it does not handle will not.
 
 **What an agent typically writes instead:**
 
+```yaml
+description: Helps with Claude API development and SDK integration.
+```
+
+The agent version states the skill's subject without naming any trigger conditions. Every Claude-adjacent request matches it equally, so the model cannot distinguish when to load it versus when not to.
+
+---
+
+## Example 2: A Description That Lists All Entry Points
+
+**Source:** `skill-creator` — frontmatter (`anthropics/skills`)
+
+```yaml
+description: Create new skills, modify and improve existing skills, and measure skill
+  performance. Use when users want to create a skill from scratch, edit, or optimize
+  an existing skill, run evals to test a skill, benchmark skill performance with
+  variance analysis, or optimize a skill's description for better triggering accuracy.
+```
+
+**What this shows:**
+
+The description leads with the capability in three parallel verb phrases ("Create … modify … measure"). The "Use when" clause then exhaustively lists every distinct entry point as a separate clause. Each entry point is a concrete user intent, not a synonym of the others. A user arriving at this skill via any one of six different paths finds their intent reflected in the description. The total length (under 1024 characters) keeps the description within spec.
+
+**What an agent typically writes instead:**
+
+```yaml
+description: Helps create and manage skills for AI agents.
+```
+
+The agent version names the domain without listing entry points. A user who wants to run benchmarks, review trigger accuracy, or write evaluation tests cannot tell from this description whether the skill is relevant.
+
+---
+
+## Example 3: An Activation Table With a Labelled Default
+
+**Source:** `distill-context` — Activation section (this repo)
+
+> ## Activation
+>
+> | Mode | When to use |
+> |---|---|
+> | **update** (default) | AGENTS.md exists and you want to sync it with recent changes |
+> | **research** | No AGENTS.md exists, or user explicitly requests a full analysis |
+> | **realign** | AGENTS.md exists but is structurally wrong, bloated, or stale |
+
+**What this shows:**
+
+Three modes cover every relevant state of `AGENTS.md`: it exists and is current; it does not exist; it exists but is wrong. The conditions are mutually exclusive, phrased as observable facts ("AGENTS.md exists", "does not exist", "is structurally wrong"), not abstract intent categories. The default is labelled inline with `(default)` in the Mode column rather than in a separate section, which prevents a reader from missing it. No mode description requires knowledge of another mode to be understood.
+
+**What an agent typically writes instead:**
+
+> ## Activation
+>
 > | Mode | Description |
 > |---|---|
-> | `system-overview` | Creates a system overview document |
-> | `readme` | Creates a README for your project |
-> | `generic` | General purpose document creation |
+> | **update** | Updates AGENTS.md |
+> | **research** | Researches the project |
+> | **realign** | Realigns the file |
 
-The agent version describes the output rather than the condition. It omits the output artifact entirely. A reader cannot determine when to use a mode, or what they will get, from the description alone.
-
----
-
-## Example 2: A Role Declaration That Names Both Sides of the Contract
-
-**Source:** `write-system-overview` — Your Role section
-
-> You are the workflow manager. You launch sub-agents and confirm that each phase has produced non-empty output. You do not read reference files, research files, or drafts yourself. Pass file paths to sub-agents and let them read what they need.
-
-**What this shows:**
-
-Four sentences. The first names the role. The second states the positive obligation. The third is an explicit prohibition — and it is as important as the obligation, because without it the agent will drift into reading files it is supposed to delegate. The fourth states the correct behaviour as an imperative. The word "yourself" in sentence three is load-bearing: it clarifies that the agent orchestrates, it does not execute.
-
-**What an agent typically writes instead:**
-
-> As the workflow manager, you'll coordinate the different phases of the document creation process, working with specialized sub-agents to research, outline, write, and review the final document. Make sure to verify that each phase completes successfully before moving on.
-
-The agent version states the obligation in a single passive sentence and follows it with a vague instruction ("make sure to verify"). The prohibition is absent. Nothing prevents the agent from reading files directly rather than delegating.
+The agent version states what each mode does rather than when to use it, and omits the default label. A reader cannot determine which mode to choose without already knowing the answer.
 
 ---
 
-## Example 3: Mode Detection That Guards Against Silent Misrouting
+## Example 4: A Decision Tree That Eliminates Prose If-Else
 
-**Source:** `technical-writer` — Mode Detection section (excerpt; additional modes follow the same pattern)
+**Source:** `webapp-testing` — Decision Tree section (`anthropics/skills`)
 
-> If the user specifies a mode, use it. Otherwise, infer from the request:
+> ## Decision Tree: Choosing Your Approach
 >
-> - "write a README" / "document this project" / "generate a README" → `readme`
-> - "write a system overview" / "document this system" / "write an overview" → `system-overview`
-> - User explicitly names `generic`, or provides their own topics/template structure → `generic`
->
-> `generic` is never inferred silently. Only use it when the user explicitly requests it or supplies their own document structure.
->
-> If the mode cannot be determined from the request, ask the user before proceeding.
+> ```
+> User task → Is it static HTML?
+>     ├─ Yes → Read HTML file directly to identify selectors
+>     │         ├─ Success → Write Playwright script using selectors
+>     │         └─ Fails/Incomplete → Treat as dynamic (below)
+>     │
+>     └─ No (dynamic webapp) → Is the server already running?
+>         ├─ No → Run: python scripts/with_server.py --help
+>         │        Then use the helper + write simplified Playwright script
+>         │
+>         └─ Yes → Reconnaissance-then-action:
+>             1. Navigate and wait for networkidle
+>             2. Take screenshot or inspect DOM
+>             3. Identify selectors from rendered state
+>             4. Execute actions with discovered selectors
+> ```
 
 **What this shows:**
 
-Every mode has at least one concrete example phrase, and each phrase maps to exactly one mode with no overlap. The final catch-all (`generic`) carries a named guard: a phrase that prohibits silent inference. The fallback when no mode matches is explicit action (ask), not silent default. The structure is: direct lookup → phrase inference → named guard → fallback. Each layer handles a distinct input state.
+Each branch point is a binary observable condition ("Is it static HTML?", "Is the server already running?"), not a judgment call. Each leaf is an imperative instruction with no ambiguity. The ASCII format expresses a decision structure that would require four or five nested if-then paragraphs in prose — and is more scannable than any of them. The parenthetical "(dynamic webapp)" and "(below)" cross-reference are the only prose additions, and both are structurally necessary.
 
 **What an agent typically writes instead:**
 
-> Determine the appropriate mode based on what the user is asking for. Use `generic` if nothing else seems to fit.
+> Depending on the type of application and whether a server is running, you may need to use different approaches. For static HTML files, you can read them directly. For dynamic webapps, you'll typically need to start a server first, though sometimes the server is already running, in which case you can go straight to automation.
 
-The agent version offers no inference criteria and uses `generic` as a silent default — exactly the failure the guard prevents. Any sufficiently novel user request will produce the wrong output silently.
+The agent version uses "depending on", "you may need", "you'll typically", and "sometimes" — four hedges in two sentences. None of the three conditions are named; all three actions are blurred into optionality.
 
 ---
 
-## Example 4: Processing Rules as Labelled Imperatives
+## Example 5: Parallel Sub-agent Dispatch With Exact Specifications
 
-**Source:** `distill-context` — Update Mode section
+**Source:** `full-review` — Workflow section (`wshobson/commands`)
 
-> **Extraction rules:**
-> - **Permanence:** Only extract information that remains true over time; ignore transient steps
-> - **Novelty:** Skip standard practices; only record project-specific facts
-> - **Conflict:** Newer conversations supersede existing AGENTS.md entries
-> - **Redundancy:** Don't document what is already in README or enforced by tooling
-> - **Density:** Aggressive pruning; one line per fact
-
-**What this shows:**
-
-Each rule has a bold label (a single noun) and a precise imperative statement. No sentence explains why the rule exists. The label functions as a category name that can be referenced elsewhere ("Apply the Density rule here"). The semicolon in each item separates the positive instruction from its inverse — both halves together eliminate ambiguity that the positive alone would leave. Five rules cover the full decision space without overlap.
-
-**What an agent typically writes instead:**
-
-> When extracting information, focus on things that are generally applicable and will remain relevant over time. Try to avoid duplicating information that's already covered in other files. Be concise and don't include too much detail.
-
-The agent version uses three hedges ("generally", "try to avoid", "too much") and gives no named categories. A reader cannot determine what to do with a specific piece of information because the rules offer no decision criteria.
-
----
-
-## Example 5: Sub-Agent Isolation Justified by Named Failure Modes
-
-**Source:** `technical-writer` — Workflow section
-
-> This workflow requires separate sub-agents for each phase. Do not combine them.
+> Execute parallel reviews using Task tool with specialized agents:
 >
-> Context growth degrades style adherence. Self-review is attachment-biased. Mode collapse (researching while writing, validating instead of critiquing) is the primary cause of poor output. Separate sub-agents with isolated contexts solve all three problems.
+> ## 1. Code Quality Review
+> - Use Task tool with subagent_type="code-reviewer"
+> - Prompt: "Review code quality and maintainability for: $ARGUMENTS. Check for code smells, readability, documentation, and adherence to best practices."
+> - Focus: Clean code principles, SOLID, DRY, naming conventions
+>
+> ## 2. Security Audit
+> - Use Task tool with subagent_type="security-auditor"
+> - Prompt: "Perform security audit on: $ARGUMENTS. Check for vulnerabilities, OWASP compliance, authentication issues, and data protection."
+> - Focus: Injection risks, authentication, authorization, data encryption
+>
+> ## 3. Architecture Review
+> - Use Task tool with subagent_type="architect-reviewer"
+> - Prompt: "Review architectural design and patterns in: $ARGUMENTS. Evaluate scalability, maintainability, and adherence to architectural principles."
+> - Focus: Service boundaries, coupling, cohesion, design patterns
 
 **What this shows:**
 
-The rule comes first as an imperative with no hedging. The justification follows as three precise failure-mode names: context growth, attachment bias, and mode collapse. Each failure mode is named, not described at length. "Mode collapse" is defined with a parenthetical example, which is the right amount of explanation — enough to recognise the failure, not enough to explain how to prevent it. This paragraph earns its place because it prevents a specific, costly shortcut. A skill that does not justify isolation will have agents combining phases.
+Each sub-agent section has exactly three items: which tool and subagent type to use, what prompt to pass (including `$ARGUMENTS` substitution), and what focus area constrains the review. The structure is identical for every agent, making parallelism explicit: six sections in identical format signals that six agents run concurrently. No prose narrative wraps the list. The prompt text is quoted verbatim — the executing agent receives exactly this string.
 
 **What an agent typically writes instead:**
 
-> It's best to use separate sub-agents for each phase so that the context stays manageable and each agent can focus on its specific task without being influenced by what came before.
+> Launch multiple review agents in parallel to check different aspects of the code. One should focus on code quality and another on security, while a third reviews the architecture.
 
-The agent version uses passive ("it's best") and vague causation ("influenced by what came before"). The failure modes are unnamed. Nothing in this paragraph would stop an agent from combining phases when it judges the context to be "manageable".
-
+The agent version names three categories without specifying which tool to use, what prompt to pass, or how `$ARGUMENTS` is substituted. An executing agent would have to invent these parameters, producing inconsistent results.

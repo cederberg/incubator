@@ -4,11 +4,14 @@ Verify each item explicitly.
 
 ## Frontmatter
 
-- [ ] `name` is present and uses kebab-case
-- [ ] `description` states what the skill does and when to use it (not what it produces alone)
-- [ ] `description` names at least one concrete trigger condition, not only a capability statement
+- [ ] `name` uses kebab-case and contains only lowercase letters, numbers, and hyphens (max 64 characters)
+- [ ] `description` is present and states what the skill does and when to trigger (not only a capability statement)
+- [ ] `description` names at least one concrete trigger condition — an observable user action, phrasing pattern, or file state
+- [ ] `description` is under 1,024 characters
 - [ ] `description` contains no hedging language ("typically", "usually", "generally", "may")
-- [ ] No synonym in the frontmatter duplicates a phrase already covered by the Mode Detection inference rules
+- [ ] If the skill has near-neighbour skills that could be confused with it: `description` includes at least one explicit non-trigger condition
+- [ ] `disable-model-invocation: true` is set for any skill with side effects that must not run automatically
+- [ ] `context: fork` is set for any skill that must run without access to conversation history
 
 ## Activation and Modes
 
