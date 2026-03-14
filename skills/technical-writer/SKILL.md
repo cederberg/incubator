@@ -51,13 +51,11 @@ Set the mode path variable once and use it throughout:
 
 ```
 MODE=<detected-mode>           # system-overview, readme, or generic
-MODE_DIR=references/modes/$MODE   # does not exist for generic; see below
+MODE_DIR=references/modes/$MODE
 WORK_DIR=$(mktemp -d)
 ```
 
 Pass `$WORK_DIR` and `$MODE_DIR` to all sub-agents so they read from consistent locations.
-
-**For `generic` mode:** there is no pre-authored `references/modes/generic/` directory. Before beginning Phase 1, materialise the user's input into `$WORK_DIR/topics.md` and `$WORK_DIR/template.md`, then use `$WORK_DIR` as the source for these files in all subsequent phases. See the Generic Mode section below.
 
 ---
 
