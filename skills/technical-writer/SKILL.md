@@ -1,7 +1,7 @@
 ---
 name: technical-writer
-description: Writes or reviews technical documents with named modes. Supported modes: system-overview, readme, generic.
-synonyms: [write system overview, write a README, document this system, document this project]
+description: Writes or reviews technical documents and skill files with named modes. Supported modes: system-overview, readme, skill-writer, generic.
+synonyms: [write system overview, write a README, document this system, document this project, write a skill, create a skill, review this skill]
 ---
 
 # technical-writer
@@ -12,6 +12,7 @@ synonyms: [write system overview, write a README, document this system, document
 |---|---|---|
 | `system-overview` | Document an internal system for a technically literate audience | `OVERVIEW.md` in project root |
 | `readme` | Write or rewrite a project-level README | `README.md` in project root |
+| `skill-writer` | Write a new skill file or review and polish an existing one | `SKILL.md` in a skill directory |
 | `generic` | User supplies their own topics and document structure | Path specified by user |
 
 ## Mode Detection
@@ -20,6 +21,8 @@ If the user specifies a mode, use it. Otherwise, infer from the request:
 
 - "write a README" / "document this project" / "generate a README" → `readme`
 - "write a system overview" / "document this system" / "write an overview" → `system-overview`
+- "write a skill" / "create a skill" / "new skill" / "add a skill" → `skill-writer`
+- "review this skill" / "improve this skill" / "polish this skill" → `skill-writer` + structural review variant
 - User explicitly names `generic`, or provides their own topics/template structure → `generic`
 
 `generic` is never inferred silently. Only use it when the user explicitly requests it or supplies their own document structure.
@@ -58,7 +61,7 @@ Context growth degrades style adherence. Self-review is attachment-biased. Mode 
 Set the mode path variable once and use it throughout:
 
 ```
-MODE=<detected-mode>           # system-overview, readme, or generic
+MODE=<detected-mode>           # system-overview, readme, skill-writer, or generic
 MODE_DIR=references/modes/$MODE
 WORK_DIR=$(mktemp -d)
 ```
@@ -111,6 +114,15 @@ Each researcher:
 | Researcher C | Usage | `$WORK_DIR/usage.md` |
 | Researcher D | Configuration | `$WORK_DIR/config.md` |
 | Researcher E | Contribution & support | `$WORK_DIR/contributing.md` |
+
+**skill-writer:**
+
+| Agent | Scope | Output file |
+|---|---|---|
+| Researcher A | Task, activation & modes | `$WORK_DIR/task.md` |
+| Researcher B | Workflow & input/output contracts | `$WORK_DIR/workflow.md` |
+
+Use two researchers for skills with multiple modes or sub-agent workflows. Use one researcher for single-step skills with no modes.
 
 **generic:** derive scope assignments from the topics in `$WORK_DIR/topics.md`. Assign one researcher per topic; name output files after the topic.
 
@@ -178,9 +190,39 @@ Once the review passes, copy `$WORK_DIR/draft.md` to the appropriate output path
 |---|---|
 | `system-overview` | `OVERVIEW.md` in the project root |
 | `readme` | `README.md` in the project root |
+| `skill-writer` | `SKILL.md` in a new skill directory; ask the user for the directory name if not provided |
 | `generic` | path specified by user |
 
 Use the path requested by the user if they specified one.
+
+---
+
+## Skill-writer Mode
+
+The `skill-writer` mode produces or improves a `SKILL.md` file. It differs from other modes in two ways: the subject of research is the skill's task domain and workflow requirements, not a codebase; and Phase 5 uses the **"review instructions"** label.
+
+### Writing a new skill
+
+Before starting Phase 1:
+
+1. Identify the skill name and directory. If the user has not provided a name, ask: "What should the skill be called?" before proceeding.
+
+2. Confirm the skill directory path. The default is `skills/<skill-name>/` relative to the project root, or `.claude/skills/<skill-name>/` if the project uses the local skills convention.
+
+**Phase 1 override:** The general Phase 1 instructions (enumerate modules, external systems, documentation files) do not apply. Instead, the discovery agent reads the user's description and any existing skill files in the project directory. It writes `$WORK_DIR/discovery.md` with three sections: the task the skill must perform, the activation conditions mentioned, and any output artifacts or file paths specified.
+
+Phase 2 passes `references/modes/skill-writer/topics.md` to both researchers. Researcher A takes topics 1–3 (task, activation, modes); Researcher B takes topics 4–6 (workflow, input/output contracts, reference file requirements).
+
+Phase 5 uses the **"review instructions"** label and receives `references/modes/skill-writer/examples.md` and `references/modes/skill-writer/checklist.md`.
+
+### Reviewing an existing skill
+
+When the user provides an existing `SKILL.md` to review, use the structural review variant as defined in the Review Variant section above. The skill-writer-specific parameters are:
+
+- Reviewer label: **"review instructions"**
+- Checklist: `references/modes/skill-writer/checklist.md`
+- Examples: `references/modes/skill-writer/examples.md`
+- Writer (if issues found): also receives `references/modes/skill-writer/template.md`
 
 ---
 
