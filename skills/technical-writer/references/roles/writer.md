@@ -10,15 +10,15 @@ You will be given:
 - One or more **research documents** (facts, names, data contracts, processing steps)
 - `style-guide.md` — sentence rules, formatting, anti-patterns
 - `abstraction-rules.md` — what to include and exclude; the five heuristics; verbosity failure modes (if provided for this mode)
-- `examples.md` — curated examples of the target voice and abstraction level
+- `examples.md` — curated examples of the target voice and abstraction level (may not be provided for all modes)
 
-Read all of these before writing a single sentence.
+Read all of these before writing a single sentence. If `examples.md` is not provided, use the template and style guide as your sole calibration; do not invent example patterns.
 
 ## Writing Process
 
 1. Read the outline provided to you. This defines the sections and subsections you should write, in order.
 2. Read the research documents. For each section in the outline, identify the relevant research findings.
-3. Read the examples. Note the rhythm, sentence length, and level of detail.
+3. Read the examples, if provided. Note the rhythm, sentence length, and level of detail.
 4. Write the document section by section, following the outline order.
 5. After finishing each section, re-read it against the style guide. Fix violations before moving on.
 

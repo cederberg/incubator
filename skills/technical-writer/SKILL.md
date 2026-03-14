@@ -1,6 +1,6 @@
 ---
 name: technical-writer
-description: Writes technical documents with named modes. Supported modes: system-overview, readme.
+description: Writes or reviews technical documents with named modes. Supported modes: system-overview, readme, generic.
 synonyms: [write system overview, write a README, document this system, document this project]
 ---
 
@@ -12,6 +12,7 @@ synonyms: [write system overview, write a README, document this system, document
 |---|---|---|
 | `system-overview` | Document an internal system for a technically literate audience | `OVERVIEW.md` in project root |
 | `readme` | Write or rewrite a project-level README | `README.md` in project root |
+| `generic` | User supplies their own topics and document structure | Path specified by user |
 
 ## Mode Detection
 
@@ -19,8 +20,20 @@ If the user specifies a mode, use it. Otherwise, infer from the request:
 
 - "write a README" / "document this project" / "generate a README" → `readme`
 - "write a system overview" / "document this system" / "write an overview" → `system-overview`
+- User explicitly names `generic`, or provides their own topics/template structure → `generic`
 
-**If the mode cannot be determined from the request:** ask the user before proceeding. Do not default silently — a README written with system-overview structure, or a system overview written with README brevity, is a worse outcome than a clarification question.
+**`generic` is never inferred silently.** Only use it when the user explicitly requests it or supplies their own document structure. A document written with a mismatched mode structure is a worse outcome than a clarification question.
+
+**If the mode cannot be determined from the request:** ask the user before proceeding.
+
+## Review Variant
+
+When the user provides an **existing document** to review rather than asking for a new one to be written, ask (or accept as an explicit flag):
+
+- **Structural** — skip research, discovery, and outline; run the reviewer agent directly on the existing document using the mode's `checklist.md` and shared style rules. No codebase access required.
+- **Accuracy** — run the full pipeline, but seed the writer with the existing document as a baseline draft rather than starting from blank. Research checks whether the document's claims reflect current reality.
+
+Mode is inferred or specified as normal. The review variant does not change the mode — it changes how the pipeline is entered.
 
 ---
 
@@ -37,16 +50,20 @@ Context growth degrades style adherence. Self-review is attachment-biased. Mode 
 Set the mode path variable once and use it throughout:
 
 ```
-MODE=<detected-mode>           # system-overview or readme
-MODE_DIR=references/modes/$MODE
+MODE=<detected-mode>           # system-overview, readme, or generic
+MODE_DIR=references/modes/$MODE   # does not exist for generic; see below
 WORK_DIR=$(mktemp -d)
 ```
 
 Pass `$WORK_DIR` and `$MODE_DIR` to all sub-agents so they read from consistent locations.
 
+**For `generic` mode:** there is no pre-authored `references/modes/generic/` directory. Before beginning Phase 1, materialise the user's input into `$WORK_DIR/topics.md` and `$WORK_DIR/template.md`, then use `$WORK_DIR` as the source for these files in all subsequent phases. See the Generic Mode section below.
+
 ---
 
 ### Phase 1: Discovery
+
+*(Skip this phase for the structural review variant — go directly to Phase 5.)*
 
 Run a **single lightweight discovery agent**. Its job is to enumerate the project's components, integrations, and existing documentation so that researcher scopes can be assigned without gaps.
 
@@ -62,12 +79,14 @@ The discovery agent writes its output to `$WORK_DIR/discovery.md` with three sec
 
 ### Phase 2: Research
 
-Launch **multiple researcher sub-agents in parallel**, each scoped to a distinct topic from `$MODE_DIR/topics.md`.
+*(Skip this phase for the structural review variant — go directly to Phase 5.)*
+
+Launch **multiple researcher sub-agents in parallel**, each scoped to a distinct topic from the mode's `topics.md`.
 
 Each researcher:
 - Follows `references/roles/researcher.md`
 - Receives `$WORK_DIR/discovery.md` to orient themselves
-- Receives `$MODE_DIR/topics.md` to understand their scope
+- Receives the mode's `topics.md` to understand their scope
 - Writes its full output to an assigned file in `$WORK_DIR/`
 
 **Typical scope assignments by mode:**
@@ -91,6 +110,8 @@ Each researcher:
 | Researcher D | Configuration | `$WORK_DIR/config.md` |
 | Researcher E | Contribution & support | `$WORK_DIR/contributing.md` |
 
+**generic:** derive scope assignments from the topics in `$WORK_DIR/topics.md`. Assign one researcher per topic; name output files after the topic.
+
 Adapt scopes to the actual project using `$WORK_DIR/discovery.md`. For a small project, two or three researchers may suffice.
 
 After all researchers complete, confirm each output file is non-empty using `wc -c` before proceeding.
@@ -99,9 +120,12 @@ After all researchers complete, confirm each output file is non-empty using `wc 
 
 ### Phase 3: Outline
 
+*(Skip this phase for the structural review variant — go directly to Phase 5.)*
+*(Skip this phase for the accuracy review variant — use the provided document as the baseline draft and go to Phase 5.)*
+
 Launch a **single outliner sub-agent** with:
 - `references/roles/outliner.md`
-- `$MODE_DIR/template.md`
+- The mode's `template.md` (from `$MODE_DIR/template.md` or `$WORK_DIR/template.md` for generic)
 - All Phase 2 output files from `$WORK_DIR/`
 
 The outliner writes a document skeleton to `$WORK_DIR/outline.md`.
@@ -110,16 +134,18 @@ The outliner writes a document skeleton to `$WORK_DIR/outline.md`.
 
 ### Phase 4: Write
 
+*(Skip this phase for both review variants.)*
+
 Launch a **single writer sub-agent** with:
 - `references/roles/writer.md`
-- `$MODE_DIR/template.md`
-- `$MODE_DIR/examples.md`
+- The mode's `template.md`
 - `references/rules/style-guide.md`
 - `$WORK_DIR/outline.md`
 - All Phase 2 output files from `$WORK_DIR/`
 
-**For `system-overview` mode only**, also pass:
-- `references/rules/abstraction-rules.md`
+Also pass if available for the mode:
+- `examples.md` — pass if present (`$MODE_DIR/examples.md`); omit for generic unless the user provided one
+- `references/rules/abstraction-rules.md` — pass for `system-overview` only
 
 The writer fills in the outline section by section and writes the draft to `$WORK_DIR/draft.md`.
 
@@ -129,12 +155,12 @@ The writer fills in the outline section by section and writes the draft to `$WOR
 
 Launch a **single reviewer sub-agent** with:
 - `references/roles/reviewer.md`
-- `$MODE_DIR/examples.md`
-- `$MODE_DIR/checklist.md`
-- `$WORK_DIR/draft.md`
+- `$WORK_DIR/draft.md` (or the existing document path for the structural review variant)
 
-**For `system-overview` mode only**, also pass:
-- `references/rules/abstraction-rules.md`
+Also pass if available for the mode:
+- `examples.md` — pass if present; omit for generic unless user provided one
+- `checklist.md` — pass if present (`$MODE_DIR/checklist.md`); omit for generic unless user provided one
+- `references/rules/abstraction-rules.md` — pass for `system-overview` only
 
 Read the reviewer's output. If it finds issues:
 1. Launch a **new writer sub-agent** with the draft, the numbered review output, and the same file paths as Phase 4
@@ -153,8 +179,27 @@ Once the review passes, copy `$WORK_DIR/draft.md` to the appropriate output path
 |---|---|
 | `system-overview` | `OVERVIEW.md` in the project root |
 | `readme` | `README.md` in the project root |
+| `generic` | path specified by user |
 
 Use the path requested by the user if they specified one.
+
+---
+
+## Generic Mode
+
+The `generic` mode has no pre-authored mode files. Before starting Phase 1:
+
+1. **Extract research topics** from the user's description — what areas to investigate, what the document should cover. If the user has not provided topics, ask: "What areas should the researchers investigate?"
+
+2. **Extract document structure** — section names, ordering, and per-section guidance. If the user has not described a structure, ask: "What sections should the document contain, and what should each cover?"
+
+3. **Materialise** these as files in `$WORK_DIR/`:
+   - Write topics to `$WORK_DIR/topics.md` in the same format as other `topics.md` files
+   - Write the document structure to `$WORK_DIR/template.md` in the same format as other `template.md` files
+
+4. Proceed identically to any other mode from Phase 1 onward, using `$WORK_DIR/topics.md` and `$WORK_DIR/template.md` where other modes use `$MODE_DIR/` equivalents.
+
+**If the user provides neither topics nor structure, ask before proceeding.** Generic mode without these inputs produces a worse outcome than a clarification question.
 
 ---
 
@@ -173,9 +218,11 @@ Use the path requested by the user if they specified one.
 
 ### Mode-specific (under `references/modes/<mode>/`)
 
-| File | Used By | Purpose |
-|---|---|---|
-| `topics.md` | Researcher agents | Research scope definitions for this document type |
-| `template.md` | Outliner + Writer | Section order and per-section content guidance |
-| `examples.md` | Writer + Reviewer | Target voice; annotated correct examples |
-| `checklist.md` | Reviewer | Structural invariants to verify |
+| File | Required | Used By | Purpose |
+|---|---|---|---|
+| `topics.md` | Yes | Researcher agents | Research scope definitions for this document type |
+| `template.md` | Yes | Outliner + Writer | Section order and per-section content guidance |
+| `examples.md` | No | Writer + Reviewer | Target voice; annotated correct examples |
+| `checklist.md` | No | Reviewer | Structural invariants to verify |
+
+For `generic` mode, `topics.md` and `template.md` are materialised into `$WORK_DIR/` at invocation time. `examples.md` and `checklist.md` are used only if the user supplies them.
