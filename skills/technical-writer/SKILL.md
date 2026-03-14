@@ -171,7 +171,7 @@ Also pass if available for the mode:
 - `checklist.md` — pass if present (`$MODE_DIR/checklist.md`); omit for generic unless user provided one
 - `references/rules/abstraction-rules.md` — pass for `system-overview` only
 
-Note that when reviewing instructional content (e.g. a skill file) rather than a document, label the sub-agent **"review instructions"** instead.
+Note that when reviewing instructional content (e.g. a skill file) rather than a document, label the sub-agent **"review instructions"** instead. When the skill being reviewed references other files as sub-agent inputs (role files, rule files, mode files), pass those referenced files to the reviewer as well so it can verify the instructions are consistent with them.
 
 Read the reviewer's output. If it finds issues:
 1. Launch a **new writer sub-agent** with the draft, the numbered review output, and the same file paths as Phase 4
