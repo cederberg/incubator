@@ -30,10 +30,18 @@ If the user specifies a mode, use it. Otherwise, infer from the request:
 
 When the user provides an **existing document** to review rather than asking for a new one to be written, ask (or accept as an explicit flag):
 
-- **Structural** — skip research, discovery, and outline; run the reviewer agent directly on the existing document using the mode's `checklist.md` and shared style rules. No codebase access required.
-- **Accuracy** — run the full pipeline, but seed the writer with the existing document as a baseline draft rather than starting from blank. Research checks whether the document's claims reflect current reality.
+- **Structural** — run the reviewer directly on the existing document using the mode's `checklist.md` and shared style rules. No codebase access required.
+- **Accuracy** — run the full pipeline seeded with the existing document as the baseline draft. Research checks whether the document's claims reflect current reality.
 
 Mode is inferred or specified as normal. The review variant does not change the mode — it changes how the pipeline is entered.
+
+| Phase | Write (default) | Structural review | Accuracy review |
+|---|---|---|---|
+| 1: Discovery | Run | Skip | Run |
+| 2: Research | Run | Skip | Run |
+| 3: Outline | Run | Skip | Skip |
+| 4: Write | Run | Skip | Run — seeded with provided document |
+| 5: Review | Run | Run on provided document | Run |
 
 ---
 
@@ -61,8 +69,6 @@ Pass `$WORK_DIR` and `$MODE_DIR` to all sub-agents so they read from consistent 
 
 ### Phase 1: Discovery
 
-*(Skip this phase for the structural review variant — go directly to Phase 5.)*
-
 Run a **single lightweight discovery agent**. Its job is to enumerate the project's components, integrations, and existing documentation so that researcher scopes can be assigned without gaps.
 
 The discovery agent writes its output to `$WORK_DIR/discovery.md` with three sections:
@@ -76,8 +82,6 @@ The discovery agent writes its output to `$WORK_DIR/discovery.md` with three sec
 ---
 
 ### Phase 2: Research
-
-*(Skip this phase for the structural review variant — go directly to Phase 5.)*
 
 Launch **multiple researcher sub-agents in parallel**, each scoped to a distinct topic from the mode's `topics.md`.
 
@@ -118,12 +122,9 @@ After all researchers complete, confirm each output file is non-empty using `wc 
 
 ### Phase 3: Outline
 
-*(Skip this phase for the structural review variant — go directly to Phase 5.)*
-*(Skip this phase for the accuracy review variant — use the provided document as the baseline draft and go to Phase 5.)*
-
 Launch a **single outliner sub-agent** with:
 - `references/roles/outliner.md`
-- The mode's `template.md` (from `$MODE_DIR/template.md` or `$WORK_DIR/template.md` for generic)
+- `$MODE_DIR/template.md`
 - All Phase 2 output files from `$WORK_DIR/`
 
 The outliner writes a document skeleton to `$WORK_DIR/outline.md`.
@@ -131,8 +132,6 @@ The outliner writes a document skeleton to `$WORK_DIR/outline.md`.
 ---
 
 ### Phase 4: Write
-
-*(Skip this phase for both review variants.)*
 
 Launch a **single writer sub-agent** with:
 - `references/roles/writer.md`
@@ -153,7 +152,7 @@ The writer fills in the outline section by section and writes the draft to `$WOR
 
 Launch a **single reviewer sub-agent** with:
 - `references/roles/reviewer.md`
-- `$WORK_DIR/draft.md` (or the existing document path for the structural review variant)
+- The document to review: `$WORK_DIR/draft.md` for write/accuracy; the provided document path for structural review
 
 Also pass if available for the mode:
 - `examples.md` — pass if present; omit for generic unless user provided one
