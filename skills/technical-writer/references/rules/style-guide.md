@@ -14,7 +14,7 @@ Two voices apply depending on document type. Choose one; do not mix within a doc
   - Subject: the action or rule
   - Form: imperative mood
   - Example: "Split the paragraph." "Remove it."
-  - Not: passive declarations that satisfy the Documentation voice rule
+  - Not: "The draft should be overwritten with the revised version."
 
 No first person in either voice. Never "we", "our", or "I".
 
