@@ -13,13 +13,31 @@ description: What the skill does and when to use it. Max 1,024 characters.
 ---
 ```
 
-The frontmatter fields follow the [Agent Skills open standard](https://agentskills.io), which is supported across Claude Code, OpenAI Codex, and Cursor. Fields not in the core standard are noted as Claude Code–specific.
+The frontmatter fields follow the [Agent Skills open standard](https://agentskills.io), which is supported across Claude Code, Gemini CLI, OpenAI Codex, and Cursor. Fields not in the core standard are noted as Claude Code–specific.
+
+**Portability caveat:** Gemini CLI and OpenAI Codex only read `name` and `description` from `SKILL.md`. All other fields are silently ignored by those tools. Claude Code–specific fields still work correctly in Claude Code; they cause no errors elsewhere — they are just inert.
 
 ### Core fields (standard)
 
 **`name`** — kebab-case, lowercase letters, numbers, and hyphens only, max 64 characters. If omitted, the skill directory name is used.
 
 **`description`** — what the skill does and the conditions that trigger it. Max 1,024 characters. This is the primary signal the agent uses for automatic activation. A description that states only what the skill does (not when) will be under-triggered. A description that also states when NOT to trigger will prevent misfires on near-neighbours.
+
+**`allowed-tools`** — comma- or space-delimited list of tools the agent may use without per-use approval when this skill is active. Example: `Read, Grep, Glob` for a read-only skill. Claude Code extends this with scoped syntax: `Bash(python3 scripts/*)` permits only matching `Bash` calls.
+
+**`license`** — license name or path to a bundled license file. Example: `MIT` or `LICENSE.txt`. No functional effect; used by skill registries and auditing tools.
+
+**`compatibility`** — short free-text note on environment requirements (max 500 chars). Experimental; support varies across agents. Omit unless the skill has hard dependencies that would silently fail in a wrong environment.
+
+**`metadata`** — arbitrary key-value map for client-specific properties. Example:
+
+```yaml
+metadata:
+  author: your-org
+  version: "1.0"
+```
+
+No functional effect in any current agent; used by registries and catalogues.
 
 ### Invocation control (Claude Code)
 
@@ -32,8 +50,6 @@ The frontmatter fields follow the [Agent Skills open standard](https://agentskil
 **`context: fork`** — run the skill in an isolated subagent context. The skill body becomes the subagent's prompt; it has no access to the current conversation. Use when the skill must run without conversation history contaminating its output.
 
 **`agent`** — which subagent type to use when `context: fork` is set. Options: `Explore`, `Plan`, `general-purpose`, or any custom agent from `.claude/agents/`. Omit to use `general-purpose`.
-
-**`allowed-tools`** — tools Claude can use without per-use approval when this skill is active. Example: `Read, Grep, Glob` for a read-only skill.
 
 **`model`** — model to use when this skill runs. Omit to inherit the session model.
 
