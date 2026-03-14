@@ -12,12 +12,12 @@
 - Sentences should not exceed ~20 words. Split long sentences at natural boundaries.
 - No hedging words: "typically", "usually", "generally", "in most cases", "often". Either the rule applies or the exception is worth its own sentence.
 - No filler openers: "It is worth noting that…", "It should be mentioned that…", "As you can see…" — cut entirely.
-- No justification prose. State what the system does or what the rule requires. Exception: include rationale when it determines how to apply the rule to cases not listed. Never "This was designed for…" or "The reason we do X is…"
+- No justification prose. State what the system does or what the rule requires. Include rationale only when it determines how to apply the rule to cases not listed. Never "This was designed for…" or "The reason we do X is…"
 
 ## Paragraph Rules
 
 - Two to four sentences per paragraph. More is a sign the paragraph covers two things.
-- One idea per paragraph. If a paragraph ends with something unrelated to its first sentence, split it.
+- One idea per paragraph. Split paragraphs that contain unrelated ideas.
 - No transition sentences between paragraphs ("Now that we've covered X, let's look at Y…").
 
 ## Formatting
@@ -27,11 +27,11 @@
 - Bold is not for emphasis. If a sentence needs emphasis, rewrite it.
 - Legitimate uses: term in a definition list (`- **COMPLETED** — Processing succeeded`), named option introduced inline (`**Structural** — run the reviewer…`), category label in a rule list (`**Permanence:** Only extract…`).
 
-### Note:
-- Use "Note:" for a caveat or exception that cannot be folded into the main text without disrupting flow.
-- One "Note:" per section is typical. Two is the maximum.
+### Note Usage
+- Use "Note:" for a caveat or exception that would require a parenthetical or subordinate clause mid-sentence to include inline.
+- Two is the maximum per section.
 - Format: `Note that <fact>.` — a complete sentence, not a fragment.
-- Do not use "Note:" to explain the implementation behind a rule.
+- Do not use "Note:" to explain why a rule exists.
 
 ### Tables
 - Use tables for matrix relationships only: when two named dimensions interact (e.g. event type × message type).
@@ -39,13 +39,13 @@
 
 ### ASCII Diagrams
 - Use ASCII diagrams for system topology and state machines.
-- Do not use them for data structures, call sequences, or class hierarchies.
+- Do not use ASCII diagrams for data structures, call sequences, or class hierarchies.
 
 ### Lists
 - Bullet lists for finite sets of named things: statuses, message types, fields.
 - Numbered lists for ordered sequences: processing steps, priority tiers, resolution cases.
 - No nested bullets beyond one level deep.
-- Each bullet item: bold name, dash, short description. No trailing period.
+- Each bullet: bold name, dash, short description. No trailing period.
 
 ## Terminology
 
