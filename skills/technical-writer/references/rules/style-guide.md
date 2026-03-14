@@ -49,7 +49,7 @@
 
 ## Terminology
 
-- Use the document's own names consistently. A named concept has one name throughout.
+- Name each concept once; use that name without variation thereafter.
 - Introduce each name once (in its definition or on first use) and reference it by name thereafter.
 - Named things are never paraphrased after introduction. Not "the research step" after Phase 2: Research has been named. Not "the delivery service" after Delivery Gateway has been named.
 
