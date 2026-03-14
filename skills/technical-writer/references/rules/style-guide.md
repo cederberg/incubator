@@ -16,7 +16,7 @@
 
 ## Paragraph Rules
 
-- Two to four sentences per paragraph. More is a sign the paragraph covers two things.
+- Two to four sentences per paragraph. A paragraph exceeding four sentences covers more than one idea and must be split.
 - One idea per paragraph. Split paragraphs that contain unrelated ideas.
 - No transition sentences between paragraphs ("Now that we've covered X, let's look at Y…").
 
@@ -35,7 +35,7 @@
 
 ### Tables
 - Use tables for matrix relationships only: when two named dimensions interact (e.g. event type × message type).
-- Not for simple lists that happen to have two columns.
+- Tables are not used for simple lists that happen to have two columns.
 
 ### ASCII Diagrams
 - Use ASCII diagrams for system topology and state machines.
@@ -45,12 +45,11 @@
 - Bullet lists for finite sets of named things: statuses, message types, fields.
 - Numbered lists for ordered sequences: processing steps, priority tiers, resolution cases.
 - No nested bullets beyond one level deep.
-- Each bullet that introduces a named item: bold name, dash, short description. No trailing period.
+- Each bullet in a named-item list follows this format: **Name** — short description. No trailing period.
 
 ## Terminology
 
-- Name each concept once; use that name without variation thereafter.
-- Introduce each name once (in its definition or on first use) and reference it by name thereafter.
+- Each concept has one name, introduced at its definition or first use, and referenced by that name thereafter without variation.
 - Named things are never paraphrased after introduction. Not "the research step" after Phase 2: Research has been named. Not "the delivery service" after Delivery Gateway has been named.
 
 ## Section Headings
