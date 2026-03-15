@@ -1,4 +1,16 @@
-# Research Topics: Skill File
+# Discovery and Research: Skill File
+
+## Phase 1: Discovery
+
+Ignore the default Phase 1 instructions (enumerate modules, external systems, documentation files). Research the skill's task domain and workflow requirements, not a codebase.
+
+Read the user's description and any existing skill files in the project directory. Write `$WORK_DIR/discovery.md` with three sections:
+
+- **Task** — the task the skill must perform
+- **Activation conditions** — the activation conditions mentioned
+- **Output artifacts** — any output artifacts or file paths specified
+
+## Phase 2: Research Topics
 
 | Topic | Description | Output file |
 |---|---|---|
