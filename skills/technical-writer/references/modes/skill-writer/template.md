@@ -1,6 +1,6 @@
 # Skill File Structure Template
 
-A SKILL.md file has two parts: frontmatter that tells Claude when to load the skill, and a body with instructions Claude follows when the skill runs.
+Structure a SKILL.md file in two parts: frontmatter and a skill body. Frontmatter tells Claude when to load the skill. The body contains the instructions Claude follows when the skill runs.
 
 ---
 
@@ -13,15 +13,15 @@ description: What the skill does and when to use it. Max 1,024 characters.
 ---
 ```
 
-The frontmatter fields follow the [Agent Skills open standard](https://agentskills.io), which is supported across Claude Code, Gemini CLI, OpenAI Codex, and Cursor. Fields not in the core standard are noted as Claude Code–specific.
+Follow the [Agent Skills open standard](https://agentskills.io), supported across Claude Code, Gemini CLI, OpenAI Codex, and Cursor. Mark fields not in the core standard as Claude Code–specific.
 
-**Portability caveat:** Gemini CLI and OpenAI Codex only read `name` and `description` from `SKILL.md`. All other fields are silently ignored by those tools. Claude Code–specific fields still work correctly in Claude Code; they cause no errors elsewhere — they are just inert.
+**Portability caveat:** Gemini CLI and OpenAI Codex only read `name` and `description` from `SKILL.md`. Those tools silently ignore all other fields. Claude Code–specific fields still work correctly in Claude Code; they cause no errors elsewhere — they are just inert.
 
 ### Core fields (standard)
 
-**`name`** — kebab-case, lowercase letters, numbers, and hyphens only, max 64 characters. If omitted, the skill directory name is used.
+**`name`** — kebab-case, lowercase letters, numbers, and hyphens only, max 64 characters. If omitted, Claude uses the skill directory name.
 
-**`description`** — what the skill does and the conditions that trigger it. Max 1,024 characters. This is the primary signal the agent uses for automatic activation. A description that states only what the skill does (not when) will be under-triggered. A description that also states when NOT to trigger will prevent misfires on near-neighbours.
+**`description`** — what the skill does and the conditions that trigger it. Max 1,024 characters. This is the primary signal the agent uses for automatic activation. Include when to trigger, not only what the skill does — omitting the trigger condition causes under-activation. Include when NOT to trigger to prevent misfires on near-neighbours.
 
 **`allowed-tools`** — comma- or space-delimited list of tools the agent may use without per-use approval when this skill is active. Example: `Read, Grep, Glob` for a read-only skill. Claude Code extends this with scoped syntax: `Bash(python3 scripts/*)` permits only matching `Bash` calls.
 
@@ -47,7 +47,7 @@ No functional effect in any current agent; used by registries and catalogues.
 
 ### Execution fields (Claude Code)
 
-**`context: fork`** — run the skill in an isolated subagent context. The skill body becomes the subagent's prompt; it has no access to the current conversation. Use when the skill must run without conversation history contaminating its output.
+**`context: fork`** — run the skill in an isolated subagent context. Use when the skill must run without conversation history contaminating its output. The subagent receives the skill body as its prompt and has no access to the current conversation.
 
 **`agent`** — which subagent type to use when `context: fork` is set. Options: `Explore`, `Plan`, `general-purpose`, or any custom agent from `.claude/agents/`. Omit to use `general-purpose`.
 
@@ -71,47 +71,59 @@ Use these in skill body content:
 
 ## Skill Body
 
+### Section Order
+
+1. **Frontmatter** (required)
+2. **Skill Name / H1** (required)
+3. **Activation** (required)
+4. **Preconditions** (optional)
+5. *(other sections as needed)*
+6. **Workflow** (required)
+7. **Output** (required)
+8. **Reference Files** (optional)
+
+---
+
 ### Skill Name (H1)
 
-The skill name as the document's H1 heading. Matches the `name` frontmatter field in human-readable form.
+Use the skill name as the document's H1 heading. Match the `name` frontmatter field in human-readable form.
 
 ---
 
-### Modes (for multi-mode skills)
+### Activation
 
-A table defining each named mode.
+State the conditions that trigger the skill and, for multi-mode skills, how the agent selects among modes. Choose one of three forms depending on branching complexity.
 
-| Mode | When to use | Output |
-|---|---|---|
-| `mode-name` | The distinguishing condition for this mode | The artifact produced |
+**Prose trigger** — a short statement of the condition that triggers a single-mode skill. State it without hedging.
 
-Include every mode. State the default in the Mode Detection section.
-
-### Mode Detection (for multi-mode skills)
-
-Explicit inference rules covering every mode. State the default or fallback explicitly.
+**Modes table** — a table defining each named mode with its triggering condition and output. Label the default mode inline with `(default)` in the Mode column. Include inference rules directly in or after the table. See Example 3 in `examples.md`.
 
 ```
+## Activation
+
+| Mode | When to use |
+|---|---|
+| **update** (default) | AGENTS.md exists and you want to sync it with recent changes |
+| **research** | No AGENTS.md exists, or user explicitly requests a full analysis |
+
 If the user specifies a mode, use it. Otherwise, infer from the request:
-- [user phrasing A] / [user phrasing B] → `mode-a`
-- [user phrasing C] → `mode-b`
+- "sync" / "update" → `update`
+- "full analysis" / "from scratch" → `research`
 
-[Mode X] is never inferred silently. Use it only when the user explicitly requests it.
-
-If the mode cannot be determined from the request, ask the user before proceeding.
+If the mode cannot be determined, ask the user before proceeding.
 ```
 
----
+Guard any catch-all or generic mode against silent inference. A mode labelled "generic" or "other" must require explicit user selection.
 
-### Activation (for single-mode skills)
+**Decision tree** — an ASCII tree for branching logic too complex for a modes table. Make each branch point a binary observable condition and each leaf an imperative instruction. See Example 4 in `examples.md`.
 
-The condition that triggers this skill. State it without hedging.
+A modes table may appear inside Activation or immediately after it — both placements are valid.
 
 ---
 
 ### Preconditions (optional)
 
-A bullet list of guards that must be true before the skill runs. Include only guards that, if violated, would cause the skill to produce incorrect output or require the user to intervene mid-run. Omit this section if no such guards exist.
+List guards that must be true before the skill runs. Include only guards that, if violated, would cause incorrect output or require mid-run intervention. Omit this section if no such guards exist.
 
 ---
 
@@ -131,7 +143,7 @@ One paragraph. State what you do and what you do NOT do. Name the sub-agent role
 
 **For orchestrator skills** — named phases, each with a sub-agent label, inputs, and an output file.
 
-Include a rationale for sub-agent isolation when the phase could plausibly be merged with an adjacent phase without apparent loss.
+Include a rationale for sub-agent isolation when the phase could plausibly merge with an adjacent phase without apparent loss.
 
 ```
 ### Phase N: [Phase Name]
@@ -149,7 +161,7 @@ State explicit confirmation steps between phases (e.g., verify output is non-emp
 
 ### Output
 
-The exact file path, naming convention, or output template for every artifact the skill produces.
+State the exact file path, naming convention, or output template for every artifact the skill produces.
 
 **For structured output**, use a template with explicit placeholders:
 
@@ -170,7 +182,7 @@ Write the result to `$WORK_DIR/draft.md`, then copy to [final path].
 
 ### Reference Files (for multi-file skills)
 
-A table listing every file delegated to a sub-agent.
+List every file delegated to a sub-agent in a table.
 
 | File | Used By | Purpose |
 |---|---|---|
@@ -182,7 +194,8 @@ A table listing every file delegated to a sub-agent.
 
 ## Section Selection
 
-- **Modes** and **Mode Detection** appear together; omit both for single-mode skills.
-- **Your Role** is required for orchestrator skills; omit for simple procedural skills.
-- **Preconditions** are optional; include only when a guard, if violated, would cause incorrect output or require mid-run intervention.
-- **Reference Files** is required for any skill that delegates to sub-files.
+- **Activation** — required in every skill. Choose the form — prose trigger, modes table, or decision tree — based on branching needs.
+- **Modes table** — place inside Activation or immediately after it.
+- **Preconditions** — include only when a violated guard would cause incorrect output or require mid-run intervention.
+- **Your Role** — include for orchestrator skills that manage sub-agents.
+- **Reference Files** — include when the skill delegates to sub-files.

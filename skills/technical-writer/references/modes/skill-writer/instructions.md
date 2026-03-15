@@ -1,4 +1,27 @@
-# Research Topics: Skill File
+# Mode Instructions: Skill File
+
+## Pre-flight
+
+Before starting Phase 1:
+
+1. Identify the skill name and directory. If the user has not provided a name, ask: "What should the skill be called?"
+2. Confirm the skill directory path. Default to `skills/<skill-name>/` relative to the project root. Use `.claude/skills/<skill-name>/` for projects that use the local skills convention.
+
+## Phase 1: Discovery
+
+Ignore the default Phase 1 instructions (enumerate modules, external systems, documentation files). Research the skill's task domain and workflow requirements, not a codebase.
+
+Read the user's description and any existing skill files in the project directory. Write `$WORK_DIR/discovery.md` with three sections:
+
+- **Task** — the task the skill must perform
+- **Activation conditions** — the activation conditions mentioned
+- **Output artifacts** — any output artifacts or file paths specified
+
+## Phase 5: Review
+
+Use the **"review instructions"** label. Pass `references/modes/skill-writer/examples.md` and `references/modes/skill-writer/checklist.md` to the reviewer.
+
+## Research Topics
 
 | Topic | Description | Output file |
 |---|---|---|
