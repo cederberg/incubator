@@ -28,9 +28,9 @@ If the mode cannot be determined from the request, ask the user before proceedin
 
 ### Review Variant
 
-When the user provides an **existing document** to review rather than asking for a new one, ask (or accept as an explicit flag):
+When the user provides an **existing document** to review, ask (or accept as an explicit flag):
 
-- **Structural** — run the reviewer directly on the existing document using the mode's `checklist.md` and shared style rules. The codebase is not consulted.
+- **Structural** — run the reviewer directly on the existing document using the mode's `checklist.md` and shared style rules. Do not consult the codebase.
 - **Accuracy** — run the full pipeline seeded with the existing document as the baseline draft. Research checks whether the document's claims reflect current reality.
 
 Note that the review variant changes how the pipeline is entered, not the mode.
@@ -137,7 +137,7 @@ Launch a **single reviewer sub-agent** labelled **"review document"** with:
 - `$MODE_DIR/examples.md` (if it exists)
 - The document to review: `$WORK_DIR/draft.md` or the provided document path
 
-When reviewing instructional content (e.g. a skill file), label the sub-agent **"review instructions"** instead. If the skill being reviewed references role files, rule files, or mode files as sub-agent inputs, pass those files to the reviewer.
+When reviewing instructional content (e.g. a skill file), label the sub-agent **"review instructions"** instead. If the skill references role, rule, or mode files as sub-agent inputs, pass those files to the reviewer.
 
 Read the reviewer's output. If it finds issues:
 1. Launch a **new writer sub-agent** with the draft, the numbered review output, and the same file paths as Phase 4
@@ -152,16 +152,14 @@ Repeat up to 3 cycles. Stop when the reviewer finds no issues or the cycle limit
 
 Copy `$WORK_DIR/draft.md` to the appropriate output path:
 
-| Mode | Default output path |
-|---|---|
-| `system-overview` | `OVERVIEW.md` in the project root |
-| `readme` | `README.md` in the project root |
-| `skill-writer` | `SKILL.md` in a new skill directory; ask the user for the directory name if not provided |
-| `generic` | path specified by user |
+- **system-overview** — `OVERVIEW.md` in the project root
+- **readme** — `README.md` in the project root
+- **skill-writer** — `SKILL.md` in a new skill directory; ask the user for the directory name if not provided
+- **generic** — path specified by user
 
 Use the path requested by the user if they specified one.
 
-After copying, scan the final document for `[MISSING: ...]` markers. List any found markers verbatim. Note that each represents a gap the research could not resolve; leave resolution to the user.
+After copying, scan the final document for `[MISSING: ...]` markers. List any found markers verbatim. Note that each marker represents a gap the research could not resolve. Leave resolution to the user.
 
 ---
 
