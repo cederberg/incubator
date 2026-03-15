@@ -1,10 +1,6 @@
-# Discovery and Research: System Overview
+# Mode Instructions: System Overview
 
-## Phase 1: Discovery
-
-Use the default discovery instructions.
-
-## Phase 2: Research Topics
+## Research Topics
 
 | Topic | Description | Output file |
 |---|---|---|

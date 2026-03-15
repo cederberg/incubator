@@ -33,7 +33,7 @@ When the user provides an **existing document** to review rather than asking for
 - **Structural** — run the reviewer directly on the existing document using the mode's `checklist.md` and shared style rules. The codebase is not consulted.
 - **Accuracy** — run the full pipeline seeded with the existing document as the baseline draft. Research checks whether the document's claims reflect current reality.
 
-The review variant does not change the mode — it changes how the pipeline is entered.
+Note that the review variant changes how the pipeline is entered, not the mode.
 
 | Phase | Write (default) | Structural review | Accuracy review |
 |---|---|---|---|
@@ -47,13 +47,13 @@ The review variant does not change the mode — it changes how the pipeline is e
 
 ## Your Role
 
-You are the workflow manager. You launch sub-agents and confirm that each phase has produced non-empty output. You do not read reference files, research files, or drafts yourself, except where explicitly instructed to. Pass file paths to sub-agents and let them read what they need.
+Act as the workflow manager. Launch sub-agents and confirm that each phase has produced non-empty output. Do not read reference files, research files, or drafts yourself, except where explicitly instructed to. Pass file paths to sub-agents and let them read what they need.
 
 ## Workflow: Five Phases, Multiple Sub-Agents
 
-This workflow requires separate sub-agents for each phase. Do not combine them.
+Use separate sub-agents for each phase. Do not combine them.
 
-Use separate sub-agents with isolated contexts. Context growth degrades style adherence. Self-review is attachment-biased. Mode collapse — researching while writing, or validating instead of critiquing — produces poor output.
+Use isolated contexts for each sub-agent.
 
 Set the mode path variable once and use it throughout:
 
@@ -63,15 +63,17 @@ MODE_DIR=references/modes/$MODE
 WORK_DIR=$(mktemp -d)
 ```
 
-Pass `$WORK_DIR` and `$MODE_DIR` to all sub-agents so they read from consistent locations.
+Pass `$WORK_DIR` and `$MODE_DIR` to all sub-agents.
+
+### Mode-specific Instructions
+
+Read `$MODE_DIR/instructions.md` before starting the workflow. If it contains a Pre-flight section, execute those steps first. If `instructions.md` provides mode-specific overrides for any phase, follow those instead of the defaults below.
 
 ---
 
 ### Phase 1: Discovery
 
-Run a **single lightweight discovery agent**. Its job is to enumerate the project's components, integrations, and existing documentation.
-
-If `$MODE_DIR/discover.md` contains a Phase 1 section, pass those instructions to the discovery agent instead of the defaults below.
+Run a **single lightweight discovery agent** to enumerate the project's components, integrations, and existing documentation.
 
 The discovery agent writes its output to `$WORK_DIR/discovery.md` with three sections:
 
@@ -85,7 +87,7 @@ Read `$WORK_DIR/discovery.md` and use it to define researcher scopes in Phase 2.
 
 ### Phase 2: Research
 
-Read the Phase 2 section of `$MODE_DIR/discover.md` to determine researcher assignments. Each researcher has a separate assigned topic name, description and output file.
+Read the Research Topics section of `$MODE_DIR/instructions.md` to determine researcher assignments. Each assignment includes a topic name, description, and output file.
 
 Launch one researcher sub-agent per assignment **in parallel** with:
 - `references/roles/researcher.md`
@@ -105,7 +107,7 @@ Launch a **single outliner sub-agent** with:
 - All Phase 2 output files from `$WORK_DIR/`
 - The output file path (`$WORK_DIR/outline.md`)
 
-The outliner writes a document skeleton to `$WORK_DIR/outline.md`.
+Instruct the outliner to write a document skeleton to `$WORK_DIR/outline.md`.
 
 ---
 
@@ -121,7 +123,7 @@ Launch a **single writer sub-agent** with:
 - All Phase 2 output files from `$WORK_DIR/`
 - The output file path (`$WORK_DIR/draft.md`)
 
-The writer fills in the outline section by section and writes the draft to `$WORK_DIR/draft.md`.
+Instruct the writer to fill in the outline section by section and write the draft to `$WORK_DIR/draft.md`.
 
 ---
 
@@ -135,7 +137,7 @@ Launch a **single reviewer sub-agent** labelled **"review document"** with:
 - `$MODE_DIR/examples.md` (if it exists)
 - The document to review: `$WORK_DIR/draft.md` or the provided document path
 
-When reviewing instructional content (e.g. a skill file), label the sub-agent **"review instructions"** instead. When the skill being reviewed references other files as sub-agent inputs (role files, rule files, mode files), pass those referenced files to the reviewer so it can verify consistency.
+When reviewing instructional content (e.g. a skill file), label the sub-agent **"review instructions"** instead. If the skill being reviewed references role files, rule files, or mode files as sub-agent inputs, pass those files to the reviewer.
 
 Read the reviewer's output. If it finds issues:
 1. Launch a **new writer sub-agent** with the draft, the numbered review output, and the same file paths as Phase 4
@@ -159,18 +161,7 @@ Copy `$WORK_DIR/draft.md` to the appropriate output path:
 
 Use the path requested by the user if they specified one.
 
-After copying, scan the final document for `[MISSING: ...]` markers. List any found markers verbatim and note that each represents a gap the research could not resolve. The user decides how to handle them.
-
----
-
-### Skill-writer Pre-flight
-
-Before starting Phase 1 in `skill-writer` mode:
-
-1. Identify the skill name and directory. If the user has not provided a name, ask: "What should the skill be called?"
-2. Confirm the skill directory path. The default is `skills/<skill-name>/` relative to the project root, or `.claude/skills/<skill-name>/` if the project uses the local skills convention.
-
-Phase 5 in `skill-writer` mode uses the **"review instructions"** label and receives `references/modes/skill-writer/examples.md` and `references/modes/skill-writer/checklist.md`.
+After copying, scan the final document for `[MISSING: ...]` markers. List any found markers verbatim. Note that each represents a gap the research could not resolve; leave resolution to the user.
 
 ---
 
@@ -191,9 +182,7 @@ Phase 5 in `skill-writer` mode uses the **"review instructions"** label and rece
 
 | File | Required | Consumer | Purpose |
 |---|---|---|---|
-| `discover.md` | Yes | Workflow manager | Phase 1 overrides and Phase 2 researcher assignments |
+| `instructions.md` | Yes | Workflow manager | Pre-flight steps, phase overrides, and researcher assignments |
 | `template.md` | Yes | Outliner + Writer | Section order and per-section content guidance |
 | `examples.md` | No | Writer + Reviewer | Target voice; annotated correct examples |
 | `checklist.md` | No | Reviewer | Structural invariants to verify |
-
-For `generic` mode, all four files exist in `references/modes/generic/`. `discover.md` serves as a template — the manager materialises the user's topics into `$WORK_DIR/topics.md` following its format. `examples.md` is not provided unless the user supplies one.
