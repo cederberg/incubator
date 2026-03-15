@@ -1,7 +1,8 @@
 ---
 name: archive-conversation
-description: Extracts and structures knowledge from a conversation for persistent storage.
-synonyms: [summarize session, save conversation, archive chat]
+description: "Saves a structured summary of the current session to `.agent/memory/`. Trigger when the user requests \"archive conversation\", \"save session\", or \"archive chat\". Do NOT trigger for general summarization or note-taking unrelated to session archiving."
+argument-hint: "[output-path]"
+allowed-tools: Write, Glob, Bash
 ---
 
 # archive-conversation

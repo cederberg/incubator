@@ -1,6 +1,8 @@
 ---
 name: technical-writer
 description: "Use when the user wants to write or review a technical document or skill file. Triggers include: \"write a README\", \"document this system\", \"write a skill\", \"review this skill\". If intent is clear, proceed; otherwise ask the user before starting. Do NOT trigger for general writing help or ad-hoc editing."
+argument-hint: "[readme|system-overview|skill-writer|generic] [--structural|--accuracy]"
+allowed-tools: Agent, Read, Write, Bash, Glob
 ---
 
 # technical-writer

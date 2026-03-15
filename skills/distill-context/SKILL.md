@@ -1,7 +1,8 @@
 ---
 name: distill-context
-description: Creates and maintains AGENTS.md — the default project context file
-synonyms: [init agent context, update agent context, reformat agent context, distill knowledge]
+description: "Creates and maintains AGENTS.md, the agent context file for a project. Trigger when the user says \"distill context\", \"update AGENTS.md\", \"init agent context\", or \"sync context\"."
+argument-hint: "[update|research|realign]"
+allowed-tools: Read, Write, Glob, Bash
 ---
 
 # distill-context
