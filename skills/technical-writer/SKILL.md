@@ -35,7 +35,7 @@ When the user provides an **existing document** to review, ask (or accept as an 
 - **Structural** — run the reviewer directly on the existing document using the mode's `checklist.md` and shared style rules. Do not consult the codebase.
 - **Accuracy** — run the full pipeline seeded with the existing document as the baseline draft. Research checks whether the document's claims reflect current reality.
 
-Note that the review variant changes how the pipeline is entered, not the mode.
+The review variant changes how the pipeline is entered, not the mode.
 
 | Phase | Write (default) | Structural review | Accuracy review |
 |---|---|---|---|
@@ -53,9 +53,7 @@ Act as the workflow manager. Launch sub-agents and confirm that each phase has p
 
 ## Workflow: Five Phases, Multiple Sub-Agents
 
-Use separate sub-agents for each phase. Do not combine them.
-
-Use isolated contexts for each sub-agent.
+Use a separate, isolated sub-agent for each phase.
 
 Set the mode path variable once and use it throughout:
 

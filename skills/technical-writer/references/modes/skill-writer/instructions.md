@@ -5,7 +5,7 @@
 Before starting Phase 1:
 
 1. Identify the skill name and directory. If the user has not provided a name, ask: "What should the skill be called?"
-2. Confirm the skill directory path. Default to `skills/<skill-name>/` relative to the project root. Use `.claude/skills/<skill-name>/` for projects that use the local skills convention.
+2. Confirm the skill directory path. Default to `skills/<skill-name>/` relative to the project root. Use the agent-specific local skills path if the project follows one (e.g. `.claude/skills/<skill-name>/` for Claude Code projects).
 
 ## Phase 1: Discovery
 
@@ -14,7 +14,7 @@ Ignore the default Phase 1 instructions (enumerate modules, external systems, do
 Read the user's description and any existing skill files in the project directory. Write `$WORK_DIR/discovery.md` with three sections:
 
 - **Task** — the task the skill must perform
-- **Activation conditions** — the activation conditions mentioned
+- **Activation conditions** — the activation conditions, if any; note if the skill is slash-command-only with no auto-activation
 - **Output artifacts** — any output artifacts or file paths specified
 
 ## Phase 5: Review

@@ -1,6 +1,6 @@
 # Skill File Structure Template
 
-Structure a SKILL.md file in two parts: frontmatter and a skill body. Frontmatter tells Claude when to load the skill. The body contains the instructions Claude follows when the skill runs.
+Structure a SKILL.md file in two parts: frontmatter and a skill body. Frontmatter tells the agent when to load the skill. The body contains the instructions the agent follows when the skill runs.
 
 ---
 
@@ -19,7 +19,7 @@ Follow the [Agent Skills open standard](https://agentskills.io), supported acros
 
 ### Core fields (standard)
 
-**`name`** — kebab-case, lowercase letters, numbers, and hyphens only, max 64 characters. If omitted, Claude uses the skill directory name.
+**`name`** — kebab-case, lowercase letters, numbers, and hyphens only, max 64 characters. If omitted, the agent uses the skill directory name.
 
 **`description`** — what the skill does and the conditions that trigger it. Max 1,024 characters. This is the primary signal the agent uses for automatic activation. Include when to trigger, not only what the skill does — omitting the trigger condition causes under-activation. Include when NOT to trigger to prevent misfires on near-neighbours.
 
@@ -41,9 +41,9 @@ No functional effect in any current agent; used by registries and catalogues.
 
 ### Invocation control (Claude Code)
 
-**`disable-model-invocation: true`** — prevent Claude from loading this skill automatically. Use for workflows with side effects that should only run when you type `/skill-name`. Omit for skills that should activate from context.
+**`disable-model-invocation: true`** — prevent the agent from loading this skill automatically. Use for workflows with side effects that should only run when you type `/skill-name`. Omit for skills that should activate from context.
 
-**`user-invocable: false`** — hide from the `/` menu. Use for background knowledge skills that Claude should load automatically but that have no meaningful user command. Omit for everything else.
+**`user-invocable: false`** — hide from the `/` menu. Use for background knowledge skills that the agent should load automatically but that have no meaningful user command. Omit for everything else.
 
 ### Execution fields (Claude Code)
 
@@ -75,7 +75,7 @@ Use these in skill body content:
 
 1. **Frontmatter** (required)
 2. **Skill Name / H1** (required)
-3. **Activation** (required)
+3. **Activation** (optional)
 4. **Preconditions** (optional)
 5. *(other sections as needed)*
 6. **Workflow** (required)
@@ -92,26 +92,13 @@ Use the skill name as the document's H1 heading. Match the `name` frontmatter fi
 
 ### Activation
 
+Include this section for skills that activate automatically from context. Omit it for skills intended to be invoked only as a slash command.
+
 State the conditions that trigger the skill and, for multi-mode skills, how the agent selects among modes. Choose one of three forms depending on branching complexity.
 
 **Prose trigger** — a short statement of the condition that triggers a single-mode skill. State it without hedging.
 
 **Modes table** — a table defining each named mode with its triggering condition and output. Label the default mode inline with `(default)` in the Mode column. Include inference rules directly in or after the table. See Example 3 in `examples.md`.
-
-```
-## Activation
-
-| Mode | When to use |
-|---|---|
-| **update** (default) | AGENTS.md exists and you want to sync it with recent changes |
-| **research** | No AGENTS.md exists, or user explicitly requests a full analysis |
-
-If the user specifies a mode, use it. Otherwise, infer from the request:
-- "sync" / "update" → `update`
-- "full analysis" / "from scratch" → `research`
-
-If the mode cannot be determined, ask the user before proceeding.
-```
 
 Guard any catch-all or generic mode against silent inference. A mode labelled "generic" or "other" must require explicit user selection.
 
@@ -124,12 +111,6 @@ A modes table may appear inside Activation or immediately after it — both plac
 ### Preconditions (optional)
 
 List guards that must be true before the skill runs. Include only guards that, if violated, would cause incorrect output or require mid-run intervention. Omit this section if no such guards exist.
-
----
-
-### Your Role (for orchestrator skills)
-
-One paragraph. State what you do and what you do NOT do. Name the sub-agent roles you manage.
 
 ---
 
@@ -194,8 +175,7 @@ List every file delegated to a sub-agent in a table.
 
 ## Section Selection
 
-- **Activation** — required in every skill. Choose the form — prose trigger, modes table, or decision tree — based on branching needs.
+- **Activation** — required for skills that activate automatically from context; omit for slash-command-only skills. Choose the form — prose trigger, modes table, or decision tree — based on branching needs.
 - **Modes table** — place inside Activation or immediately after it.
 - **Preconditions** — include only when a violated guard would cause incorrect output or require mid-run intervention.
-- **Your Role** — include for orchestrator skills that manage sub-agents.
 - **Reference Files** — include when the skill delegates to sub-files.

@@ -3,14 +3,11 @@
 ## Structure
 
 - [ ] Skill body opens with an H1 heading matching the `name` frontmatter field
-- [ ] Activation section is present
-- [ ] If a Modes table is present: it includes a labelled default and inference rules
+- [ ] Activation section is present if the skill auto-activates from context
+- [ ] If an Activation modes table is present: it includes a labelled default and inference rules
 - [ ] Any catch-all or generic mode is guarded against silent inference
 - [ ] Preconditions, if present, appears after Activation and before Workflow
-- [ ] Your Role, if present, appears before Workflow
-- [ ] Workflow section is present
-- [ ] Output section is present
-- [ ] Reference Files, if present, appears after Output
+- [ ] Reference Files, if present, appears after the output specification
 
 ## Frontmatter
 
@@ -28,7 +25,7 @@
 - [ ] Workflow steps are numbered or named phases; no prose narrative substitutes for ordered steps
 - [ ] Every sub-agent phase specifies the agent's role, the inputs it receives, and the artifact or output it produces
 - [ ] Any review-revise loop states a maximum number of cycles
-- [ ] If sub-agents are used: each isolated phase includes a rationale when merging it with an adjacent phase would be plausible
+- [ ] If sub-agents are used: adjacent phases that could plausibly be merged include an isolation rationale
 
 ## Output
 
