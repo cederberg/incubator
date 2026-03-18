@@ -18,36 +18,6 @@ Use this structure as the canonical starting point. Add or remove sections to ma
 
 ---
 
-## Inbound Data
-
-**Purpose:** Define the data contracts at the system boundary — what data enters the system and from where.
-
-**Structure:** One H3 subsection per distinct inbound source or event category.
-
-**Content per subsection:**
-- One paragraph: what triggers this data, which external system sends it.
-- Bullet list of fields: `**Field Name** — one-line description`. Include only fields the system uses or that affect behavior.
-- Note: for reliability, timing, or validity caveats that affect how the system interprets the data.
-
-**Exclude:** HTTP methods, endpoint paths, authentication, field data types, JSON structure, error handling, retry behavior.
-
----
-
-## Outbound Data
-
-**Purpose:** Define the data contracts at the outbound system boundary.
-
-**Structure:** One H3 subsection per distinct outbound destination.
-
-**Content per subsection:**
-- One paragraph: what the system sends and to which external system.
-- Bullet list of fields if the contract is non-obvious.
-- Note: for any behavioral constraints at the destination (e.g., the destination handles scheduling/retries itself).
-
-**Exclude:** Same exclusions as Inbound Data.
-
----
-
 ## Concepts & Definitions
 
 **Purpose:** Establish the vocabulary used throughout the rest of the document. Every named concept that appears in multiple later sections belongs here.
@@ -75,6 +45,36 @@ Use this structure as the canonical starting point. Add or remove sections to ma
 - Note: for terminal states, mutually exclusive states, or states with special operational significance.
 
 **Exclude:** Internal triggers (method calls, scheduler invocations, database writes). Document the observable business event that causes each transition, not the mechanism that executes it.
+
+---
+
+## Inbound Data
+
+**Purpose:** Define the data contracts at the system boundary — what data enters the system and from where.
+
+**Structure:** One H3 subsection per distinct inbound source or event category.
+
+**Content per subsection:**
+- One paragraph: what triggers this data, which external system sends it.
+- Bullet list of fields: `**Field Name** — one-line description`. Include only fields the system uses or that affect behavior.
+- Note: for reliability, timing, or validity caveats that affect how the system interprets the data.
+
+**Exclude:** HTTP methods, endpoint paths, authentication, field data types, JSON structure, error handling, retry behavior.
+
+---
+
+## Outbound Data
+
+**Purpose:** Define the data contracts at the outbound system boundary.
+
+**Structure:** One H3 subsection per distinct outbound destination.
+
+**Content per subsection:**
+- One paragraph: what the system sends and to which external system.
+- Bullet list of fields if the contract is non-obvious.
+- Note: for any behavioral constraints at the destination (e.g., the destination handles scheduling/retries itself).
+
+**Exclude:** Same exclusions as Inbound Data.
 
 ---
 
@@ -111,7 +111,7 @@ Use this structure as the canonical starting point. Add or remove sections to ma
 
 ## Notes on Section Ordering
 
-- Introduction → Inbound Data → Outbound Data → Concepts & Definitions → Status Lifecycles → [Process sections] → Other Processes is the default order.
+- Introduction → Concepts & Definitions → Status Lifecycles → Inbound Data → Outbound Data → [Process sections] → Other Processes is the default order.
 - Include as many process sections as the system warrants. Order them by significance — the primary process first.
 - If a concept is only used in one section, it may be defined inline there rather than in Concepts & Definitions.
 - If Outbound Data is trivial (one destination, obvious contract), it may be folded into the Introduction.

@@ -2,7 +2,7 @@
 
 ## Structure
 
-- [ ] Section order matches the template: Introduction → Inbound Data → Outbound Data → Concepts & Definitions → Status Lifecycles → [Process sections] → Other Processes
+- [ ] Section order matches the template: Introduction → Concepts & Definitions → Status Lifecycles → Inbound Data → Outbound Data → [Process sections] → Other Processes
 - [ ] Introduction contains an ASCII topology diagram
 - [ ] Introduction contains a bullet list of external systems directly after the diagram; each entry names the system and states its role in one sentence
 - [ ] Every external system referenced in the document appears in that bullet list
