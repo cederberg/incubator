@@ -1,7 +1,7 @@
 ---
 name: technical-writer
 description: "Use when the user wants to write or review a technical document or skill file. Triggers include: \"write a README\", \"document this system\", \"write a skill\", \"review this skill\". If intent is clear, proceed; otherwise ask the user before starting. Do NOT trigger for general writing help or ad-hoc editing."
-argument-hint: "[readme|system-overview|skill-writer|generic] [--structural|--accuracy]"
+argument-hint: "[readme|system-overview|skill-writer|generic] [--accuracy|--feedback|--structure]"
 allowed-tools: Agent, Read, Write, Bash, Glob
 ---
 
@@ -9,19 +9,18 @@ allowed-tools: Agent, Read, Write, Bash, Glob
 
 ## Activation
 
-| Mode | When to use | Output |
-|---|---|---|
-| **system-overview** | Document an internal system for a technically literate audience | `OVERVIEW.md` in project root |
-| **readme** | Write or rewrite a project-level README | `README.md` in project root |
-| **skill-writer** | Write a new skill file or review and polish an existing one | `SKILL.md` in a skill directory |
-| **generic** | User supplies their own topics and document structure | Path specified by user |
+| Mode | When to use |
+|---|---|
+| **readme** | Write or rewrite a project-level README |
+| **system-overview** | Document an internal system for a technically literate audience |
+| **skill-writer** | Write a new skill file or review and polish an existing one |
+| **generic** | User supplies their own topics and document structure |
 
 If the user specifies a mode, use it. Otherwise, infer from the request:
 
 - "write a README" / "document this project" / "generate a README" → `readme`
 - "write a system overview" / "document this system" / "write an overview" → `system-overview`
 - "write a skill" / "create a skill" / "new skill" / "add a skill" → `skill-writer`
-- "review this skill" / "improve this skill" / "polish this skill" → `skill-writer` + structural review variant
 - User explicitly names `generic`, or provides their own topics/template structure → `generic`
 
 `generic` is never inferred silently. Use it only when the user explicitly requests it or supplies their own document structure.
@@ -30,26 +29,35 @@ If the mode cannot be determined from the request, ask the user before proceedin
 
 ### Review Variant
 
-When the user provides an **existing document** to review, ask (or accept as an explicit flag):
+When the user provides an existing document to review, ask (or accept as an explicit flag) which variant to run:
 
-- **Structural** — run the reviewer directly on the existing document using the mode's `checklist.md` and shared style rules. Do not consult the codebase.
-- **Accuracy** — run the full pipeline seeded with the existing document as the baseline draft. Research checks whether the document's claims reflect current reality.
+- **Accuracy** — run phases 1, 2, 4, and 5 seeded with the existing document as the draft input
+- **Feedback** — skip to writing, seeded with the existing document and user-supplied feedback
+- **Structure** — run the reviewer directly on the existing document without consulting the codebase
 
 The review variant changes how the pipeline is entered, not the mode.
 
-| Phase | Write (default) | Structural review | Accuracy review |
-|---|---|---|---|
-| 1: Discovery | Run | Skip | Run |
-| 2: Research | Run | Skip | Run |
-| 3: Outline | Run | Skip | Skip |
-| 4: Write | Run | Skip | Run — seeded with provided document |
-| 5: Review | Run | Run on provided document | Run |
+| Phase | Write (default) | Accuracy review | Feedback review | Structural review |
+|---|---|---|---|---|
+| 1: Discovery | Run | Run | Skip | Skip |
+| 2: Research | Run | Run | Skip | Skip |
+| 3: Outline | Run | Skip | Skip | Skip |
+| 4: Write | Run | Run with provided document | Run with provided document + feedback | Skip |
+| 5: Review | Run | Run | Run | Run on provided document |
 
 ---
 
 ## Your Role
 
-Act as the workflow manager. Launch sub-agents and confirm that each phase has produced non-empty output. Do not read reference files, research files, or drafts yourself, except where explicitly instructed to. Pass file paths to sub-agents and let them read what they need.
+Act as the workflow manager. Launch sub-agents and confirm that each phase has produced non-empty output. Route, delegate, and verify. Do not read or synthesize file contents.
+
+Read only these four files:
+1. `$MODE_DIR/instructions.md` — workflow configuration
+2. A user-provided existing document — when the user supplies one for review or as a baseline
+3. `$WORK_DIR/discovery.md` — researcher scope definition
+4. `$WORK_DIR/review.md` — revision decision
+
+Pass all other files — role files, rule files, templates, examples, checklists, research outputs, and drafts — as file paths to sub-agents. Do not open those files.
 
 ## Workflow: Five Phases, Multiple Sub-Agents
 
@@ -73,9 +81,13 @@ Read `$MODE_DIR/instructions.md` before starting the workflow. If it contains a 
 
 ### Phase 1: Discovery
 
-Run a **single lightweight discovery agent** to enumerate the project's components, integrations, and existing documentation.
+Run a **discovery sub-agent** to enumerate the project's components, integrations, and existing documentation.
 
-The discovery agent writes its output to `$WORK_DIR/discovery.md` with three sections:
+Launch the sub-agent with:
+- `$WORK_DIR` — the output directory path
+- Instructions to scan the codebase for application modules, external system references, and existing documentation files
+
+The discovery sub-agent writes its output to `$WORK_DIR/discovery.md` with three sections:
 
 - **Modules & Services** — all application modules, services, or major components. One line each, no descriptions.
 - **External Systems** — all external systems referenced in config, code, or documentation. One line each, no descriptions.
@@ -89,7 +101,7 @@ Read `$WORK_DIR/discovery.md` and use it to define researcher scopes in Phase 2.
 
 Read the Research Topics section of `$MODE_DIR/instructions.md` to determine researcher assignments. Each assignment includes a topic name, description, and output file.
 
-Launch one researcher sub-agent per assignment **in parallel** with:
+Launch one **researcher sub-agent** per assignment in parallel with:
 - `references/roles/researcher.md`
 - The assigned topic name and description
 - The output file path (`$WORK_DIR/<output-file>`)
@@ -97,11 +109,13 @@ Launch one researcher sub-agent per assignment **in parallel** with:
 
 After all researchers complete, confirm each output file is non-empty using `wc -c` before proceeding.
 
+Keeping research separate from discovery gives parallel researchers a stable scope definition before they begin. It prevents scope changes mid-research from corrupting the outline.
+
 ---
 
 ### Phase 3: Outline
 
-Launch a **single outliner sub-agent** with:
+Launch an **outliner sub-agent** with:
 - `references/roles/outliner.md`
 - `$MODE_DIR/template.md`
 - All Phase 2 output files from `$WORK_DIR/`
@@ -109,11 +123,13 @@ Launch a **single outliner sub-agent** with:
 
 Instruct the outliner to write a document skeleton to `$WORK_DIR/outline.md`.
 
+Separating structural decisions from prose generation keeps the writer focused on content. A single-pass approach produces poorly ordered drafts.
+
 ---
 
 ### Phase 4: Write
 
-Launch a **single writer sub-agent** with:
+Launch a **writer sub-agent** with:
 - `references/roles/writer.md`
 - `references/rules/style-guide.md`
 - `references/rules/abstraction-rules.md` (if in `system-overview` mode)
@@ -125,26 +141,24 @@ Launch a **single writer sub-agent** with:
 
 Instruct the writer to fill in the outline section by section and write the draft to `$WORK_DIR/draft.md`.
 
+A writer sub-agent cannot objectively evaluate output it just produced against the same criteria it used to produce it.
+
 ---
 
 ### Phase 5: Review
 
-Launch a **single reviewer sub-agent** labelled **"review document"** with:
+Launch a **reviewer sub-agent** labelled **"review document"** with:
 - `references/roles/reviewer.md`
 - `references/rules/style-guide.md`
 - `references/rules/abstraction-rules.md` (if in `system-overview` mode)
 - `$MODE_DIR/checklist.md` (if it exists)
 - `$MODE_DIR/examples.md` (if it exists)
 - The document to review: `$WORK_DIR/draft.md` or the provided document path
+- The output file path (`$WORK_DIR/review.md`)
 
 When reviewing instructional content (e.g. a skill file), label the sub-agent **"review instructions"** instead. If the skill references role, rule, or mode files as sub-agent inputs, pass those files to the reviewer.
 
-Read the reviewer's output. If it finds issues:
-1. Launch a **new writer sub-agent** with the draft, the numbered review output, and the same file paths as Phase 4
-2. Instruct it to address each numbered issue and overwrite `$WORK_DIR/draft.md`
-3. Launch a **new reviewer sub-agent** labelled **"review document"** (or **"review instructions"**) to check the result
-
-Repeat up to 3 cycles. Stop when the reviewer finds no issues or the cycle limit is reached.
+Read `$WORK_DIR/review.md`. If it finds issues, launch a new **writer sub-agent** with the draft, `$WORK_DIR/review.md`, and the same file paths as Phase 4. Instruct it to address each numbered issue, scan for similar issues elsewhere in the document, and overwrite `$WORK_DIR/draft.md`.
 
 ---
 
@@ -165,14 +179,16 @@ After copying, scan the final document for `[MISSING: ...]` markers. List any fo
 
 ## Reference Files
 
+Pass these paths to sub-agents as listed below. Do not read them yourself.
+
 ### Shared
 
 | File | Consumer | Purpose |
 |---|---|---|
-| `references/roles/researcher.md` | Researcher agents | Output format and extraction rules |
-| `references/roles/outliner.md` | Outliner agent | Section selection, subsection naming, ordering rules |
-| `references/roles/writer.md` | Writer agent | Writing instructions and input usage |
-| `references/roles/reviewer.md` | Reviewer agent | Review posture and output format |
+| `references/roles/researcher.md` | Researcher sub-agents | Output format and extraction rules |
+| `references/roles/outliner.md` | Outliner sub-agent | Section selection, subsection naming, ordering rules |
+| `references/roles/writer.md` | Writer sub-agent | Writing instructions and input usage |
+| `references/roles/reviewer.md` | Reviewer sub-agent | Review posture and output format |
 | `references/rules/style-guide.md` | Writer | Sentence rules, formatting, anti-patterns |
 | `references/rules/abstraction-rules.md` | Writer + Reviewer | What to include/exclude; heuristics (system-overview only) |
 
