@@ -14,7 +14,7 @@ If the answer is no, exclude the fact.
 
 ---
 
-## Five Exclusion Heuristics
+## Four Exclusion Heuristics
 
 ### 1. The Rename Test
 
@@ -62,73 +62,6 @@ If yes: exclude it.
 - "The system periodically fetches updated SMS templates" — passes. Behavioral fact.
 - "Kafka consumer group rebalancing triggers a brief processing pause" — fails. Platform behavior.
 - "The system processes events in parallel across multiple worker instances" — passes. Behavioral fact with operational implications.
-
-### 5. The Diagram Sufficiency Test
-
-> "Is this already clear from the architecture diagram?"
-
-If yes: exclude it from prose — don't repeat what the diagram already shows.
-
-**Examples:**
-- "The system receives events from the message broker" — may fail if the diagram shows this. Use the specific component name only if the diagram doesn't already make this clear.
-- The diagram shows Component A → Service B. Don't also write "Component A sends data to Service B" unless you need to add something the diagram doesn't show.
-
----
-
-## Verbosity Failure Modes
-
-These patterns are the most common ways agents produce over-specified documentation.
-
-### Hedging
-
-Hedging words signal that the writer is not confident enough to state the rule clearly.
-
-**Fail:** "Events are typically processed within a few seconds, but may occasionally take longer depending on system load."
-**Pass:** "Events are processed asynchronously." *(If timing is operationally important, state the specific threshold and what happens if it's missed.)*
-
-Cut: "typically", "usually", "generally", "in most cases", "often", "may", "might", "could potentially".
-
-### Meta-Commentary
-
-Sentences that describe the document, not the system.
-
-**Fail:** "This section describes how the system handles duplicate events."
-**Pass:** *(Start the section directly: "Both Network Attach and Data Traffic events may be filtered…")*
-
-Cut: "This section describes…", "As mentioned above…", "The following explains…", "It is important to note that…"
-
-### Over-Enumeration
-
-Listing every sub-case when the main rule plus one Note: covers them all.
-
-**Fail:**
-```
-Events may be duplicate due to:
-- Network retransmission
-- 3G nodes sending before response
-- 3G nodes sending on failed attach
-- Application-level retry on error
-- Operator sending duplicate notifications
-```
-**Pass:** "Events may arrive more than once, particularly from 3G nodes which send without waiting for an attach response."
-
-Reserve bullet lists for named, enumerable items (statuses, message types, fields). Don't use them for explanatory prose broken into fragments.
-
-### Passive Re-Stating
-
-Describing in prose what the architecture diagram already shows.
-
-**Fail:** "After the event is received by the intake component, it is stored in the database. The worker then picks it up from the database for processing."
-**Pass:** *(This is shown in the topology diagram. Don't repeat it in prose.)*
-
-### Justification Creep
-
-Adding the rationale for a design decision.
-
-**Fail:** "Separate delivery accounts are used per region to reduce the risk of outbound rate limiting, as a single account could be throttled if one region has unusually high traffic."
-**Pass:** "Separate delivery accounts are used per region to reduce rate limiting risk."
-
-The reason can be noted in one clause at most. A full explanation belongs in an ADR, not a system overview.
 
 ---
 

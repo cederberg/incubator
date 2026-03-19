@@ -39,6 +39,6 @@
 
 ## Quality
 
-- [ ] SKILL.md body is under 5,000 words
+- [ ] SKILL.md body is under 500 lines
 - [ ] Terminology is consistent throughout — the same concept is not referred to by different names
 - [ ] No section is empty or consists only of placeholder text

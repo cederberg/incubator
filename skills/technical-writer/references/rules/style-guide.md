@@ -23,12 +23,14 @@ Choose one voice for each document. Avoid first person (never "we", "our", or "I
 - Avoid hedging words: "typically", "usually", "generally", "in most cases", "often".
 - Avoid filler openers: "It is worth noting that…", "It should be mentioned that…", "As you can see…"
 - Avoid justification prose. State what something does or what it requires. Avoid phrases like "This was designed for…" or "The reason X exists is…"
+- Convert nominalized verbs back to verb form: "decide" not "make a decision"; "implement" not "the implementation of"; "assess" not "conduct an assessment of".
 - Allow illustrative examples and clarification sentences in instructional documents.
 
 ## Paragraph Rules
 
 - Use two to four sentences per paragraph.
 - Write one idea per paragraph; split any paragraph that contains two.
+- Put the paragraph's main claim in the first sentence. Supporting detail follows.
 - Avoid transition sentences between paragraphs (e.g. "Now that we've covered X, let's look at Y…").
 
 ## Formatting
@@ -73,3 +75,43 @@ Choose one voice for each document. Avoid first person (never "we", "our", or "I
 - Use H3 (`###`) for subsections.
 - Avoid H4 headings.
 - Write section headings as noun phrases. Avoid questions ("How Events Are Processed") and verb phrases ("Processing Events").
+
+---
+
+## Verbosity Failure Modes
+
+### Hedging
+
+**Fail:** "Events are typically processed within a few seconds, but may occasionally take longer depending on system load."
+**Pass:** "Events are processed asynchronously." *(If timing is operationally important, state the specific threshold and what happens if it's missed.)*
+
+Cut: "typically", "usually", "generally", "in most cases", "often", "may", "might", "could potentially".
+
+### Meta-Commentary
+
+**Fail:** "This section describes how the system handles duplicate events."
+**Pass:** *(Start the section directly: "Both Network Attach and Data Traffic events may be filtered…")*
+
+Cut: "This section describes…", "As mentioned above…", "The following explains…", "It is important to note that…"
+
+### Over-Enumeration
+
+**Fail:**
+```
+Events may be duplicate due to:
+- Network retransmission
+- 3G nodes sending before response
+- 3G nodes sending on failed attach
+- Application-level retry on error
+- Operator sending duplicate notifications
+```
+**Pass:** "Events may arrive more than once; 3G nodes send without waiting for an attach response."
+
+Reserve bullet lists for named, enumerable items (statuses, message types, fields). Do not use them for explanatory prose broken into fragments.
+
+### Justification Creep
+
+**Fail:** "Separate delivery accounts are used per region to reduce the risk of outbound rate limiting, as a single account could be throttled if one region has unusually high traffic."
+**Pass:** "Separate delivery accounts are used per region to reduce rate limiting risk."
+
+Note that one clause is sufficient for a reason. Longer explanations belong in a separate document.
