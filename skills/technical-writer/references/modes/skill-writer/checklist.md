@@ -17,6 +17,7 @@
 - [ ] `description` is under 1,024 characters
 - [ ] `description` contains no hedging language ("typically", "usually", "generally", "may")
 - [ ] If near-neighbour skills exist that overlap with this skill: `description` includes at least one explicit non-trigger condition
+- [ ] Ask a subagent: "When would you use the [skill name] skill?" — verify the answer reflects the intended trigger conditions
 - [ ] `disable-model-invocation: true` is set for any skill with side effects that must not run automatically
 - [ ] `context: fork` is set for any skill that must run without access to conversation history
 
@@ -38,4 +39,6 @@
 
 ## Quality
 
+- [ ] SKILL.md body is under 5,000 words
+- [ ] Terminology is consistent throughout — the same concept is not referred to by different names
 - [ ] No section is empty or consists only of placeholder text
