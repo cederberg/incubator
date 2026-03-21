@@ -14,7 +14,7 @@ Scan the conversation for anything already established: workflow steps, phrasing
 - **Triggers and anti-triggers** — phrasings that activate it; adjacent tasks that should not
 - **Modes** — named variants, distinguishing conditions, and default
 - **Outputs** — every artifact, with exact paths or naming conventions
-- **Inputs and dependencies** — arguments, files, tools, sub-agents, preconditions
+- **Inputs and dependencies** — arguments, files, tools, preconditions
 - **Edge cases and guardrails** — failure handling; hard constraints
 - **Success criteria** — what a correct result looks like
 
