@@ -27,7 +27,7 @@ Use this structure as the canonical starting point. Add or remove sections to ma
 **Content per subsection:**
 - One sentence introducing the concept and its role.
 - Bullet list of named values with descriptions (for enums/types), OR a numbered list for resolution/priority cases, OR a table for matrix relationships.
-- Note: for mutual exclusivity rules, ordering effects, or special cases that cannot be inferred from the list alone.
+- Notes for mutual exclusivity rules, ordering effects, or special cases that cannot be inferred from the list alone.
 
 **Exclude:** How the values are stored, how resolution is implemented in code, configuration keys. A concept section defines what a thing *is*, not how it works.
 
@@ -42,7 +42,7 @@ Use this structure as the canonical starting point. Add or remove sections to ma
 **Content per subsection:**
 - One sentence: what the entity is and why its state matters.
 - A table or diagram: named states and the observable conditions that trigger each transition.
-- Note: for terminal states, mutually exclusive states, or states with special operational significance.
+- Notes for terminal states, mutually exclusive states, or states with special operational significance.
 
 **Exclude:** Internal triggers (method calls, scheduler invocations, database writes). Document the observable business event that causes each transition, not the mechanism that executes it.
 
@@ -57,7 +57,7 @@ Use this structure as the canonical starting point. Add or remove sections to ma
 **Content per subsection:**
 - One paragraph: what triggers this data, which external system sends it.
 - Bullet list of fields: `**Field Name** — one-line description`. Include only fields the system uses or that affect behavior.
-- Note: for reliability, timing, or validity caveats that affect how the system interprets the data.
+- Notes for reliability, timing, or validity caveats that affect how the system interprets the data.
 
 **Exclude:** HTTP methods, endpoint paths, authentication, field data types, JSON structure, error handling, retry behavior.
 
@@ -72,7 +72,7 @@ Use this structure as the canonical starting point. Add or remove sections to ma
 **Content per subsection:**
 - One paragraph: what the system sends and to which external system.
 - Bullet list of fields if the contract is non-obvious.
-- Note: for any behavioral constraints at the destination (e.g., the destination handles scheduling/retries itself).
+- Notes for any behavioral constraints at the destination (e.g., the destination handles scheduling/retries itself).
 
 **Exclude:** Same exclusions as Inbound Data.
 
@@ -91,7 +91,7 @@ Use this structure as the canonical starting point. Add or remove sections to ma
 **Content per subsection:**
 - One paragraph: what happens in this step, in terms of inputs, action, and outcome.
 - Bullet list or numbered steps if the step has a defined sequence or branching logic worth documenting.
-- Note: for important exceptions or edge cases within the step.
+- Notes for important exceptions or edge cases within the step.
 
 **Exclude:** Class names, method names, SQL queries, retry counts, thread pool sizes, exception types, how the step interacts with the framework. The step is described in terms of what it does to the data, not how the code implements it.
 

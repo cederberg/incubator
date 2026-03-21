@@ -48,6 +48,6 @@ Select and elevate from the research documents. Do not reproduce them.
 - Do not add any fact not present in the research documents
 - Do not consult the codebase
 - Do not explain design rationale ("This is done because…")
-- Do not add a "Note:" just to cover yourself — use it only for a genuine caveat
+- Do not add a note just to cover yourself — use it only for a genuine caveat
 - Do not summarize or introduce sections ("This section describes…")
 - Do not use hedging language

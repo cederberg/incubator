@@ -51,7 +51,7 @@ Produce a Markdown document and write it to the assigned file path. Format it as
 **Per section:**
 - Does the level of detail match the examples in `examples.md`?
 - Are there bullets that list implementation details instead of behavioral facts?
-- Does any "Note:" exist only because the surrounding prose is unclear?
+- Does any note exist only because the surrounding prose is unclear?
 
 **Structural checklist:**
 

@@ -25,7 +25,7 @@ Use this structure as the starting point. Replace `[Topic]` section headings wit
 **Content per subsection:**
 - One sentence introducing the concept and its role.
 - Bullet list of named values with descriptions, OR a numbered list for priority/resolution cases, OR a table for matrix relationships.
-- Note: for mutual exclusivity rules, ordering effects, or special cases that cannot be inferred from the list alone.
+- Notes for mutual exclusivity rules, ordering effects, or special cases that cannot be inferred from the list alone.
 
 **Omit this section entirely** if the document has no shared vocabulary to establish.
 
@@ -42,7 +42,7 @@ Use this structure as the starting point. Replace `[Topic]` section headings wit
 **Content per subsection:**
 - One paragraph: what this sub-topic covers, in terms of inputs, behaviour, and outcomes.
 - Bullet or numbered list if the sub-topic has a defined sequence, set of named items, or branching logic worth documenting.
-- Note: for important exceptions or edge cases.
+- Notes for important exceptions or edge cases.
 
 **Exclude:** Implementation details that a reader does not need to understand the behaviour. Internal names, configuration keys, and mechanism descriptions belong in source code or ADRs, not here.
 

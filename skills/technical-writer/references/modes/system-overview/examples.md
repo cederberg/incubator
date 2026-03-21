@@ -104,7 +104,7 @@ The agent version explains the algorithm narrative ("multi-criteria sorting", "r
 
 **What this shows:**
 
-Three behavioral facts as bullets. No explanation of how the deletion works, which table is affected beyond what's already established, or what "per-message-type timestamps" look like in storage. The edge case (duplicate return-home events) is handled in a single sentence at the end — not a separate section, not a Note:, just a sentence.
+Three behavioral facts as bullets. No explanation of how the deletion works, which table is affected beyond what's already established, or what "per-message-type timestamps" look like in storage. The edge case (duplicate return-home events) is handled in a single sentence at the end — not a separate section, not a note, just a sentence.
 
 **What an agent typically writes instead:**
 

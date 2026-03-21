@@ -72,6 +72,6 @@ Some facts are genuinely ambiguous. These require judgment:
 - **Database table names:** Include when the table name is the clearest way to identify a data store the reader needs to reason about (e.g., `entity_state`, `notification_block`). Exclude when the name is incidental.
 - **Named error states:** Include when the status is externally visible or operationally significant (e.g., `FAILED` events trigger alerts). Exclude when it's purely internal.
 - **External system names:** Include always. They are architectural actors, not implementation detail.
-- **"Note:" vs. new sentence:** Use Note: when the caveat would interrupt the flow of the main paragraph. Use a new sentence when the caveat is equally important to the main fact.
+- **Note vs. new sentence:** Use notes when the caveat would interrupt the flow of the main paragraph. Use a new sentence when the caveat is equally important to the main fact.
 
 When in doubt, exclude. The code executes; the doc does not. An omission is recoverable. A misleading inclusion is not.
