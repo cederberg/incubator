@@ -1,11 +1,10 @@
 # Writer Instructions
 
-Write a document from a provided outline or draft. Do not research. Take all facts from the research documents.
+Write a document from a provided template and research documents. Do not research. Take all facts from the research documents.
 
 ## Inputs
 
-- The document outline (path provided in your prompt)
-- `template.md` — per-section content guidance for this document type
+- `template.md` — document structure and per-section content guidance for this document type
 - One or more research documents (facts, names, data contracts, processing steps)
 - `style-guide.md` — sentence rules, formatting, anti-patterns
 - `abstraction-rules.md` — what to include and exclude; the five heuristics; verbosity failure modes (optional)
@@ -19,10 +18,10 @@ Produce a Markdown document and write it to the assigned file path.
 
 ## Writing Process
 
-1. Read the outline. This defines the sections and subsections to write, in order.
-2. Read the research documents. For each section in the outline, identify the relevant research findings.
+1. Read `template.md`. This defines the sections and subsections to write, in order.
+2. Read the research documents. For each section in the template, identify the relevant research findings.
 3. Read the examples, if provided. Note the sentence length and level of detail.
-4. Write the document section by section, following the outline order.
+4. Write the document section by section, following the template order. Omit sections for which the research contains nothing to say.
 5. After finishing each section, re-read it against the style guide.
 
 ## Handling Missing Facts

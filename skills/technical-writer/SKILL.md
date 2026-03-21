@@ -41,9 +41,8 @@ The review variant changes how the pipeline is entered, not the mode.
 |---|---|---|---|---|
 | 1: Discovery | Run | Run | Skip | Skip |
 | 2: Research | Run | Run | Skip | Skip |
-| 3: Outline | Run | Skip | Skip | Skip |
-| 4: Write | Run | Run with provided document | Run with provided document + feedback | Skip |
-| 5: Review | Run | Run | Run | Run on provided document |
+| 3: Write | Run | Run with provided document | Run with provided document + feedback | Skip |
+| 4: Review | Run | Run | Run | Run on provided document |
 
 ---
 
@@ -109,25 +108,11 @@ Launch one **researcher sub-agent** per assignment in parallel with:
 
 After all researchers complete, confirm each output file is non-empty using `wc -c` before proceeding.
 
-Keeping research separate from discovery gives parallel researchers a stable scope definition before they begin. It prevents scope changes mid-research from corrupting the outline.
+Keeping research separate from discovery gives parallel researchers a stable scope definition before they begin. It prevents scope changes mid-research from corrupting the draft.
 
 ---
 
-### Phase 3: Outline
-
-Launch an **outliner sub-agent** with:
-- `references/roles/outliner.md`
-- `$MODE_DIR/template.md`
-- All Phase 2 output files from `$WORK_DIR/`
-- The output file path (`$WORK_DIR/outline.md`)
-
-Instruct the outliner to write a document skeleton to `$WORK_DIR/outline.md`.
-
-Separating structural decisions from prose generation keeps the writer focused on content. A single-pass approach produces poorly ordered drafts.
-
----
-
-### Phase 4: Write
+### Phase 3: Write
 
 Launch a **writer sub-agent** with:
 - `references/roles/writer.md`
@@ -135,17 +120,16 @@ Launch a **writer sub-agent** with:
 - `references/rules/abstraction-rules.md` (if in `system-overview` mode)
 - `$MODE_DIR/template.md`
 - `$MODE_DIR/examples.md` (if it exists)
-- `$WORK_DIR/outline.md`
 - All Phase 2 output files from `$WORK_DIR/`
 - The output file path (`$WORK_DIR/draft.md`)
 
-Instruct the writer to fill in the outline section by section and write the draft to `$WORK_DIR/draft.md`.
+Instruct the writer to write the draft to `$WORK_DIR/draft.md`.
 
 A writer sub-agent cannot objectively evaluate output it just produced against the same criteria it used to produce it.
 
 ---
 
-### Phase 5: Review
+### Phase 4: Review
 
 Launch a **reviewer sub-agent** labelled **"review document"** with:
 - `references/roles/reviewer.md`
@@ -186,7 +170,6 @@ Pass these paths to sub-agents as listed below. Do not read them yourself.
 | File | Consumer | Purpose |
 |---|---|---|
 | `references/roles/researcher.md` | Researcher sub-agents | Output format and extraction rules |
-| `references/roles/outliner.md` | Outliner sub-agent | Section selection, subsection naming, ordering rules |
 | `references/roles/writer.md` | Writer sub-agent | Writing instructions and input usage |
 | `references/roles/reviewer.md` | Reviewer sub-agent | Review posture and output format |
 | `references/rules/style-guide.md` | Writer | Sentence rules, formatting, anti-patterns |
@@ -197,6 +180,6 @@ Pass these paths to sub-agents as listed below. Do not read them yourself.
 | File | Required | Consumer | Purpose |
 |---|---|---|---|
 | `instructions.md` | Yes | Workflow manager | Pre-flight steps, phase overrides, and researcher assignments |
-| `template.md` | Yes | Outliner + Writer | Section order and per-section content guidance |
+| `template.md` | Yes | Writer | Section order and per-section content guidance |
 | `examples.md` | No | Writer + Reviewer | Target voice; annotated correct examples |
 | `checklist.md` | No | Reviewer | Structural invariants to verify |
