@@ -86,10 +86,11 @@ Launch the sub-agent with:
 - `$WORK_DIR` — the output directory path
 - Instructions to scan the codebase for application modules, external system references, and existing documentation files
 
-The discovery sub-agent writes its output to `$WORK_DIR/discovery.md` with three sections:
+The discovery sub-agent writes its output to `$WORK_DIR/discovery.md` with four sections:
 
 - **Modules & Services** — all application modules, services, or major components. One line each, no descriptions.
 - **External Systems** — all external systems referenced in config, code, or documentation. One line each, no descriptions.
+- **Processes & Workflows** — named processes, jobs, pipelines, or multi-step operations the system performs. One line each: process name and trigger (e.g., "Order Provisioning — triggered by incoming order event", "Nightly Reconciliation — scheduled daily"). Include both primary and background processes.
 - **Documentation & Specs** — any existing documentation files worth consulting: READMEs, OpenAPI/WSDL specs, architecture docs, wikis, significant configuration files. One line each with relative path.
 
 Read `$WORK_DIR/discovery.md` and use it to define researcher scopes in Phase 2.
