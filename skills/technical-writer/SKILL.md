@@ -1,7 +1,7 @@
 ---
 name: technical-writer
 description: "Use when the user wants to write or review a technical document or skill file. Triggers include: \"write a README\", \"document this system\", \"write a skill\", \"review this skill\". If intent is clear, proceed; otherwise ask the user before starting. Do NOT trigger for general writing help or ad-hoc editing."
-argument-hint: "[readme|system-overview|skill-writer|generic] [--accuracy|--feedback|--structure]"
+argument-hint: "[readme|system-overview|skill-writer|system-feature] [--accuracy|--feedback|--structure]"
 allowed-tools: Agent, Read, Write, Bash, Glob
 ---
 
@@ -14,18 +14,16 @@ allowed-tools: Agent, Read, Write, Bash, Glob
 | **readme** | Write or rewrite a project-level README |
 | **system-overview** | Document an internal system for a technically literate audience |
 | **skill-writer** | Write a new skill file or review and polish an existing one |
-| **generic** | User supplies their own topics and document structure |
+| **system-feature** | Document a specific process, subsystem, or feature in detail |
 
 If the user specifies a mode, use it. Otherwise, infer from the request:
 
 - "write a README" / "document this project" / "generate a README" → `readme`
 - "write a system overview" / "document this system" / "write an overview" → `system-overview`
 - "write a skill" / "create a skill" / "new skill" / "add a skill" → `skill-writer`
-- User explicitly names `generic`, or provides their own topics/template structure → `generic`
+- "document the X process" / "write up how X works" / "document the X feature" → `system-feature`
 
-`generic` is never inferred silently. Use it only when the user explicitly requests it or supplies their own document structure.
-
-If the mode cannot be determined from the request, ask the user before proceeding.
+If no other mode matches, use `system-feature` as the default.
 
 ### Review Variant
 
@@ -118,7 +116,7 @@ Keeping research separate from discovery gives parallel researchers a stable sco
 Launch a **writer sub-agent** with:
 - `references/roles/writer.md`
 - `references/rules/style-guide.md`
-- `references/rules/abstraction-rules.md` (if in `system-overview` mode)
+- `references/rules/abstraction-rules.md` (if in `system-overview` or `system-feature` mode)
 - `$MODE_DIR/template.md`
 - `$MODE_DIR/examples.md` (if it exists)
 - All Phase 2 output files from `$WORK_DIR/`
@@ -135,7 +133,7 @@ A writer sub-agent cannot objectively evaluate output it just produced against t
 Launch a **reviewer sub-agent** labelled **"review document"** with:
 - `references/roles/reviewer.md`
 - `references/rules/style-guide.md`
-- `references/rules/abstraction-rules.md` (if in `system-overview` mode)
+- `references/rules/abstraction-rules.md` (if in `system-overview` or `system-feature` mode)
 - `$MODE_DIR/checklist.md` (if it exists)
 - `$MODE_DIR/examples.md` (if it exists)
 - The document to review: `$WORK_DIR/draft.md` or the provided document path
@@ -154,7 +152,7 @@ Copy `$WORK_DIR/draft.md` to the appropriate output path:
 - **system-overview** — `OVERVIEW.md` in the project root
 - **readme** — `README.md` in the project root
 - **skill-writer** — `SKILL.md` in a new skill directory; ask the user for the directory name if not provided
-- **generic** — path specified by user
+- **system-feature** — path specified by user; ask if not provided
 
 Use the path requested by the user if they specified one.
 
@@ -174,7 +172,7 @@ Pass these paths to sub-agents as listed below. Do not read them yourself.
 | `references/roles/writer.md` | Writer sub-agent | Writing instructions and input usage |
 | `references/roles/reviewer.md` | Reviewer sub-agent | Review posture and output format |
 | `references/rules/style-guide.md` | Writer | Sentence rules, formatting, anti-patterns |
-| `references/rules/abstraction-rules.md` | Writer + Reviewer | What to include/exclude; heuristics (system-overview only) |
+| `references/rules/abstraction-rules.md` | Writer + Reviewer | What to include/exclude; heuristics (system-overview and system-feature) |
 
 ### Mode-specific (under `references/modes/<mode>/`)
 
