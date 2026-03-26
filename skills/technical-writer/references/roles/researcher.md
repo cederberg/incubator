@@ -33,12 +33,16 @@ Look for:
 - Names of external systems and what role they play
 - Names of data fields at the contract level, not internal model fields
 - Named status values, types, and enums that appear in external interfaces or operator-facing output
-- Processing step names as they appear in logs, comments, or service names
+- Named processes and what triggers each one (event, schedule, API call, manual action)
+- Steps within each process, in execution order, described as input → action → outcome
+- Decision points: what conditions cause the process to branch, skip steps, or produce different outcomes
+- Intermediate state changes the process causes (e.g., status transitions, records created or updated)
+- Terminal outcomes: what the process produces when it completes successfully, and what happens on failure
 - State business rules as conditions: X → Y
 - Data stores referenced by name; include table names only if needed to identify the store
 
 Do NOT extract:
-- Internal class/interface/method names
+- Internal class/interface/method names (but DO extract the processing steps they implement, described without code names)
 - SQL column definitions or index structures
 - HTTP client configuration, timeouts, retry counts
 - Framework annotations or configuration
