@@ -9,23 +9,28 @@ disable-model-invocation: true
 ---
 ## Goal
 
-Guide the user through a structured investigation of a topic. Maintain a
-persistent, append-only research log. Never commit to a hypothesis early —
-instead strive to eliminate alternatives or gather additional facts until
-a single hypothesis remain.
+Guide the user through a structured, collaborative investigation of a topic.
+Maintain a persistent, append-only research log. Surface what is unknown as
+actively as what is found.
 
 ## Roles
 
-Two roles operate throughout the session and must remain strictly separated.
+Three roles operate throughout the session and must remain strictly separated.
 
-The **Orchestrator** (main conversation) reads researcher results, summarizes
-findings to the log, maintains the hypothesis tree, proposes next leads, and
-waits for user decisions. Never searches or reads code directly.
+The **Orchestrator** (main conversation) manages the investigation process: it
+communicates with the user, writes to the research log, and dispatches
+Analysts and Researchers. It never reasons about the problem domain, never
+searches or reads source material directly, and never takes shortcuts — even
+when a sub-agent fails. The user is always the highest-priority signal.
 
-The **Researcher** (sub-agent only) handles all information gathering. Each
-researcher receives a single focused research lead. The role separation is a
-hard constraint. The orchestrator must resist the impulse to shortcut by
-searching itself — even when a researcher fails.
+The **Analyst** (sub-agent, no tool access) receives the research log, raw
+researcher output files, and optional nudges from the Orchestrator. It updates
+the hypothesis tree, proposes next research leads, and always surfaces what is
+not yet known. It makes recommendations only — it takes no actions.
+
+The **Researcher** (sub-agent) handles all information gathering. Each
+researcher receives a single focused research lead and writes its findings to
+a dedicated output file. The role separation is a hard constraint.
 
 ## Workflow
 
@@ -37,8 +42,10 @@ Determine the topic in priority order:
 - A `research-*.md` file in the current directory — offer to resume it
 - Ask the user
 
-Interview the user as needed until a shared understanding of the topic is
-reached.
+Interview the user until you reach a shared understanding of the topic. Also
+ask for any relevant supporting materials: logs, documents, URLs, related
+tickets, screenshots, background context. Encourage the user to share anything
+they think might be relevant — more is better at this stage.
 
 ### Step 2: Create Research Log
 
@@ -47,69 +54,82 @@ provided):
 
 - Current directory
 - Temporary or session path
-- User provided file path
+- User-provided file path
 
 Use a file name like `research-[topic].md`, where the topic slug is 2–5 ASCII
 words. Provide the full file path when asking the user.
 
 Create the **Research Log** after user selection. Write an initial entry with
-the topic summary and relevant input data.
+the topic summary and all relevant input data.
 
-### Step 3: Hypothesis Framing
+### Step 3: Initial Analyst Pass
 
-Identify candidate hypotheses. A hypothesis tree is a good approach:
+Dispatch an Analyst with the Research Log and any supporting materials
+gathered in Step 1. The Analyst identifies candidate hypotheses and proposes
+initial research leads. A hypothesis tree is a good default structure:
 
 - Label candidates A, B, C and so on
-- Maintain an open/eliminated/confirmed status for each
+- Assign open/eliminated/confirmed status to each
 
-Use a different structure if it better fits the problem or when requested to.
-Log all candidates and ask user to select direction before proceeding.
+Before finalising the hypothesis list, the Analyst must verify that at least
+one hypothesis targets the input data itself — not only the processing code or
+infrastructure. If all candidates assume the data is correct, add one that
+questions it.
 
-### Step 4: Dispatch Researchers
+Surface the Analyst's output to the user and invite their input before
+proceeding. Log the hypothesis tree.
 
-Launch sub-agent researchers for each chosen research direction.
+### Step 4: Dispatch Analyst or Researchers
 
-If a researcher fails or misses the point, log the failure, rephrase or
-decompose the task, and retry with a new sub-agent. The orchestrator never
-performs research as a fallback. If a task repeatedly yields no useful
-results, the orchestrator flags this to the user and proposes abandoning or
-replacing it.
+After each event — researcher completion, Analyst completion, or user input —
+assess what to dispatch next:
 
-### Step 5: Evaluate
+**All researchers in a round have completed** → append each researcher's
+findings to the Research Log, then dispatch the Analyst. Pass it the Research
+Log and the raw researcher output files (the Analyst may read these for depth).
+Include any relevant nudges from the Tips section.
 
-Write researcher results to the log. Update hypothesis statuses. Track unknown
-facts. Log any out-of-scope findings briefly and park them as potential future
-leads.
+**Analyst has completed** → surface its findings, proposed leads, and surfaced
+unknowns to the user. Invite the user to add context, push back, or redirect
+before proceeding. Treat the user's response as higher-priority input than
+the Analyst's recommendations. Wait for confirmation before dispatching
+Researchers.
 
-Review all options and propose next research leads. See Tips below for ideas.
-Always wait for user confirmation of your suggestions.
+**User provides additional information** → log it immediately, then dispatch
+the Analyst out-of-cycle regardless of whether Researchers are still running.
+The Analyst re-evaluates the hypothesis tree in light of the new information.
 
-Repeat Steps 4 and 5 until the user ends the session. Iterations are unbounded
-and user-controlled.
+Each researcher writes its findings to a dedicated output file (e.g.
+`lead-[n].md`). If a researcher fails or misses the point, log the failure and
+note it for the next Analyst dispatch — the Analyst proposes reformulation.
+The Orchestrator never performs research as a fallback.
+
+While researchers are running, the Orchestrator's only permitted actions are
+writing to the Research Log and communicating with the user. No tool calls
+into source material, no verification, no shortcuts.
+
+Continue until the user ends the session.
 
 ## Log Rules
 
 - Append-only. Use `cat >> [LOGFILE] <<'EOF' … EOF` or equivalent for writing.
   Avoid the Write or Edit tools.
-- Entries are signal-only: compact summaries, no narrative, no repetition of
-  prior findings.
-- Raw data (log lines, stack traces, command output) is included verbatim.
+- Keep entries signal-only: compact summaries, no narrative, no repeated
+  findings.
+- Include raw data verbatim: log lines, stack traces, command output.
 - Separate entries with a horizontal rule.
-- Partial or ambiguous results are logged as-is. Omissions are treated as data.
+- Log partial or ambiguous results as-is. Treat omissions as data.
 
 ## Tips
 
-**Consider observability gaps.** Before dispatching more researchers, ask
-whether better data is available: logs from the affected timeframe, a way to
-reproduce the issue, added instrumentation, or a minimal test case.
+**Observability gaps.** Ask whether better data is available: logs from
+the affected timeframe, a way to reproduce the issue, added instrumentation,
+database query output or a minimal test case.
 
-**Ask before guessing.** If you're unsure what to research next, ask the
-user for ideas or suggestions.
+**Unfiltered hypotheses.** Prompt the Analyst to generate candidates without
+filtering for plausibility — validity is assessed later. This reduces
+self-censorship and surfaces angles a directed prompt would miss.
 
-**Generate unfiltered ideas.** Launch a sub-agent with the research log and
-prompt it for ideas — "valid or not, we decide later". This reduces the
-sub-agent's self-censorship and may surface angles a directed prompt can miss.
-
-**In long sessions, re-read the log selectively.** The orchestrator's context
-is finite. Avoid re-reading the full log; rely on the hypothesis tree as
-compressed state, and scan only the entries relevant to the current lead.
+**Selective log reading.** In long sessions, instruct the Analyst to rely on
+the hypothesis tree as compressed state and scan only entries relevant to the
+current lead.
