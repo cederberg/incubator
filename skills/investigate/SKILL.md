@@ -28,7 +28,7 @@ researcher output files, and optional nudges from the Orchestrator. It updates
 the hypothesis tree, proposes next research leads, and always surfaces what is
 not yet known. It makes recommendations only — it takes no actions.
 
-The **Researcher** (sub-agent) handles all information gathering. Each
+The **Researcher** (general-purpose sub-agent) handles all information gathering. Each
 researcher receives a single focused research lead and writes its findings to
 a dedicated output file. The role separation is a hard constraint.
 
