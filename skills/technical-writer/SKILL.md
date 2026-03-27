@@ -58,7 +58,7 @@ Pass all other files — role files, rule files, templates, examples, checklists
 
 ## Workflow: Five Phases, Multiple Sub-Agents
 
-Use a separate, isolated sub-agent for each phase.
+Use a separate, isolated **general-purpose** sub-agent for each phase. Do not use Explore agents — all phases write output files to `$WORK_DIR` and require Write access.
 
 Set the mode path variable once and use it throughout:
 
