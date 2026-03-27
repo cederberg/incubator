@@ -65,7 +65,7 @@ Set the mode path variable once and use it throughout:
 ```
 MODE=<detected-mode>
 MODE_DIR=references/modes/$MODE
-WORK_DIR=.technical-writer
+WORK_DIR=<session working directory>
 ```
 
 Pass `$WORK_DIR` and `$MODE_DIR` to all sub-agents.
