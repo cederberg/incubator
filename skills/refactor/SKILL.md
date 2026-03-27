@@ -1,5 +1,5 @@
 ---
-name: iterative-refactoring
+name: refactor
 description: >
   Multi-pass convergent refactoring of a specific piece of code. Use when code
   works but feels tangled, over-complicated, or like it hasn't found its natural
