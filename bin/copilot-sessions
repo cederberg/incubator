@@ -1,0 +1,310 @@
+#!/usr/bin/env python3
+"""List and inspect Copilot CLI sessions.
+
+Usage:
+  copilot-sessions                      List 30 most recent sessions
+  copilot-sessions -n 50               List 50 most recent sessions
+  copilot-sessions -d ~/Projects/ris   Filter by directory (prefix match)
+  copilot-sessions <session-id>        Show detailed stats for a session
+"""
+
+import argparse
+import json
+import sys
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Optional
+
+SESSION_STATE_DIR = Path.home() / ".copilot" / "session-state"
+DEFAULT_COUNT = 30
+MAX_PROMPT_WIDTH = 80
+
+
+def truncate(text: str, width: int) -> str:
+    text = text.replace("\n", " ").strip()
+    return text if len(text) <= width else text[: width - 1] + "…"
+
+
+def parse_iso(ts: str) -> datetime:
+    return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+
+
+def format_time(iso_str: str) -> str:
+    try:
+        return parse_iso(iso_str).astimezone().strftime("%Y-%m-%d %H:%M")
+    except Exception:
+        return iso_str[:16]
+
+
+def format_duration(td: timedelta) -> str:
+    total = int(td.total_seconds())
+    h, rem = divmod(total, 3600)
+    m, s = divmod(rem, 60)
+    if h:
+        return f"{h}h {m}m"
+    if m:
+        return f"{m}m {s}s"
+    return f"{s}s"
+
+
+def load_events(session_dir: Path) -> Optional[list]:
+    events_file = session_dir / "events.jsonl"
+    if not events_file.exists():
+        return None
+    events = []
+    try:
+        with events_file.open() as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    events.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+    except OSError:
+        return None
+    return events
+
+
+def parse_session_summary(session_dir: Path) -> Optional[dict]:
+    """Parse just enough for the list view (fast path — stops early)."""
+    events_file = session_dir / "events.jsonl"
+    if not events_file.exists():
+        return None
+
+    start_time = None
+    first_prompt = None
+    cwd = None
+
+    try:
+        with events_file.open() as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    event = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+
+                t = event.get("type", "")
+                if t == "session.start":
+                    data = event.get("data", {})
+                    start_time = event.get("timestamp") or data.get("startTime")
+                    cwd = data.get("context", {}).get("cwd", "")
+                elif t == "user.message" and first_prompt is None:
+                    content = event.get("data", {}).get("content", "")
+                    if content:
+                        first_prompt = content
+                        if start_time:
+                            break
+    except OSError:
+        return None
+
+    if not start_time:
+        return None
+
+    return {
+        "id": session_dir.name,
+        "start_time": start_time,
+        "cwd": cwd or "",
+        "first_prompt": first_prompt or "(no prompt found)",
+    }
+
+
+def parse_session_detail(session_dir: Path) -> Optional[dict]:
+    """Parse full stats for a single session."""
+    events = load_events(session_dir)
+    if events is None:
+        return None
+
+    start_time = None
+    end_time = None
+    cwd = None
+    branch = None
+    first_prompt = None
+    user_messages = []
+    event_counts = {}
+
+    for event in events:
+        t = event.get("type", "")
+        ts = event.get("timestamp", "")
+        event_counts[t] = event_counts.get(t, 0) + 1
+
+        if t == "session.start":
+            data = event.get("data", {})
+            start_time = ts or data.get("startTime")
+            ctx = data.get("context", {})
+            cwd = ctx.get("cwd", "")
+            branch = ctx.get("branch", "")
+
+        elif t == "user.message":
+            content = event.get("data", {}).get("content", "")
+            if content:
+                user_messages.append(content)
+                if first_prompt is None:
+                    first_prompt = content
+
+        if ts:
+            end_time = ts
+
+    if not start_time:
+        return None
+
+    try:
+        duration = parse_iso(end_time) - parse_iso(start_time)
+    except Exception:
+        duration = timedelta(0)
+
+    tool_calls = event_counts.get("tool.execution_start", 0)
+    assistant_turns = event_counts.get("assistant.turn_end", 0)
+    subagents = event_counts.get("subagent.started", 0)
+
+    return {
+        "id": session_dir.name,
+        "start_time": start_time,
+        "end_time": end_time,
+        "duration": duration,
+        "cwd": cwd,
+        "branch": branch,
+        "first_prompt": first_prompt or "(no prompt found)",
+        "user_messages": user_messages,
+        "user_turn_count": len(user_messages),
+        "assistant_turn_count": assistant_turns,
+        "tool_calls": tool_calls,
+        "subagents": subagents,
+        "total_events": len(events),
+        "event_counts": event_counts,
+    }
+
+
+def resolve_session_dir(session_id: str) -> Optional[Path]:
+    """Find a session dir by full or prefix match."""
+    if len(session_id) == 36 and (SESSION_STATE_DIR / session_id).is_dir():
+        return SESSION_STATE_DIR / session_id
+    # prefix search
+    matches = [d for d in SESSION_STATE_DIR.iterdir() if d.is_dir() and d.name.startswith(session_id)]
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        print(f"Ambiguous session prefix '{session_id}' — matches:", file=sys.stderr)
+        for m in matches:
+            print(f"  {m.name}", file=sys.stderr)
+        sys.exit(1)
+    return None
+
+
+def cmd_detail(session_id: str):
+    session_dir = resolve_session_dir(session_id)
+    if session_dir is None:
+        print(f"Session not found: {session_id}", file=sys.stderr)
+        sys.exit(1)
+
+    d = parse_session_detail(session_dir)
+    if d is None:
+        print(f"Could not parse session: {session_id}", file=sys.stderr)
+        sys.exit(1)
+
+    home = str(Path.home())
+    cwd_display = d["cwd"].replace(home, "~") if d["cwd"] else "(unknown)"
+
+    print(f"Session:    {d['id']}")
+    print(f"Started:    {format_time(d['start_time'])}")
+    print(f"Ended:      {format_time(d['end_time'])}")
+    print(f"Duration:   {format_duration(d['duration'])}")
+    print(f"Directory:  {cwd_display}")
+    if d["branch"]:
+        print(f"Branch:     {d['branch']}")
+    print()
+    print(f"User turns:      {d['user_turn_count']}")
+    print(f"Assistant turns: {d['assistant_turn_count']}")
+    print(f"Tool calls:      {d['tool_calls']}")
+    if d["subagents"]:
+        print(f"Sub-agents:      {d['subagents']}")
+    print(f"Total events:    {d['total_events']}")
+    print()
+    print("First prompt:")
+    print("-" * 60)
+    print(d["first_prompt"])
+
+    if d["user_turn_count"] > 1:
+        print()
+        print(f"Follow-up prompts ({d['user_turn_count'] - 1}):")
+        for i, msg in enumerate(d["user_messages"][1:], 1):
+            preview = truncate(msg, 100)
+            print(f"  [{i}] {preview}")
+
+
+def cmd_list(count: int, dir_filter: Optional[str]):
+    if not SESSION_STATE_DIR.exists():
+        print(f"Session directory not found: {SESSION_STATE_DIR}", file=sys.stderr)
+        sys.exit(1)
+
+    # Normalize filter to resolved absolute path
+    filter_path = None
+    if dir_filter:
+        filter_path = str(Path(dir_filter).expanduser().resolve())
+
+    sessions = []
+    for entry in SESSION_STATE_DIR.iterdir():
+        if not entry.is_dir():
+            continue
+        info = parse_session_summary(entry)
+        if not info:
+            continue
+        if filter_path and not info["cwd"].startswith(filter_path):
+            continue
+        sessions.append(info)
+
+    sessions.sort(key=lambda s: s["start_time"], reverse=True)
+    sessions = sessions[:count]
+
+    if not sessions:
+        msg = "No sessions found."
+        if filter_path:
+            msg += f" (filter: {filter_path})"
+        print(msg)
+        return
+
+    id_w, time_w = 8, 16
+    print(f"{'SESSION':>{id_w}}  {'STARTED':<{time_w}}  {'CWD':<30}  FIRST PROMPT")
+    print("-" * (id_w + 2 + time_w + 2 + 30 + 2 + MAX_PROMPT_WIDTH))
+
+    home = str(Path.home())
+    for s in sessions:
+        short_id = s["id"][:8]
+        started = format_time(s["start_time"])
+        cwd = truncate(s["cwd"].replace(home, "~"), 30)
+        prompt = truncate(s["first_prompt"], MAX_PROMPT_WIDTH)
+        print(f"{short_id:>{id_w}}  {started:<{time_w}}  {cwd:<30}  {prompt}")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="List and inspect Copilot CLI sessions.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  copilot-sessions                      List 30 most recent sessions\n"
+            "  copilot-sessions -n 50               List 50 most recent sessions\n"
+            "  copilot-sessions -d ~/Projects/ris   Filter by directory\n"
+            "  copilot-sessions f9d6ffdd            Show detail for a session\n"
+        ),
+    )
+    parser.add_argument("session_id", nargs="?", help="Session ID (full or prefix) to inspect")
+    parser.add_argument("-n", "--count", type=int, default=DEFAULT_COUNT, metavar="N",
+                        help=f"Number of sessions to list (default: {DEFAULT_COUNT})")
+    parser.add_argument("-d", "--dir", metavar="DIR",
+                        help="Filter sessions by working directory (prefix match)")
+
+    args = parser.parse_args()
+
+    if args.session_id:
+        cmd_detail(args.session_id)
+    else:
+        cmd_list(args.count, args.dir)
+
+
+if __name__ == "__main__":
+    main()
