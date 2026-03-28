@@ -1,0 +1,746 @@
+#!/usr/bin/env python3
+"""List and inspect Claude Code sessions.
+
+Usage:
+  claude-sessions                         List sessions in current directory
+  claude-sessions --list-dirs             List all project directories with sessions
+  claude-sessions -d ~/Projects/myapp     Filter by a specific directory
+  claude-sessions <session-id>            Session summary (id, tokens, tools, sub-agents, turns)
+  claude-sessions <session-id> --raw      Full transcript with reasoning and tool I/O
+  claude-sessions <session-id> --turn 4   Transcript for a single turn (implies --raw)
+  claude-sessions <session-id> --turn 4-10  Transcript for a range of turns
+
+Session IDs can be given as a full UUID, an 8-char prefix, or a path to a .jsonl file.
+"""
+
+import argparse
+import json
+import re
+import sys
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Optional
+
+CLAUDE_PROJECTS_DIR = Path.home() / ".claude" / "projects"
+DEFAULT_COUNT = 30
+MAX_PROMPT_WIDTH = 80
+W = 120
+
+
+def encode_project_path(path: Path) -> str:
+    """'/Users/per/Projects/foo' → '-Users-per-Projects-foo'"""
+    return str(path.resolve()).replace("/", "-")
+
+
+def decode_project_path(encoded: str) -> str:
+    """'-Users-per-Projects-foo' → '/Users/per/Projects/foo' (best-effort)"""
+    return encoded.replace("-", "/")
+
+
+def truncate(text: str, width: int) -> str:
+    text = text.replace("\n", " ").strip()
+    if len(text) <= width:
+        return text
+    suffix = f" ...({len(text)} chars)"
+    return text[: width - len(suffix)] + suffix
+
+
+def parse_iso(ts: str) -> datetime:
+    return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+
+
+def format_time(ts: str) -> str:
+    try:
+        return parse_iso(ts).astimezone().strftime("%Y-%m-%d %H:%M")
+    except Exception:
+        return ts[:16]
+
+
+def format_hhmm(ts: str) -> str:
+    try:
+        return parse_iso(ts).astimezone().strftime("%H:%M")
+    except Exception:
+        return ts[11:16]
+
+
+def format_duration(td: timedelta) -> str:
+    total = int(td.total_seconds())
+    h, rem = divmod(total, 3600)
+    m, s = divmod(rem, 60)
+    if h:
+        return f"{h}h {m}m"
+    if m:
+        return f"{m}m {s}s"
+    return f"{s}s"
+
+
+IGNORE_PROMPTS = (
+    re.compile(r"^/(clear|new)\s*", re.I),
+    re.compile(r"^/(model|help|usage|exit|quit|context|status)\b.*", re.I | re.DOTALL),
+)
+
+
+def _filter_prompt(text: str) -> Optional[str]:
+    """Strip ignorable command prefixes; return None if nothing interesting remains."""
+    for pattern in IGNORE_PROMPTS:
+        text = pattern.sub("", text, count=1).strip()
+    return text or None
+
+
+def clean_user_content(content) -> Optional[str]:
+    """Extract display text from a user message content field."""
+    if not isinstance(content, str):
+        return None
+    text = content.strip()
+    if not text:
+        return None
+    if "<local-command-stdout>" in text or "<local-command-caveat>" in text:
+        return None
+    if "<command-name>" in text:
+        cmd = re.search(r"<command-name>(/?\S+)</command-name>", text)
+        args_m = re.search(r"<command-args>(.*?)</command-args>", text, re.DOTALL)
+        cmd_str = cmd.group(1) if cmd else "/?"
+        args_str = args_m.group(1).strip() if args_m and args_m.group(1).strip() else ""
+        return f"{cmd_str} {args_str}".strip()
+    return text
+
+
+def load_entries(path: Path) -> Optional[list]:
+    entries = []
+    try:
+        with path.open(encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entries.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+    except OSError:
+        return None
+    return entries
+
+
+def parse_session_summary(path: Path) -> Optional[dict]:
+    """Parse just enough for the list view (fast path)."""
+    first_ts = None
+    last_ts = None
+    first_prompt = None
+    cwd = None
+    git_branch = None
+
+    try:
+        with path.open(encoding="utf-8") as f:
+            for raw in f:
+                raw = raw.strip()
+                if not raw:
+                    continue
+                try:
+                    e = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+
+                ts_str = e.get("timestamp")
+                if ts_str:
+                    try:
+                        ts = parse_iso(ts_str)
+                        if first_ts is None or ts < first_ts:
+                            first_ts = ts
+                        if last_ts is None or ts > last_ts:
+                            last_ts = ts
+                    except Exception:
+                        pass
+
+                if not cwd and e.get("cwd"):
+                    cwd = e["cwd"]
+                if not git_branch and e.get("gitBranch"):
+                    git_branch = e["gitBranch"]
+
+                if e.get("type") == "user" and not e.get("isMeta") and first_prompt is None:
+                    content = e.get("message", {}).get("content", "")
+                    text = clean_user_content(content)
+                    if text:
+                        first_prompt = _filter_prompt(text)
+    except OSError:
+        return None
+
+    if not first_ts:
+        return None
+
+    return {
+        "id": path.stem,
+        "path": path,
+        "start_time": first_ts.isoformat(),
+        "end_time": last_ts.isoformat() if last_ts else None,
+        "cwd": cwd or "",
+        "git_branch": git_branch or "",
+        "first_prompt": first_prompt or "(no prompt found)",
+    }
+
+
+def parse_session_detail(path: Path) -> Optional[dict]:
+    """Parse full stats for a single session."""
+    entries = load_entries(path)
+    if entries is None:
+        return None
+
+    first_ts = None
+    last_ts = None
+    cwd = None
+    git_branch = None
+    model = None
+
+    turn_durations: list[int] = []
+    user_messages: list[dict] = []
+    tool_calls: dict[str, int] = {}
+    tool_errors: dict[str, int] = {}
+    usage_by_model: dict[str, dict[str, int]] = {}
+
+    tool_id_to_name: dict[str, str] = {}
+    tool_id_to_input: dict[str, dict] = {}
+
+    subagent_list: list[dict] = []
+    tool_id_to_subagent_idx: dict[str, int] = {}
+
+    transcript: list[dict] = []
+    current_turn = 0
+
+    for e in entries:
+        ts_str = e.get("timestamp", "")
+        if ts_str:
+            try:
+                ts = parse_iso(ts_str)
+                if first_ts is None or ts < first_ts:
+                    first_ts = ts
+                if last_ts is None or ts > last_ts:
+                    last_ts = ts
+            except Exception:
+                pass
+
+        if not cwd and e.get("cwd"):
+            cwd = e["cwd"]
+        if not git_branch and e.get("gitBranch"):
+            git_branch = e["gitBranch"]
+
+        etype = e.get("type", "")
+
+        if etype == "system" and e.get("subtype") == "turn_duration":
+            turn_durations.append(e.get("durationMs", 0))
+
+        elif etype == "user" and not e.get("isMeta"):
+            content = e.get("message", {}).get("content", "")
+
+            if isinstance(content, str):
+                text = clean_user_content(content)
+                text = _filter_prompt(text) if text else None
+                if text:
+                    current_turn += 1
+                    user_messages.append({"text": text, "ts": ts_str})
+                    transcript.append({"kind": "user", "turn": current_turn, "text": text, "ts": ts_str})
+
+            elif isinstance(content, list):
+                for block in content:
+                    if not isinstance(block, dict) or block.get("type") != "tool_result":
+                        continue
+                    tid = block.get("tool_use_id", "")
+                    name = tool_id_to_name.get(tid, "?")
+                    result_content = block.get("content", "")
+                    is_error = block.get("is_error", False)
+                    if isinstance(result_content, list):
+                        result_content = " ".join(
+                            b.get("text", "") for b in result_content if isinstance(b, dict)
+                        )
+                    if is_error:
+                        tool_errors[name] = tool_errors.get(name, 0) + 1
+                    idx = tool_id_to_subagent_idx.get(tid)
+                    if idx is not None:
+                        subagent_list[idx]["result"] = result_content
+                    transcript.append({
+                        "kind": "tool_result", "turn": current_turn,
+                        "call_id": tid, "name": name,
+                        "content": result_content, "success": not is_error,
+                    })
+
+        elif etype == "assistant":
+            msg = e.get("message", {})
+            if not model:
+                model = msg.get("model")
+
+            usage = msg.get("usage", {})
+            m = msg.get("model") or model or "unknown"
+            bucket = usage_by_model.setdefault(m, {})
+            for k, v in usage.items():
+                if isinstance(v, (int, float)):
+                    bucket[k] = bucket.get(k, 0) + int(v)
+
+            content_blocks = msg.get("content", [])
+            if not isinstance(content_blocks, list):
+                content_blocks = []
+
+            for block in content_blocks:
+                if not isinstance(block, dict):
+                    continue
+                btype = block.get("type")
+                if btype == "thinking":
+                    thinking = block.get("thinking", "").strip()
+                    if thinking:
+                        transcript.append({"kind": "thinking", "turn": current_turn, "text": thinking})
+                elif btype == "text":
+                    text = block.get("text", "").strip()
+                    if text:
+                        transcript.append({"kind": "assistant", "turn": current_turn, "text": text})
+                elif btype == "tool_use":
+                    name = block.get("name", "?")
+                    inp = block.get("input", {})
+                    tid = block.get("id", "")
+                    tool_id_to_name[tid] = name
+                    tool_id_to_input[tid] = inp
+                    tool_calls[name] = tool_calls.get(name, 0) + 1
+
+                    if name == "Agent":
+                        idx = len(subagent_list)
+                        subagent_list.append({
+                            "call_id": tid,
+                            "agent_type": inp.get("subagent_type", ""),
+                            "description": inp.get("description", ""),
+                            "prompt": inp.get("prompt", ""),
+                            "mode": "background" if inp.get("run_in_background") else "sync",
+                            "result": None,
+                            "turn": current_turn,
+                        })
+                        tool_id_to_subagent_idx[tid] = idx
+
+                    transcript.append({
+                        "kind": "tool_call", "turn": current_turn,
+                        "name": name, "args": inp, "call_id": tid,
+                    })
+
+    if not first_ts:
+        return None
+
+    try:
+        duration = last_ts - first_ts if last_ts else timedelta(0)
+    except Exception:
+        duration = timedelta(0)
+
+    turns = []
+    for i, m in enumerate(user_messages):
+        next_ts = user_messages[i + 1]["ts"] if i + 1 < len(user_messages) else (last_ts.isoformat() if last_ts else "")
+        try:
+            resp_ms = int((parse_iso(next_ts) - parse_iso(m["ts"])).total_seconds() * 1000)
+        except Exception:
+            resp_ms = None
+        turns.append({"text": m["text"], "ts": m["ts"], "resp_ms": resp_ms})
+
+    return {
+        "id": path.stem,
+        "start_time": first_ts.isoformat(),
+        "end_time": last_ts.isoformat() if last_ts else None,
+        "duration": duration,
+        "cwd": cwd or "",
+        "git_branch": git_branch or "",
+        "model": model,
+        "turns": turns,
+        "user_turn_count": len(turns),
+        "turn_durations": turn_durations,
+        "tool_calls": tool_calls,
+        "tool_errors": tool_errors,
+        "usage_by_model": usage_by_model,
+        "subagents": subagent_list,
+        "transcript": transcript,
+    }
+
+
+
+def section(title: str) -> None:
+    prefix = f"-- {title} "
+    print(prefix + "-" * max(0, W - len(prefix)))
+
+
+def _fmt_args(name: str, args: dict) -> str:
+    if not args:
+        return ""
+    for key in ("path", "command", "pattern", "query", "intent"):
+        if key in args and len(args) == 1:
+            return str(args[key])
+    if name == "Agent":
+        parts = []
+        if args.get("description"):
+            parts.append(args["description"])
+        if args.get("subagent_type"):
+            parts.append(f"[{args['subagent_type']}]")
+        if args.get("run_in_background"):
+            parts.append("(background)")
+        return " ".join(parts)
+    return json.dumps(args, ensure_ascii=False)
+
+
+def parse_turn_filter(spec: str) -> set[int]:
+    result = set()
+    for part in spec.split(","):
+        part = part.strip()
+        if "-" in part:
+            lo, hi = part.split("-", 1)
+            result.update(range(int(lo), int(hi) + 1))
+        else:
+            result.add(int(part))
+    return result
+
+
+def render_transcript(transcript: list[dict], turn_filter: Optional[set] = None) -> None:
+    TW = 72
+    pending_calls: dict[str, dict] = {}
+
+    for item in transcript:
+        if turn_filter is not None and item.get("turn") not in turn_filter:
+            continue
+        kind = item["kind"]
+
+        if kind == "user":
+            print()
+            print("═" * TW)
+            print(f"  TURN {item['turn']}  {format_hhmm(item['ts'])}")
+            print("═" * TW)
+            print(item["text"])
+
+        elif kind == "thinking":
+            print()
+            label = "┄ thinking "
+            print(label + "┄" * (TW - len(label)))
+            print(item["text"])
+
+        elif kind == "assistant":
+            print()
+            label = "┄ assistant "
+            print(label + "┄" * (TW - len(label)))
+            print(item["text"])
+
+        elif kind == "tool_call":
+            name = item["name"]
+            args = item["args"]
+            call_id = item["call_id"]
+            pending_calls[call_id] = item
+
+            print()
+            if name == "Agent":
+                agent_type = args.get("subagent_type", "?")
+                desc = args.get("description", "")
+                mode = "background" if args.get("run_in_background") else "sync"
+                label = f"┄ subagent: {desc} [{agent_type}/{mode}] "
+                print(label + "┄" * max(0, TW - len(label)))
+                prompt = args.get("prompt", "")
+                if prompt:
+                    print(prompt)
+            else:
+                label = f"┄ {name} "
+                print(label + "┄" * max(0, TW - len(label)))
+                arg_str = _fmt_args(name, args)
+                if arg_str:
+                    print(arg_str)
+
+        elif kind == "tool_result":
+            call_id = item["call_id"]
+            content = item["content"] or ""
+            success = item["success"]
+            name = item["name"]
+            call = pending_calls.pop(call_id, None)
+            is_subagent = call is not None and call.get("name") == "Agent"
+            limit = 3000 if is_subagent else 1200
+
+            flag = " [ERROR]" if not success else ""
+            print(f"→ {name}{flag}")
+            if len(content) > limit:
+                print(content[:limit])
+                print(f"  … ({len(content) - limit:,} more chars)")
+            else:
+                print(content)
+            print()
+
+
+def find_project_dir(path: Path) -> Optional[Path]:
+    """Find the Claude project directory for a given absolute path."""
+    encoded = encode_project_path(path)
+    candidate = CLAUDE_PROJECTS_DIR / encoded
+    return candidate if candidate.is_dir() else None
+
+
+def list_jsonl_files(project_dir: Path) -> list[Path]:
+    return sorted(project_dir.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
+
+
+def resolve_session_file(session_id: str) -> Optional[Path]:
+    """Find a session JSONL file by full UUID, 8-char prefix, or direct path."""
+    candidate = Path(session_id).expanduser()
+    if candidate.is_file():
+        return candidate
+    if candidate.with_suffix(".jsonl").is_file():
+        return candidate.with_suffix(".jsonl")
+
+    # Search all project dirs
+    matches = []
+    if CLAUDE_PROJECTS_DIR.exists():
+        for proj_dir in CLAUDE_PROJECTS_DIR.iterdir():
+            if not proj_dir.is_dir():
+                continue
+            for f in proj_dir.glob("*.jsonl"):
+                if f.stem.startswith(session_id):
+                    matches.append(f)
+
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        print(f"Ambiguous session prefix '{session_id}' — matches:", file=sys.stderr)
+        for m in matches:
+            print(f"  {m.stem}", file=sys.stderr)
+        sys.exit(1)
+    return None
+
+
+def load_all_summaries() -> list[dict]:
+    """Load summary info for all sessions across all projects."""
+    if not CLAUDE_PROJECTS_DIR.exists():
+        print(f"Claude projects directory not found: {CLAUDE_PROJECTS_DIR}", file=sys.stderr)
+        sys.exit(1)
+    results = []
+    for proj_dir in CLAUDE_PROJECTS_DIR.iterdir():
+        if not proj_dir.is_dir():
+            continue
+        for f in proj_dir.glob("*.jsonl"):
+            info = parse_session_summary(f)
+            if info:
+                results.append(info)
+    return results
+
+
+def cmd_dirs(count: int) -> None:
+    from collections import Counter
+    all_sessions = load_all_summaries()
+    home = str(Path.home())
+
+    tally: Counter = Counter()
+    latest: dict[str, str] = {}
+    for s in all_sessions:
+        cwd = s["cwd"]
+        if not cwd:
+            cwd = "(unknown)"
+        tally[cwd] += 1
+        if cwd not in latest or s["start_time"] > latest[cwd]:
+            latest[cwd] = s["start_time"]
+
+    dirs = sorted(tally.keys(), key=lambda d: latest[d], reverse=True)[:count]
+
+    if not dirs:
+        print("No sessions found.")
+        return
+
+    n_w = max(max(len(str(tally[d])) for d in dirs), len("Sessions"))
+    print(f"{'Sessions':>{n_w}}  {'Last session':<16}  Directory")
+    print("-" * (n_w + 2 + 16 + 2 + 60))
+    for d in dirs:
+        n = tally[d]
+        last = format_time(latest[d])
+        display = d.replace(home, "~")
+        print(f"{n:>{n_w}}  {last:<16}  {display}")
+
+
+def cmd_list(count: int, dir_filter: Optional[str]) -> None:
+    filter_path = str(Path(dir_filter).expanduser().resolve()) if dir_filter else None
+
+    all_sessions = load_all_summaries()
+    if filter_path:
+        sessions = [s for s in all_sessions if s["cwd"].startswith(filter_path)]
+    else:
+        sessions = all_sessions
+
+    sessions.sort(key=lambda s: s["start_time"], reverse=True)
+    sessions = sessions[:count]
+
+    if not sessions:
+        msg = "No sessions found."
+        if filter_path:
+            msg += f" (filter: {filter_path})"
+        print(msg)
+        return
+
+    home = str(Path.home())
+    dir_display = (filter_path or str(Path.cwd())).replace(home, "~")
+    print(f"Directory: {dir_display}")
+    print()
+
+    id_w, time_w = 8, 16
+    fixed_w = id_w + 2 + time_w + 2
+    prompt_w = max(20, W - fixed_w)
+    print(f"{'Session':>{id_w}}  {'Started':<{time_w}}  First prompt")
+    print("-" * (fixed_w + prompt_w))
+
+    for s in sessions:
+        short_id = s["id"][:8]
+        started = format_time(s["start_time"])
+        prompt = truncate(s["first_prompt"], prompt_w)
+        print(f"{short_id:>{id_w}}  {started:<{time_w}}  {prompt}")
+
+
+def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = None) -> None:
+    path = resolve_session_file(session_id)
+    if path is None:
+        print(f"Session not found: {session_id}", file=sys.stderr)
+        sys.exit(1)
+
+    d = parse_session_detail(path)
+    if d is None:
+        print(f"Could not parse session: {session_id}", file=sys.stderr)
+        sys.exit(1)
+
+    home = str(Path.home())
+    cwd = d.get("cwd", "")
+    cwd_display = cwd.replace(home, "~") if cwd else "(unknown)"
+
+    print(f"Session:   {d['id']}")
+    print(f"Started:   {format_time(d['start_time'])}")
+    if d.get("end_time"):
+        print(f"Ended:     {format_time(d['end_time'])}")
+    print(f"Duration:  {format_duration(d['duration'])}")
+    print(f"Directory: {cwd_display}")
+    if d["git_branch"]:
+        print(f"Branch:    {d['git_branch']}")
+    if d.get("model"):
+        print(f"Model:     {d['model']}")
+    print()
+    print(f"Turns:        {d['user_turn_count']}")
+    total_tools = sum(d["tool_calls"].values())
+    print(f"Tool calls:   {total_tools}")
+    if d["subagents"]:
+        print(f"Sub-agents:   {len(d['subagents'])}")
+
+    # Tokens
+    ubm = d["usage_by_model"]
+    if ubm:
+        print()
+        section("Tokens")
+        col_w = max(len(m) for m in ubm) + 2
+        header = f"{'Model':<{col_w}}  {'Input':>10}  {'Output':>8}  {'Cache Read':>12}  {'Cache Write':>12}"
+        print(header)
+        print("-" * len(header))
+        for m, u in ubm.items():
+            inp = u.get("input_tokens", 0)
+            out = u.get("output_tokens", 0)
+            cr  = u.get("cache_read_input_tokens", 0)
+            cw  = u.get("cache_creation_input_tokens", 0)
+            print(f"{m:<{col_w}}  {inp:>10,}  {out:>8,}  {cr:>12,}  {cw:>12,}")
+
+    # Tool usage
+    tc = d["tool_calls"]
+    if tc:
+        print()
+        section("Tool usage")
+        name_w = max(len(n) for n in tc) + 2
+        print(f"{'Tool':<{name_w}}  {'Calls':>6}  {'Errors':>6}")
+        print("-" * (name_w + 16))
+        for name in sorted(tc, key=lambda n: -tc[n]):
+            errs = d["tool_errors"].get(name, 0)
+            err_str = str(errs) if errs else "-"
+            print(f"{name:<{name_w}}  {tc[name]:>6}  {err_str:>6}")
+
+    # Sub-agents
+    agents = d["subagents"]
+    if agents:
+        print()
+        section(f"Sub-agents ({len(agents)})")
+        num_w = len(str(len(agents)))
+        desc_w = min(max((len(a["description"] or a["agent_type"]) for a in agents), default=4) + 1, 24)
+        type_w = max(len(a["agent_type"]) for a in agents) + 4
+        fixed_cols = num_w + 2 + desc_w + 2 + type_w + 2
+        prompt_w = max(30, W - fixed_cols)
+        print(f"{'#':>{num_w}}  {'Description':<{desc_w}}  {'Type':<{type_w}}  Prompt")
+        print("-" * (fixed_cols + prompt_w))
+        for i, a in enumerate(agents, 1):
+            raw_name = a["description"] or a["agent_type"]
+            label = (raw_name[:desc_w - 1] + "…") if len(raw_name) >= desc_w else raw_name
+            atype = a["agent_type"]
+            type_str = f"{atype} ○" if a["mode"] == "background" else f"{atype} •"
+            prompt_text = a["prompt"].replace("\n", " ")
+            if cwd:
+                prompt_text = prompt_text.replace(cwd + "/", "@/").replace(cwd, "@")
+            prompt_preview = truncate(prompt_text, prompt_w)
+            print(f"{i:>{num_w}}  {label:<{desc_w}}  {type_str:<{type_w}}  {prompt_preview}")
+
+    # Turns
+    turns = d["turns"]
+    if turns:
+        print()
+        section(f"Turns ({len(turns)})")
+        num_w = len(str(len(turns)))
+        prefix_w = num_w + 2 + 5 + 2 + 8 + 2 + 1 + 2
+        msg_w = max(20, W - prefix_w)
+        print(f"{'#':>{num_w}}  {'Start':<5}  {'Time':>8}     Message")
+        print(f"{'-'*num_w}  {'-'*5}  {'-'*8}  {'-':1}  {'-'*msg_w}")
+
+        agents_by_turn: dict[int, list[str]] = {}
+        for a in agents:
+            t_num = a.get("turn")
+            if t_num is not None:
+                agents_by_turn.setdefault(t_num, []).append(a["mode"])
+
+        for i, turn in enumerate(turns, 1):
+            ts = format_hhmm(turn["ts"])
+            resp = format_duration(timedelta(milliseconds=turn["resp_ms"])) if turn["resp_ms"] else "?"
+            modes = agents_by_turn.get(i, [])
+            marker = "●" if "sync" in modes else ("○" if modes else " ")
+            msg = truncate(turn["text"], msg_w)
+            print(f"{i:>{num_w}}  {ts:<5}  {resp:>8}  {marker}  {msg}")
+
+    # Full transcript
+    if raw:
+        print()
+        if turn_filter:
+            turns_desc = ", ".join(
+                f"{min(g)}-{max(g)}" if len(g) > 1 else str(min(g))
+                for g in [sorted(turn_filter)]
+            )
+            section(f"Transcript  (turns {turns_desc})")
+        else:
+            section("Transcript")
+        render_transcript(d["transcript"], turn_filter=turn_filter)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="List and inspect Claude Code sessions.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  claude-sessions                       List sessions in current directory\n"
+            "  claude-sessions --list-dirs           List all project directories with sessions\n"
+            "  claude-sessions -d ~/Projects/myapp  Filter by a specific directory\n"
+            "  claude-sessions c4a3e5f3             Show detail for a session\n"
+            "  claude-sessions c4a3e5f3 --raw       Full transcript with reasoning\n"
+        ),
+    )
+    parser.add_argument("session_id", nargs="?", help="Session ID (full or prefix) to inspect")
+    parser.add_argument("-n", "--count", type=int, default=DEFAULT_COUNT, metavar="N",
+                        help=f"Number of sessions/dirs to list (default: {DEFAULT_COUNT})")
+    parser.add_argument("-d", "--dir", metavar="DIR",
+                        help="Filter sessions by working directory (default: current directory)")
+    parser.add_argument("--list-dirs", action="store_true",
+                        help="List all project directories with sessions")
+    parser.add_argument("--raw", action="store_true",
+                        help="Show full transcript with reasoning (use with a session ID)")
+    parser.add_argument("--turn", metavar="RANGE",
+                        help="Filter transcript to specific turns, e.g. 4 or 4-10 (implies --raw)")
+
+    args = parser.parse_args()
+
+    if args.session_id:
+        turn_filter = parse_turn_filter(args.turn) if args.turn else None
+        cmd_detail(args.session_id, raw=args.raw or turn_filter is not None,
+                   turn_filter=turn_filter)
+    elif args.list_dirs:
+        cmd_dirs(args.count)
+    else:
+        dir_filter = args.dir if args.dir else str(Path.cwd())
+        cmd_list(args.count, dir_filter)
+
+
+if __name__ == "__main__":
+    main()
