@@ -126,6 +126,7 @@ def parse_session_summary(path: Path) -> Optional[dict]:
     first_prompt = None
     cwd = None
     git_branch = None
+    turn_count = 0
 
     try:
         with path.open(encoding="utf-8") as f:
@@ -154,11 +155,15 @@ def parse_session_summary(path: Path) -> Optional[dict]:
                 if not git_branch and e.get("gitBranch"):
                     git_branch = e["gitBranch"]
 
-                if e.get("type") == "user" and not e.get("isMeta") and first_prompt is None:
+                if e.get("type") == "user" and not e.get("isMeta"):
                     content = e.get("message", {}).get("content", "")
                     text = clean_user_content(content)
                     if text:
-                        first_prompt = _filter_prompt(text)
+                        text = _filter_prompt(text)
+                    if text:
+                        turn_count += 1
+                        if first_prompt is None:
+                            first_prompt = text
     except OSError:
         return None
 
@@ -173,6 +178,7 @@ def parse_session_summary(path: Path) -> Optional[dict]:
         "cwd": cwd or "",
         "git_branch": git_branch or "",
         "first_prompt": first_prompt or "(no prompt found)",
+        "turn_count": turn_count,
     }
 
 
@@ -572,17 +578,17 @@ def cmd_list(count: int, dir_filter: Optional[str]) -> None:
     print(f"Directory: {dir_display}")
     print()
 
-    id_w, time_w = 8, 16
-    fixed_w = id_w + 2 + time_w + 2
+    id_w, time_w, turns_w = 8, 16, 5
+    fixed_w = id_w + 2 + time_w + 2 + turns_w + 2
     prompt_w = max(20, W - fixed_w)
-    print(f"{'Session':>{id_w}}  {'Started':<{time_w}}  First prompt")
+    print(f"{'Session':>{id_w}}  {'Started':<{time_w}}  {'Turns':>{turns_w}}  First prompt")
     print("-" * (fixed_w + prompt_w))
 
     for s in sessions:
         short_id = s["id"][:8]
         started = format_time(s["start_time"])
         prompt = truncate(s["first_prompt"], prompt_w)
-        print(f"{short_id:>{id_w}}  {started:<{time_w}}  {prompt}")
+        print(f"{short_id:>{id_w}}  {started:<{time_w}}  {s['turn_count']:>{turns_w}}  {prompt}")
 
 
 def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = None) -> None:

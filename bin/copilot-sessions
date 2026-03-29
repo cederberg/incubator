@@ -97,7 +97,7 @@ def load_events(session_dir: Path) -> Optional[list]:
 
 
 def parse_session_summary(session_dir: Path) -> Optional[dict]:
-    """Parse just enough for the list view (fast path — stops early)."""
+    """Parse just enough for the list view."""
     events_file = session_dir / "events.jsonl"
     if not events_file.exists():
         return None
@@ -105,6 +105,7 @@ def parse_session_summary(session_dir: Path) -> Optional[dict]:
     start_time = None
     first_prompt = None
     cwd = None
+    turn_count = 0
 
     try:
         with events_file.open() as f:
@@ -122,12 +123,12 @@ def parse_session_summary(session_dir: Path) -> Optional[dict]:
                     data = event.get("data", {})
                     start_time = event.get("timestamp") or data.get("startTime")
                     cwd = data.get("context", {}).get("cwd", "")
-                elif t == "user.message" and first_prompt is None:
+                elif t == "user.message":
                     content = event.get("data", {}).get("content", "")
                     if content:
-                        first_prompt = _filter_prompt(content)
-                        if first_prompt and start_time:
-                            break
+                        turn_count += 1
+                        if first_prompt is None:
+                            first_prompt = _filter_prompt(content)
     except OSError:
         return None
 
@@ -139,6 +140,7 @@ def parse_session_summary(session_dir: Path) -> Optional[dict]:
         "start_time": start_time,
         "cwd": cwd or "",
         "first_prompt": first_prompt or "(no prompt found)",
+        "turn_count": turn_count,
     }
 
 
@@ -626,17 +628,17 @@ def cmd_list(count: int, dir_filter: Optional[str]):
     print(f"Directory: {dir_display}")
     print()
 
-    id_w, time_w = 8, 16
-    fixed_w = id_w + 2 + time_w + 2
+    id_w, time_w, turns_w = 8, 16, 5
+    fixed_w = id_w + 2 + time_w + 2 + turns_w + 2
     prompt_w = max(20, W - fixed_w)
-    print(f"{'Session':>{id_w}}  {'Started':<{time_w}}  First prompt")
+    print(f"{'Session':>{id_w}}  {'Started':<{time_w}}  {'Turns':>{turns_w}}  First prompt")
     print("-" * (fixed_w + prompt_w))
 
     for s in sessions:
         short_id = s["id"][:8]
         started = format_time(s["start_time"])
         prompt = truncate(s["first_prompt"], prompt_w)
-        print(f"{short_id:>{id_w}}  {started:<{time_w}}  {prompt}")
+        print(f"{short_id:>{id_w}}  {started:<{time_w}}  {s['turn_count']:>{turns_w}}  {prompt}")
 
 
 def cmd_dirs(count: int):
