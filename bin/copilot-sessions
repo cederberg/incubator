@@ -17,6 +17,7 @@ import argparse
 import json
 import re
 import sys
+from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
@@ -327,9 +328,12 @@ def format_model_name(model_id: str) -> str:
     return " ".join(p.capitalize() if not p[0].isdigit() else p for p in parts if p)
 
 
+def ruled(label: str, char: str = "-", width: int = W) -> str:
+    return label + char * max(0, width - len(label))
+
+
 def section(title: str) -> None:
-    prefix = f"-- {title} "
-    print(prefix + "-" * max(0, W - len(prefix)))
+    print(ruled(f"-- {title} "))
 
 
 def resolve_session_dir(session_id: str) -> Optional[Path]:
@@ -385,9 +389,16 @@ def parse_turn_filter(spec: str) -> set[int]:
     return result
 
 
+def format_turn_range(turn_filter: set[int]) -> str:
+    return ", ".join(
+        f"{min(g)}-{max(g)}" if len(g) > 1 else str(min(g))
+        for g in [sorted(turn_filter)]
+    )
+
+
 def render_transcript(transcript: list[dict], turn_filter: Optional[set] = None) -> None:
     """Print a full human-readable conversation transcript."""
-    W = 72
+    TW = 72
     pending_calls: dict[str, dict] = {}  # call_id -> item, for attaching results
 
     for item in transcript:
@@ -397,21 +408,19 @@ def render_transcript(transcript: list[dict], turn_filter: Optional[set] = None)
 
         if kind == "user":
             print()
-            print("═" * W)
+            print("═" * TW)
             print(f"  TURN {item['turn']}  {format_hhmm(item['ts'])}")
-            print("═" * W)
+            print("═" * TW)
             print(item["text"])
 
         elif kind == "thinking":
             print()
-            label = "┄ thinking "
-            print(label + "┄" * (W - len(label)))
+            print(ruled("┄ thinking ", "┄", TW))
             print(item["text"])
 
         elif kind == "assistant":
             print()
-            label = "┄ assistant "
-            print(label + "┄" * (W - len(label)))
+            print(ruled("┄ assistant ", "┄", TW))
             print(item["text"])
 
         elif kind == "tool_call":
@@ -423,13 +432,12 @@ def render_transcript(transcript: list[dict], turn_filter: Optional[set] = None)
             print()
             if name == "task":
                 label = f"┄ subagent: {args.get('name', '?')} [{args.get('agent_type', '?')}/{args.get('mode', 'sync')}] "
-                print(label + "┄" * max(0, W - len(label)))
+                print(ruled(label, "┄", TW))
                 prompt = args.get("prompt", "")
                 if prompt:
                     print(prompt)
             else:
-                label = f"┄ {name} "
-                print(label + "┄" * max(0, W - len(label)))
+                print(ruled(f"┄ {name} ", "┄", TW))
                 arg_str = _fmt_args(name, args)
                 if arg_str:
                     print(arg_str)
@@ -555,11 +563,10 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
             print(f.replace(cwd + "/", "@/").replace(cwd, "@").replace(home, "~"))
 
     # Build per-turn sub-agent mode index
-    agents_by_turn: dict[int, list[str]] = {}
+    agents_by_turn: defaultdict[int, list[str]] = defaultdict(list)
     for a in d.get("subagents", []):
-        t_num = a.get("turn")
-        if t_num is not None:
-            agents_by_turn.setdefault(t_num, []).append(a["mode"])
+        if a.get("turn") is not None:
+            agents_by_turn[a["turn"]].append(a["mode"])
 
     # Turns
     turns = d["turns"]
@@ -575,12 +582,7 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
             ts = format_hhmm(turn["ts"])
             resp = format_duration(timedelta(milliseconds=turn["resp_ms"])) if turn["resp_ms"] else "?"
             modes = agents_by_turn.get(i, [])
-            if "sync" in modes:
-                marker = "●"
-            elif modes:
-                marker = "○"
-            else:
-                marker = " "
+            marker = "●" if "sync" in modes else ("○" if modes else " ")
             msg = truncate(turn["text"], msg_w)
             print(f"{i:>{num_w}}  {ts:<5}  {resp:>8}  {marker}  {msg}")
 
@@ -588,11 +590,7 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
     if raw:
         print()
         if turn_filter:
-            turns_desc = ", ".join(
-                f"{min(g)}-{max(g)}" if len(g) > 1 else str(min(g))
-                for g in [sorted(turn_filter)]
-            )
-            section(f"Transcript  (turns {turns_desc})")
+            section(f"Transcript  (turns {format_turn_range(turn_filter)})")
         else:
             section("Transcript")
         render_transcript(d["transcript"], turn_filter=turn_filter)
