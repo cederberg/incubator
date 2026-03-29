@@ -68,11 +68,12 @@ export MANPATH="$HOME/.local/share/man:$MANPATH"
   npx skills@latest add cederberg/incubator/skills/technical-writer
   ```
 
-- **archive-conversation** — Extracts and structures knowledge from a
-  conversation for persistent storage.
+- **session-review** — Analyzes Claude Code or Copilot session logs to
+  surface learnings — context gaps, capability gaps, process failures, and
+  insights — as a structured report for later action.
 
   ```
-  npx skills@latest add cederberg/incubator/skills/archive-conversation
+  npx skills@latest add cederberg/incubator/skills/session-review
   ```
 
 - **distill-context** — Creates and maintains `AGENTS.md`, the agent context
