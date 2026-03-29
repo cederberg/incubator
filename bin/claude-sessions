@@ -355,6 +355,7 @@ def ruled(label: str, char: str = "-", width: int = W) -> str:
 
 
 def section(title: str) -> None:
+    print()
     print(ruled(f"-- {title} "))
 
 
@@ -619,7 +620,6 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
     # Tokens
     ubm = d["usage_by_model"]
     if ubm:
-        print()
         section("Tokens")
         col_w = max(len(m) for m in ubm) + 2
         header = f"{'Model':<{col_w}}  {'Input':>10}  {'Output':>8}  {'Cache Read':>12}  {'Cache Write':>12}"
@@ -635,7 +635,6 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
     # Tool usage
     tc = d["tool_calls"]
     if tc:
-        print()
         section("Tool usage")
         name_w = max(len(n) for n in tc) + 2
         print(f"{'Tool':<{name_w}}  {'Calls':>6}  {'Errors':>6}")
@@ -648,7 +647,6 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
     # Sub-agents
     agents = d["subagents"]
     if agents:
-        print()
         section(f"Sub-agents ({len(agents)})")
         num_w = len(str(len(agents)))
         desc_w = min(max((len(a["description"] or a["agent_type"]) for a in agents), default=4) + 1, 24)
@@ -671,7 +669,6 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
     # Turns
     turns = d["turns"]
     if turns:
-        print()
         section(f"Turns ({len(turns)})")
         num_w = len(str(len(turns)))
         prefix_w = num_w + 2 + 5 + 2 + 8 + 2 + 1 + 2
@@ -694,7 +691,6 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
 
     # Full transcript
     if raw:
-        print()
         if turn_filter:
             section(f"Transcript  (turns {format_turn_range(turn_filter)})")
         else:

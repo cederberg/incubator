@@ -333,6 +333,7 @@ def ruled(label: str, char: str = "-", width: int = W) -> str:
 
 
 def section(title: str) -> None:
+    print()
     print(ruled(f"-- {title} "))
 
 
@@ -500,7 +501,6 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
     # Tokens
     mm = d.get("model_metrics")
     if mm:
-        print()
         section("Tokens")
         col_w = max(len(m) for m in mm) + 2
         header = f"{'Model':<{col_w}}  {'Input':>10}  {'Output':>8}  {'Cache Read':>12}"
@@ -516,7 +516,6 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
     # Tool usage
     tc = d.get("tool_call_counts", {})
     if tc:
-        print()
         section("Tool usage")
         name_w = max(len(n) for n in tc) + 2
         print(f"{'Tool':<{name_w}}  {'Calls':>6}  {'Errors':>6}")
@@ -529,7 +528,6 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
     # Sub-agents
     agents = d.get("subagents", [])
     if agents:
-        print()
         section(f"Sub-agents ({len(agents)})")
         num_w = len(str(len(agents)))
         name_w = min(max((len(a["task_name"] or a["agent_type"]) for a in agents), default=4) + 1, 16)
@@ -553,7 +551,6 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
     # Code changes
     cc = d.get("code_changes")
     if cc and (cc.get("linesAdded") or cc.get("linesRemoved") or cc.get("filesModified")):
-        print()
         section("Code changes")
         added = cc.get("linesAdded", 0)
         removed = cc.get("linesRemoved", 0)
@@ -571,7 +568,6 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
     # Turns
     turns = d["turns"]
     if turns:
-        print()
         section(f"Turns ({len(turns)})")
         num_w = len(str(len(turns)))
         prefix_w = num_w + 2 + 5 + 2 + 8 + 2 + 1 + 2  # adds marker column (1 char + 2 spaces)
@@ -588,7 +584,6 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
 
     # Full transcript
     if raw:
-        print()
         if turn_filter:
             section(f"Transcript  (turns {format_turn_range(turn_filter)})")
         else:
