@@ -17,6 +17,7 @@ import argparse
 import json
 import re
 import sys
+from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
@@ -31,10 +32,6 @@ def encode_project_path(path: Path) -> str:
     """'/Users/per/Projects/foo' → '-Users-per-Projects-foo'"""
     return str(path.resolve()).replace("/", "-")
 
-
-def decode_project_path(encoded: str) -> str:
-    """'-Users-per-Projects-foo' → '/Users/per/Projects/foo' (best-effort)"""
-    return encoded.replace("-", "/")
 
 
 def truncate(text: str, width: int) -> str:
@@ -353,9 +350,12 @@ def parse_session_detail(path: Path) -> Optional[dict]:
 
 
 
+def ruled(label: str, char: str = "-", width: int = W) -> str:
+    return label + char * max(0, width - len(label))
+
+
 def section(title: str) -> None:
-    prefix = f"-- {title} "
-    print(prefix + "-" * max(0, W - len(prefix)))
+    print(ruled(f"-- {title} "))
 
 
 def _fmt_args(name: str, args: dict) -> str:
@@ -388,6 +388,13 @@ def parse_turn_filter(spec: str) -> set[int]:
     return result
 
 
+def format_turn_range(turn_filter: set[int]) -> str:
+    return ", ".join(
+        f"{min(g)}-{max(g)}" if len(g) > 1 else str(min(g))
+        for g in [sorted(turn_filter)]
+    )
+
+
 def render_transcript(transcript: list[dict], turn_filter: Optional[set] = None) -> None:
     TW = 72
     pending_calls: dict[str, dict] = {}
@@ -406,14 +413,12 @@ def render_transcript(transcript: list[dict], turn_filter: Optional[set] = None)
 
         elif kind == "thinking":
             print()
-            label = "┄ thinking "
-            print(label + "┄" * (TW - len(label)))
+            print(ruled("┄ thinking ", "┄", TW))
             print(item["text"])
 
         elif kind == "assistant":
             print()
-            label = "┄ assistant "
-            print(label + "┄" * (TW - len(label)))
+            print(ruled("┄ assistant ", "┄", TW))
             print(item["text"])
 
         elif kind == "tool_call":
@@ -427,14 +432,12 @@ def render_transcript(transcript: list[dict], turn_filter: Optional[set] = None)
                 agent_type = args.get("subagent_type", "?")
                 desc = args.get("description", "")
                 mode = "background" if args.get("run_in_background") else "sync"
-                label = f"┄ subagent: {desc} [{agent_type}/{mode}] "
-                print(label + "┄" * max(0, TW - len(label)))
+                print(ruled(f"┄ subagent: {desc} [{agent_type}/{mode}] ", "┄", TW))
                 prompt = args.get("prompt", "")
                 if prompt:
                     print(prompt)
             else:
-                label = f"┄ {name} "
-                print(label + "┄" * max(0, TW - len(label)))
+                print(ruled(f"┄ {name} ", "┄", TW))
                 arg_str = _fmt_args(name, args)
                 if arg_str:
                     print(arg_str)
@@ -676,11 +679,10 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
         print(f"{'#':>{num_w}}  {'Start':<5}  {'Time':>8}     Message")
         print(f"{'-'*num_w}  {'-'*5}  {'-'*8}  {'-':1}  {'-'*msg_w}")
 
-        agents_by_turn: dict[int, list[str]] = {}
+        agents_by_turn: defaultdict[int, list[str]] = defaultdict(list)
         for a in agents:
-            t_num = a.get("turn")
-            if t_num is not None:
-                agents_by_turn.setdefault(t_num, []).append(a["mode"])
+            if a.get("turn") is not None:
+                agents_by_turn[a["turn"]].append(a["mode"])
 
         for i, turn in enumerate(turns, 1):
             ts = format_hhmm(turn["ts"])
@@ -694,11 +696,7 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
     if raw:
         print()
         if turn_filter:
-            turns_desc = ", ".join(
-                f"{min(g)}-{max(g)}" if len(g) > 1 else str(min(g))
-                for g in [sorted(turn_filter)]
-            )
-            section(f"Transcript  (turns {turns_desc})")
+            section(f"Transcript  (turns {format_turn_range(turn_filter)})")
         else:
             section("Transcript")
         render_transcript(d["transcript"], turn_filter=turn_filter)
