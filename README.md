@@ -23,13 +23,6 @@ export MANPATH="$HOME/.local/share/man:$MANPATH"
 
 ## Agent Skills
 
-- **archive-conversation** — Extracts and structures knowledge from a
-  conversation for persistent storage.
-
-  ```
-  npx skills@latest add cederberg/incubator/skills/archive-conversation
-  ```
-
 - **brainstorm** — Open-ended idea generation without filtering for validity.
   Use to explore a design space, when stuck needing fresh angles, or when
   naming something.
@@ -43,14 +36,6 @@ export MANPATH="$HOME/.local/share/man:$MANPATH"
 
   ```
   npx skills@latest add cederberg/incubator/skills/discuss
-  ```
-
-- **distill-context** — Creates and maintains `AGENTS.md`, the agent context
-  file for a project. Syncs it with recent changes, performs full analysis, or
-  realigns a stale file.
-
-  ```
-  npx skills@latest add cederberg/incubator/skills/distill-context
   ```
 
 - **interview-me** — Conduct a deep, structured interview to reach shared
@@ -70,7 +55,7 @@ export MANPATH="$HOME/.local/share/man:$MANPATH"
 
 - **refactor** — Multi-pass convergent refactoring of a specific piece of
   code. Use when code works but feels tangled, over-complicated, or like it
-  hasn't found its natural shape.
+  hasn't found its natural form yet.
 
   ```
   npx skills@latest add cederberg/incubator/skills/refactor
@@ -81,4 +66,19 @@ export MANPATH="$HOME/.local/share/man:$MANPATH"
 
   ```
   npx skills@latest add cederberg/incubator/skills/technical-writer
+  ```
+
+- **archive-conversation** — Extracts and structures knowledge from a
+  conversation for persistent storage.
+
+  ```
+  npx skills@latest add cederberg/incubator/skills/archive-conversation
+  ```
+
+- **distill-context** — Creates and maintains `AGENTS.md`, the agent context
+  file for a project. Syncs it with recent changes, performs full analysis, or
+  realigns a stale file.
+
+  ```
+  npx skills@latest add cederberg/incubator/skills/distill-context
   ```
