@@ -33,10 +33,12 @@ Parse `$ARGUMENTS`:
 
 Based on your identity, use one of these commands as the `[TOOL]` reference.
 
-| Agent        | Command                           |
-|--------------|-----------------------------------|
-| Claude Code  | `python scripts/claude-sessions`  |
-| Copilot      | `python scripts/copilot-sessions` |
+| Agent        | Command                    |
+|--------------|----------------------------|
+| Claude Code  | `scripts/claude-sessions`  |
+| Copilot      | `scripts/copilot-sessions` |
+
+All script paths are relative to the skill base directory.
 
 ---
 
