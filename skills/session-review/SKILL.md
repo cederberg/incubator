@@ -1,23 +1,21 @@
 ---
 name: session-review
 description: Analyze Claude Code or Copilot session logs for insights, gaps,
-  and learnings. Produces a structured report of findings — no solutions
-  prescribed.
+  and learnings. Produces a report of findings with targeted suggestions for
+  the highest-leverage ones.
 disable-model-invocation: true
 argument-hint: "[session-id | 'latest' | 'list']"
-allowed-tools: Read, Grep, Glob, Bash(scripts/*), Bash(ls *), Bash(wc *)
+allowed-tools: Read, Grep, Glob, Bash(scripts/*)
 ---
-
 # Session Review
 
 ## Goal
 
-Agent sessions accumulate hard-won knowledge: corrections, dead ends,
-missing context, and occasional insights. The goal of this skill is to
-surface that knowledge so it can be persisted — as AGENTS.md rules, new
-tools, scripts, or skills — making future agents faster and less error-prone.
-The output is a structured report of findings; acting on them is a separate
-step.
+Agent sessions accumulate corrections, dead ends, missing context, and
+occasional insights. The goal of this skill is to learn from these — as
+AGENTS.md rules, new tools, scripts, or skills — making future agents faster
+and less error-prone. The output is a report of findings followed by targeted
+suggestions for the highest-leverage ones.
 
 ---
 
@@ -33,8 +31,7 @@ Parse `$ARGUMENTS`:
 
 ## Step 2: Select session tool
 
-Select the script that matches the current agent. Use it as `SESSION_TOOL`
-for all subsequent commands.
+Use the script for your agent as `SESSION_TOOL` for all subsequent commands.
 
 | Agent        | Script                     |
 |--------------|----------------------------|
@@ -45,15 +42,14 @@ for all subsequent commands.
 
 ## Mode: List
 
-Surface candidate sessions for the user to choose from.
-**Do not analyze yet.**
+Surface candidate sessions from the current working directory for the user
+to choose from. Do not search other projects unless requested by the user.
 
 ```bash
-$SESSION_TOOL -n 30
+$SESSION_TOOL -n 10 [-d <dir>]
 ```
 
-Working from the most recent sessions first, prefer those with higher turn
-counts. For each candidate, run:
+For each candidate session, run:
 
 ```bash
 $SESSION_TOOL <id>
@@ -68,23 +64,19 @@ Read the turns table. Scan user messages for these signals:
 - **Tool denials**
 - **Reflection signals**
 
-Quick-check sessions until you have 3 that appear worth diving into. List
-up to 10 candidate sessions, with a table showing session ID, date, duration,
-turn count, signal count, and one line of quoted evidence. Mark the top 3
-clearly. Then ask: *"Which session would you like to review?"*
+List all sessions in a table — session ID, date, duration, turn count, one
+line of quoted evidence — with the top 3 by interest marked. Ask the user
+which to review — or whether to search a different directory.
 
 ---
 
 ## Mode: Analyze
 
-### Load the session
+### Read session summary
 
 ```bash
 $SESSION_TOOL <id>
 ```
-
-Read the full output: session metadata, tool usage, sub-agent table, and
-turns table. This is your map.
 
 ### Pull targeted transcript sections
 
@@ -102,7 +94,9 @@ Prioritize:
 - Sub-agent turns — what was the task, did the result land correctly?
 - Any turn where the user signals something is worth remembering
 
-### Produce the report
+### Report findings
+
+Write the report directly in your response to the user.
 
 ```markdown
 # Session Review
@@ -114,40 +108,46 @@ Prioritize:
 **Turns:** <count>
 **Summary:** <one sentence: what was the user trying to accomplish?>
 
----
-
 ## Context Gaps
 
 Facts the agent didn't know, had to be told, or got wrong. Candidates for
-AGENTS.md, project docs, or per-filetype rules.
+AGENTS.md, project docs, or per-filetype rules. Top 3, prioritized by impact.
 
-- **Turn N** — "<quoted evidence>" — *agent assumed X; reality was Y*
+- **Turn N** — "<quoted evidence>" — *agent assumed X; reality was Y* — **pattern: ...**
 
 ## Capability Gaps
 
 Places where a missing tool, script, or skill forced a longer path — inline
 bash, multi-step workarounds, or manual steps the user had to perform.
+Top 3, prioritized by impact.
 
 - **Turn N** — "<quoted evidence>" — *agent lacked a tool for X; used Y
-  instead*
+  instead* — **pattern: ...**
 
 ## Process Failures
 
 Corrections, reversals, repeated requests, tool denials, missing allow-list
-entries, or moments where the user took over.
+entries, or moments where the user took over. Top 3, prioritized by impact.
 
-- **Turn N** — "<quoted evidence>" — *agent did X when asked for Y*
+- **Turn N** — "<quoted evidence>" — *agent did X when asked for Y* — **pattern: ...**
 
 ## Insights
 
 Explicit requests to remember or reflect, end-of-session observations, or
-moments where an agent might have learned something worth preserving.
+moments where the agent expressed a realization.
+Top 3, prioritized by impact.
 
-- **Turn N** — "<quoted or paraphrased>" — *why this matters*
-
----
+- **Turn N** — "<quoted or paraphrased>" — *why this matters* — **pattern: ...**
 ```
 
 Leave any section empty with "— none found —" rather than padding it. Be
 specific: quote directly, cite turn numbers, describe the shape of the
-problem. Do not speculate about solutions.
+problem.
+
+### Reflect and suggest
+
+Re-read the report. Identify the 1–2 findings with the highest leverage —
+the ones that, if addressed, would most improve future sessions. For each,
+suggest a concrete remedy: an AGENTS.md rule, a new tool or script, or a
+change to a skill. Do not suggest a remedy for every finding — only where
+the pattern is clear and the fix is actionable.
