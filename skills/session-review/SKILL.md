@@ -5,7 +5,7 @@ description: Analyze Claude Code or Copilot session logs for insights, gaps,
   the highest-leverage ones.
 disable-model-invocation: true
 argument-hint: "[session-id | 'latest' | 'list']"
-allowed-tools: Read, Grep, Glob, Bash(scripts/*)
+allowed-tools: Read, Grep, Glob
 ---
 # Session Review
 
@@ -31,12 +31,12 @@ Parse `$ARGUMENTS`:
 
 ## Step 2: Select session tool
 
-Use the script for your agent as `SESSION_TOOL` for all subsequent commands.
+Based on your identity, use one of these commands as the `[TOOL]` reference.
 
-| Agent        | Script                     |
-|--------------|----------------------------|
-| Claude Code  | `scripts/claude-sessions`  |
-| Copilot      | `scripts/copilot-sessions` |
+| Agent        | Command                           |
+|--------------|-----------------------------------|
+| Claude Code  | `python scripts/claude-sessions`  |
+| Copilot      | `python scripts/copilot-sessions` |
 
 ---
 
@@ -46,13 +46,13 @@ Surface candidate sessions from the current working directory for the user
 to choose from. Do not search other projects unless requested by the user.
 
 ```bash
-$SESSION_TOOL -n 10 [-d <dir>]
+[TOOL] -n 10 [-d <dir>]
 ```
 
 For each candidate session, run:
 
 ```bash
-$SESSION_TOOL <id>
+[TOOL] <id>
 ```
 
 Read the turns table. Scan user messages for these signals:
@@ -75,7 +75,7 @@ which to review — or whether to search a different directory.
 ### Read session summary
 
 ```bash
-$SESSION_TOOL <id>
+[TOOL] <id>
 ```
 
 ### Pull targeted transcript sections
@@ -84,7 +84,7 @@ Do not read the full transcript upfront. Use the turns table to identify
 interesting segments, then pull selectively:
 
 ```bash
-$SESSION_TOOL <id> --turn <range> --raw
+[TOOL] <id> --turn <range> --raw
 ```
 
 Prioritize:
