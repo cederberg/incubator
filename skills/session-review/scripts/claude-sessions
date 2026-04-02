@@ -2,12 +2,12 @@
 """List and inspect Claude Code sessions.
 
 Usage:
-  claude-sessions                         List sessions in current directory
-  claude-sessions --list-dirs             List all project directories with sessions
-  claude-sessions -d ~/Projects/myapp     Filter by a specific directory
-  claude-sessions <session-id>            Session summary (id, tokens, tools, sub-agents, turns)
-  claude-sessions <session-id> --raw      Full transcript with reasoning and tool I/O
-  claude-sessions <session-id> --turn 4   Transcript for a single turn (implies --raw)
+  claude-sessions                           List sessions in current directory
+  claude-sessions --list-dirs               List all project directories with sessions
+  claude-sessions -d ~/Projects/myapp       Filter by a specific directory
+  claude-sessions <session-id>              Session summary (id, tokens, tools, sub-agents, turns)
+  claude-sessions <session-id> --raw        Full transcript with reasoning and tool I/O
+  claude-sessions <session-id> --turn 4     Transcript for a single turn (implies --raw)
   claude-sessions <session-id> --turn 4-10  Transcript for a range of turns
 
 Session IDs can be given as a full UUID, an 8-char prefix, or a path to a .jsonl file.
@@ -17,21 +17,26 @@ import argparse
 import json
 import re
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
-CLAUDE_PROJECTS_DIR = Path.home() / ".claude" / "projects"
+DATA_DIR = Path.home() / ".claude" / "projects"
 DEFAULT_COUNT = 30
 MAX_PROMPT_WIDTH = 80
 W = 120
 
+IGNORE_PROMPTS = (
+    re.compile(r"^/(clear|new)\s*", re.I),
+    re.compile(r"^/(model|help|usage|exit|quit|context|status)\b.*", re.I | re.DOTALL),
+)
 
-def encode_project_path(path: Path) -> str:
-    """'/Users/per/Projects/foo' → '-Users-per-Projects-foo'"""
-    return str(path.resolve()).replace("/", "-")
 
+def _filter_prompt(text: str) -> Optional[str]:
+    for pattern in IGNORE_PROMPTS:
+        text = pattern.sub("", text, count=1).strip()
+    return text or None
 
 
 def truncate(text: str, width: int) -> str:
@@ -71,21 +76,12 @@ def format_duration(td: timedelta) -> str:
     return f"{s}s"
 
 
-IGNORE_PROMPTS = (
-    re.compile(r"^/(clear|new)\s*", re.I),
-    re.compile(r"^/(model|help|usage|exit|quit|context|status)\b.*", re.I | re.DOTALL),
-)
-
-
-def _filter_prompt(text: str) -> Optional[str]:
-    """Strip ignorable command prefixes; return None if nothing interesting remains."""
-    for pattern in IGNORE_PROMPTS:
-        text = pattern.sub("", text, count=1).strip()
-    return text or None
+def encode_project_path(path: Path) -> str:
+    """'/Users/per/Projects/foo' → '-Users-per-Projects-foo'"""
+    return str(path.resolve()).replace("/", "-")
 
 
 def clean_user_content(content) -> Optional[str]:
-    """Extract display text from a user message content field."""
     if not isinstance(content, str):
         return None
     text = content.strip()
@@ -120,7 +116,6 @@ def load_entries(path: Path) -> Optional[list]:
 
 
 def parse_session_summary(path: Path) -> Optional[dict]:
-    """Parse just enough for the list view (fast path)."""
     first_ts = None
     last_ts = None
     first_prompt = None
@@ -183,7 +178,6 @@ def parse_session_summary(path: Path) -> Optional[dict]:
 
 
 def parse_session_detail(path: Path) -> Optional[dict]:
-    """Parse full stats for a single session."""
     entries = load_entries(path)
     if entries is None:
         return None
@@ -368,7 +362,7 @@ def section(title: str) -> None:
 def _fmt_args(name: str, args: dict) -> str:
     if not args:
         return ""
-    for key in ("path", "command", "pattern", "query", "intent"):
+    for key in ("path", "command", "pattern", "query", "prompt", "intent"):
         if key in args and len(args) == 1:
             return str(args[key])
     if name == "Agent":
@@ -469,9 +463,8 @@ def render_transcript(transcript: list[dict], turn_filter: Optional[set] = None)
 
 
 def find_project_dir(path: Path) -> Optional[Path]:
-    """Find the Claude project directory for a given absolute path."""
     encoded = encode_project_path(path)
-    candidate = CLAUDE_PROJECTS_DIR / encoded
+    candidate = DATA_DIR / encoded
     return candidate if candidate.is_dir() else None
 
 
@@ -480,7 +473,6 @@ def list_jsonl_files(project_dir: Path) -> list[Path]:
 
 
 def resolve_session_file(session_id: str) -> Optional[Path]:
-    """Find a session JSONL file by full UUID, 8-char prefix, or direct path."""
     candidate = Path(session_id).expanduser()
     if candidate.is_file():
         return candidate
@@ -489,8 +481,8 @@ def resolve_session_file(session_id: str) -> Optional[Path]:
 
     # Search all project dirs
     matches = []
-    if CLAUDE_PROJECTS_DIR.exists():
-        for proj_dir in CLAUDE_PROJECTS_DIR.iterdir():
+    if DATA_DIR.exists():
+        for proj_dir in DATA_DIR.iterdir():
             if not proj_dir.is_dir():
                 continue
             for f in proj_dir.glob("*.jsonl"):
@@ -508,12 +500,11 @@ def resolve_session_file(session_id: str) -> Optional[Path]:
 
 
 def load_all_summaries() -> list[dict]:
-    """Load summary info for all sessions across all projects."""
-    if not CLAUDE_PROJECTS_DIR.exists():
-        print(f"Claude projects directory not found: {CLAUDE_PROJECTS_DIR}", file=sys.stderr)
+    if not DATA_DIR.exists():
+        print(f"Claude projects directory not found: {DATA_DIR}", file=sys.stderr)
         sys.exit(1)
     results = []
-    for proj_dir in CLAUDE_PROJECTS_DIR.iterdir():
+    for proj_dir in DATA_DIR.iterdir():
         if not proj_dir.is_dir():
             continue
         for f in proj_dir.glob("*.jsonl"):
@@ -524,7 +515,6 @@ def load_all_summaries() -> list[dict]:
 
 
 def cmd_dirs(count: int) -> None:
-    from collections import Counter
     all_sessions = load_all_summaries()
     home = str(Path.home())
 
@@ -712,9 +702,9 @@ def main():
             "Examples:\n"
             "  claude-sessions                       List sessions in current directory\n"
             "  claude-sessions --list-dirs           List all project directories with sessions\n"
-            "  claude-sessions -d ~/Projects/myapp  Filter by a specific directory\n"
-            "  claude-sessions c4a3e5f3             Show detail for a session\n"
-            "  claude-sessions c4a3e5f3 --raw       Full transcript with reasoning\n"
+            "  claude-sessions -d ~/Projects/myapp   Filter by a specific directory\n"
+            "  claude-sessions c4a3e5f3              Show detail for a session\n"
+            "  claude-sessions c4a3e5f3 --raw        Full transcript with reasoning\n"
         ),
     )
     parser.add_argument("session_id", nargs="?", help="Session ID (full or prefix) to inspect")
@@ -727,7 +717,7 @@ def main():
     parser.add_argument("--raw", action="store_true",
                         help="Show full transcript with reasoning (use with a session ID)")
     parser.add_argument("--turn", metavar="RANGE",
-                        help="Filter transcript to specific turns, e.g. 4 or 4-10 (implies --raw)")
+                        help="Filter transcript to specific turns, e.g. 4 or 4-10 or 4,7-10 (implies --raw)")
 
     args = parser.parse_args()
 

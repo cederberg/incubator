@@ -4,8 +4,8 @@ description: Analyze Claude Code or Copilot session logs for insights, gaps,
   and learnings. Produces a report of findings with targeted suggestions for
   the highest-leverage ones.
 disable-model-invocation: true
-argument-hint: "[session-id | 'latest' | 'list']"
-allowed-tools: Read, Grep, Glob
+argument-hint: "[session-id | 'latest']"
+allowed-tools: Agent, Read, Grep, Glob, Bash(python *)
 ---
 # Session Review
 
@@ -17,86 +17,80 @@ AGENTS.md rules, new tools, scripts, or skills — making future agents faster
 and less error-prone. The output is a report of findings followed by targeted
 suggestions for the highest-leverage ones.
 
----
-
-## Step 1: Determine mode
-
-Parse `$ARGUMENTS`:
-
-| Argument           | Mode                                        |
-|--------------------|---------------------------------------------|
-| `list` (default)   | Scan recent sessions and surface candidates |
-| `latest`           | Analyze the most recent session             |
-| `<uuid or prefix>` | Analyze the specified session               |
-
-## Step 2: Select session tool
+## Step 1: Select session tool
 
 Based on your identity, use one of these commands as the `[TOOL]` reference.
 
-| Agent        | Command                    |
-|--------------|----------------------------|
-| Claude Code  | `scripts/claude-sessions`  |
-| Copilot      | `scripts/copilot-sessions` |
+| Agent          | Command                                            |
+|----------------|----------------------------------------------------|
+| Claude Code    | `python <skill-base-dir>/scripts/claude-sessions`  |
+| GitHub Copilot | `python <skill-base-dir>/scripts/copilot-sessions` |
+| Mistral Vibe   | `python <skill-base-dir>/scripts/vibe-sessions`    |
 
-All script paths are relative to the skill base directory.
-
----
-
-## Mode: List
-
-Surface candidate sessions from the current working directory for the user
-to choose from. Do not search other projects unless requested by the user.
+Use the full path to the script. Key usage:
 
 ```bash
-[TOOL] -n 10 [-d <dir>]
+[TOOL]                       # list sessions for current dir
+[TOOL] -d <dir>              # list sessions for a directory
+[TOOL] --list-dirs           # list directories with sessions
+[TOOL] -n 10                 # limit number of listed sessions
+[TOOL] <id>                  # summarize a session by id
+[TOOL] <id> --raw            # full raw transcript for session
+[TOOL] <id> --turn <range>   # transcript for specific turns (implies --raw)
+[TOOL] --help                # show full options
 ```
 
-For each candidate session, run:
+## Step 2: Select session
 
-```bash
-[TOOL] <id>
-```
+Resolve `$ARGUMENTS` to a session ID:
 
-Read the turns table. Scan user messages for these signals:
+| `$ARGUMENTS`       | Action                                      |
+|--------------------|---------------------------------------------|
+| `<id or prefix>`   | Use directly                                |
+| `latest`           | Run `[TOOL] -n 1`, take the first result    |
+| _(empty)_          | Run `[TOOL] -n 20`, then spawn a sub-agent  |
 
-- **Corrections**
-- **Repeated requests**
-- **Short dismissive messages**
-- **User takeover**
-- **Tool denials**
-- **Reflection signals**
+When listing, filter the session list to 2+ turns, then spawn a sub-agent
+with the filtered list:
 
-List all sessions in a table — session ID, date, duration, turn count, one
-line of quoted evidence — with the top 3 by interest marked. Ask the user
-which to review — or whether to search a different directory.
+> - Fetch session summaries in list order and scan for these signals:
+>   - **Corrections** — user restates or reverses an agent action
+>   - **Repeated requests** — same ask appears more than once
+>   - **Short dismissive messages** — terse rejections
+>   - **User takeover** — user edits files or runs commands directly
+>   - **Tool denials** — agent attempted a disallowed tool
+>   - **Tool errors** — repeated failures or high error rate on a tool
+>   - **Reflection signals** — user asks to remember or note something
+> - Use `[TOOL] <session-id>` to fetch a session summary
+> - Stop after 3 interesting candidates
+> - Return session ID and one line of quoted evidence per candidate
 
----
+Present a table of at most 10 sessions (by timestamp) — session ID, date &
+time, duration, turn count, and notes. For the 3 interesting sessions use the
+sub-agent's quoted evidence as the note; for the rest use the first prompt
+from the tool output. Mark the 3 interesting session IDs in bold. Ask the
+user which to review — or whether to search a different directory.
 
-## Mode: Analyze
+## Step 3: Analyze session
 
-### Read session summary
+Spawn a sub-agent with the session ID and `[TOOL]` command:
 
-```bash
-[TOOL] <id>
-```
+> Get the session summary. Note the tool usage table — flag tools with high
+> error rates or unexpectedly high call counts. Then use the turns table to
+> identify interesting segments and pull selectively using `--turn <range>`.
+> Do not read the full transcript upfront.
+>
+> Prioritize:
+> - Turns with corrections or reversals (and the turns immediately before them)
+> - Turns with unusually long response times
+> - Turns where the user edited files themselves
+> - Tool calls with errors, retries, or roundabout use (bash where a dedicated tool exists)
+> - Sub-agent turns — what was the task, did the result land correctly?
+> - Any turn where the user signals something is worth remembering
+>
+> Return all findings with turn numbers and direct quotes.
 
-### Pull targeted transcript sections
-
-Do not read the full transcript upfront. Use the turns table to identify
-interesting segments, then pull selectively:
-
-```bash
-[TOOL] <id> --turn <range> --raw
-```
-
-Prioritize:
-- Turns with corrections or reversals (and the turns immediately before them)
-- Turns with unusually long response times
-- Turns where the user edited files themselves
-- Sub-agent turns — what was the task, did the result land correctly?
-- Any turn where the user signals something is worth remembering
-
-### Report findings
+## Step 4: Report findings
 
 Write the report directly in your response to the user.
 
@@ -146,7 +140,7 @@ Leave any section empty with "— none found —" rather than padding it. Be
 specific: quote directly, cite turn numbers, describe the shape of the
 problem.
 
-### Reflect and suggest
+## Step 5: Reflect and suggest
 
 Re-read the report. Identify the 1–2 findings with the highest leverage —
 the ones that, if addressed, would most improve future sessions. For each,

@@ -17,23 +17,23 @@ import argparse
 import json
 import re
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
-SESSION_STATE_DIR = Path.home() / ".copilot" / "session-state"
+DATA_DIR = Path.home() / ".copilot" / "session-state"
 DEFAULT_COUNT = 30
 MAX_PROMPT_WIDTH = 80
+W = 120
 
 IGNORE_PROMPTS = (
     re.compile(r"^/(clear|new)\s*", re.I),
-    re.compile(r"^/(model|help|usage|exit|quit|context)\b.*", re.I | re.DOTALL),
+    re.compile(r"^/(model|help|usage|exit|quit|context|status)\b.*", re.I | re.DOTALL),
 )
 
 
 def _filter_prompt(text: str) -> Optional[str]:
-    """Strip ignorable command prefixes; return None if nothing interesting remains."""
     for pattern in IGNORE_PROMPTS:
         text = pattern.sub("", text, count=1).strip()
     return text or None
@@ -51,18 +51,18 @@ def parse_iso(ts: str) -> datetime:
     return datetime.fromisoformat(ts.replace("Z", "+00:00"))
 
 
-def format_time(iso_str: str) -> str:
+def format_time(ts: str) -> str:
     try:
-        return parse_iso(iso_str).astimezone().strftime("%Y-%m-%d %H:%M")
+        return parse_iso(ts).astimezone().strftime("%Y-%m-%d %H:%M")
     except Exception:
-        return iso_str[:16]
+        return ts[:16]
 
 
-def format_hhmm(iso_str: str) -> str:
+def format_hhmm(ts: str) -> str:
     try:
-        return parse_iso(iso_str).astimezone().strftime("%H:%M")
+        return parse_iso(ts).astimezone().strftime("%H:%M")
     except Exception:
-        return iso_str[11:16]
+        return ts[11:16]
 
 
 def format_duration(td: timedelta) -> str:
@@ -97,14 +97,15 @@ def load_events(session_dir: Path) -> Optional[list]:
 
 
 def parse_session_summary(session_dir: Path) -> Optional[dict]:
-    """Parse just enough for the list view."""
     events_file = session_dir / "events.jsonl"
     if not events_file.exists():
         return None
 
     start_time = None
+    end_time = None
     first_prompt = None
     cwd = None
+    git_branch = None
     turn_count = 0
 
     try:
@@ -119,10 +120,15 @@ def parse_session_summary(session_dir: Path) -> Optional[dict]:
                     continue
 
                 t = event.get("type", "")
+                ts = event.get("timestamp")
+                if ts:
+                    end_time = ts
                 if t == "session.start":
                     data = event.get("data", {})
-                    start_time = event.get("timestamp") or data.get("startTime")
-                    cwd = data.get("context", {}).get("cwd", "")
+                    start_time = ts or data.get("startTime")
+                    ctx = data.get("context", {})
+                    cwd = ctx.get("cwd", "")
+                    git_branch = ctx.get("branch", "")
                 elif t == "user.message":
                     content = event.get("data", {}).get("content", "")
                     if content:
@@ -138,7 +144,9 @@ def parse_session_summary(session_dir: Path) -> Optional[dict]:
     return {
         "id": session_dir.name,
         "start_time": start_time,
+        "end_time": end_time,
         "cwd": cwd or "",
+        "git_branch": git_branch or "",
         "first_prompt": first_prompt or "(no prompt found)",
         "turn_count": turn_count,
     }
@@ -146,7 +154,6 @@ def parse_session_summary(session_dir: Path) -> Optional[dict]:
 
 
 def parse_session_detail(session_dir: Path) -> Optional[dict]:
-    """Parse full stats for a single session."""
     events = load_events(session_dir)
     if events is None:
         return None
@@ -161,8 +168,8 @@ def parse_session_detail(session_dir: Path) -> Optional[dict]:
 
     # Tool tracking
     tool_call_info: dict[str, dict] = {}   # toolCallId -> {name, args, intention}
-    tool_call_counts: dict[str, int] = {}  # tool_name -> call count
-    tool_error_counts: dict[str, int] = {} # tool_name -> error count
+    tool_calls: dict[str, int] = {}  # tool_name -> call count
+    tool_errors: dict[str, int] = {} # tool_name -> error count
 
     # Subagent tracking
     subagent_list: list[dict] = []
@@ -174,7 +181,7 @@ def parse_session_detail(session_dir: Path) -> Optional[dict]:
     # Extra session fields
     reasoning_effort: Optional[str] = None
     code_changes: Optional[dict] = None
-    current_model: Optional[str] = None
+    model: Optional[str] = None
 
     # Transcript items for --raw
     transcript: list[dict] = []
@@ -216,7 +223,7 @@ def parse_session_detail(session_dir: Path) -> Optional[dict]:
                 args = tr.get("arguments", {})
                 intention = tr.get("intentionSummary", "")
                 tool_call_info[call_id] = {"name": name, "args": args, "intention": intention}
-                tool_call_counts[name] = tool_call_counts.get(name, 0) + 1
+                tool_calls[name] = tool_calls.get(name, 0) + 1
                 transcript.append({"kind": "tool_call", "turn": current_turn, "name": name,
                                     "args": args, "call_id": call_id, "intention": intention})
 
@@ -263,7 +270,7 @@ def parse_session_detail(session_dir: Path) -> Optional[dict]:
             content = result.get("content", "") if isinstance(result, dict) else str(result)
             name = tool_call_info.get(call_id, {}).get("name", "?")
             if not success:
-                tool_error_counts[name] = tool_error_counts.get(name, 0) + 1
+                tool_errors[name] = tool_errors.get(name, 0) + 1
             idx = subagent_by_callid.get(call_id)
             if idx is not None:
                 subagent_list[idx]["result"] = content
@@ -274,7 +281,7 @@ def parse_session_detail(session_dir: Path) -> Optional[dict]:
             sd = event.get("data", {})
             model_metrics = sd.get("modelMetrics")
             code_changes = sd.get("codeChanges") or None
-            current_model = sd.get("currentModel")
+            model = sd.get("currentModel")
 
         if ts:
             end_time = ts
@@ -303,31 +310,21 @@ def parse_session_detail(session_dir: Path) -> Optional[dict]:
         "end_time": end_time,
         "duration": duration,
         "cwd": cwd,
-        "branch": branch,
+        "git_branch": git_branch,
         "reasoning_effort": reasoning_effort,
-        "current_model": current_model,
+        "model": model,
         "turns": turns,
         "user_turn_count": len(turns),
         "assistant_turn_count": event_counts.get("assistant.turn_end", 0),
-        "tool_calls": event_counts.get("tool.execution_start", 0),
         "subagents": subagent_list,
         "total_events": len(events),
         "event_counts": event_counts,
-        "tool_call_counts": tool_call_counts,
-        "tool_error_counts": tool_error_counts,
+        "tool_calls": tool_calls,
+        "tool_errors": tool_errors,
         "model_metrics": model_metrics,
         "code_changes": code_changes,
         "transcript": transcript,
     }
-
-
-W = 120  # default output width
-
-
-def format_model_name(model_id: str) -> str:
-    """'claude-opus-4.6' → 'Opus 4.6'"""
-    parts = model_id.removeprefix("claude-").split("-")
-    return " ".join(p.capitalize() if not p[0].isdigit() else p for p in parts if p)
 
 
 def ruled(label: str, char: str = "-", width: int = W) -> str:
@@ -340,14 +337,13 @@ def section(title: str) -> None:
 
 
 def resolve_session_dir(session_id: str) -> Optional[Path]:
-    """Find a session dir by full or prefix match, or direct path."""
     candidate = Path(session_id).expanduser()
     if candidate.is_dir():
         return candidate
-    if len(session_id) == 36 and (SESSION_STATE_DIR / session_id).is_dir():
-        return SESSION_STATE_DIR / session_id
+    if len(session_id) == 36 and (DATA_DIR / session_id).is_dir():
+        return DATA_DIR / session_id
     # prefix search
-    matches = [d for d in SESSION_STATE_DIR.iterdir() if d.is_dir() and d.name.startswith(session_id)]
+    matches = [d for d in DATA_DIR.iterdir() if d.is_dir() and d.name.startswith(session_id)]
     if len(matches) == 1:
         return matches[0]
     if len(matches) > 1:
@@ -359,7 +355,6 @@ def resolve_session_dir(session_id: str) -> Optional[Path]:
 
 
 def _fmt_args(name: str, args: dict) -> str:
-    """Format tool arguments as a short readable string."""
     if not args:
         return ""
     # Common single-value tools: show the value directly
@@ -380,7 +375,6 @@ def _fmt_args(name: str, args: dict) -> str:
 
 
 def parse_turn_filter(spec: str) -> set[int]:
-    """Parse '4', '4-10', '4,7-10,15' into a set of turn numbers."""
     result = set()
     for part in spec.split(","):
         part = part.strip()
@@ -400,7 +394,6 @@ def format_turn_range(turn_filter: set[int]) -> str:
 
 
 def render_transcript(transcript: list[dict], turn_filter: Optional[set] = None) -> None:
-    """Print a full human-readable conversation transcript."""
     TW = 72
     pending_calls: dict[str, dict] = {}  # call_id -> item, for attaching results
 
@@ -464,7 +457,7 @@ def render_transcript(transcript: list[dict], turn_filter: Optional[set] = None)
             print()
 
 
-def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = None):
+def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = None) -> None:
     session_dir = resolve_session_dir(session_id)
     if session_dir is None:
         print(f"Session not found: {session_id}", file=sys.stderr)
@@ -484,10 +477,10 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
     print(f"Ended:     {format_time(d['end_time'])}")
     print(f"Duration:  {format_duration(d['duration'])}")
     print(f"Directory: {cwd_display}{' (@)' if cwd else ''}")
-    if d["branch"]:
-        print(f"Branch:    {d['branch']}")
-    model_str = format_model_name(d["current_model"]) if d.get("current_model") else None
-    if model_str:
+    if d["git_branch"]:
+        print(f"Branch:    {d['git_branch']}")
+    if d.get("model"):
+        model_str = d["model"]
         effort = d.get("reasoning_effort")
         if effort:
             model_str += f" ({effort})"
@@ -495,7 +488,7 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
     print()
     print(f"Turns:           {d['user_turn_count']}")
     print(f"Assistant turns: {d['assistant_turn_count']}")
-    print(f"Tool calls:      {d['tool_calls']}")
+    print(f"Tool calls:      {sum(d['tool_calls'].values())}")
     if d["subagents"]:
         print(f"Sub-agents:      {len(d['subagents'])}")
     print(f"Total events:    {d['total_events']}")
@@ -516,14 +509,14 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
             print(f"{model:<{col_w}}  {inp:>10,}  {out:>8,}  {cr:>12,}")
 
     # Tool usage
-    tc = d.get("tool_call_counts", {})
+    tc = d.get("tool_calls", {})
     if tc:
         section("Tool usage")
         name_w = max(len(n) for n in tc) + 2
         print(f"{'Tool':<{name_w}}  {'Calls':>6}  {'Errors':>6}")
         print("-" * (name_w + 16))
         for name in sorted(tc, key=lambda n: -tc[n]):
-            errs = d["tool_error_counts"].get(name, 0)
+            errs = d["tool_errors"].get(name, 0)
             err_str = str(errs) if errs else "-"
             print(f"{name:<{name_w}}  {tc[name]:>6}  {err_str:>6}")
 
@@ -594,11 +587,11 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
 
 
 def load_all_sessions() -> list:
-    if not SESSION_STATE_DIR.exists():
-        print(f"Session directory not found: {SESSION_STATE_DIR}", file=sys.stderr)
+    if not DATA_DIR.exists():
+        print(f"Session directory not found: {DATA_DIR}", file=sys.stderr)
         sys.exit(1)
     sessions = []
-    for entry in SESSION_STATE_DIR.iterdir():
+    for entry in DATA_DIR.iterdir():
         if not entry.is_dir():
             continue
         info = parse_session_summary(entry)
@@ -607,7 +600,7 @@ def load_all_sessions() -> list:
     return sessions
 
 
-def cmd_list(count: int, dir_filter: Optional[str]):
+def cmd_list(count: int, dir_filter: Optional[str]) -> None:
     # Normalize filter to resolved absolute path
     filter_path = str(Path(dir_filter).expanduser().resolve()) if dir_filter else None
 
@@ -641,14 +634,13 @@ def cmd_list(count: int, dir_filter: Optional[str]):
         print(f"{short_id:>{id_w}}  {started:<{time_w}}  {s['turn_count']:>{turns_w}}  {prompt}")
 
 
-def cmd_dirs(count: int):
-    from collections import Counter
+def cmd_dirs(count: int) -> None:
     sessions = load_all_sessions()
     home = str(Path.home())
     tally: Counter = Counter()
     latest: dict[str, str] = {}
     for s in sessions:
-        cwd = s["cwd"]
+        cwd = s["cwd"] or "(unknown)"
         tally[cwd] += 1
         if cwd not in latest or s["start_time"] > latest[cwd]:
             latest[cwd] = s["start_time"]
