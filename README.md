@@ -28,21 +28,21 @@ export MANPATH="$HOME/.local/share/man:$MANPATH"
   naming something.
 
   ```
-  npx skills@latest add cederberg/incubator/skills/brainstorm
+  npx skills@latest add -g cederberg/incubator/skills/brainstorm
   ```
 
 - **discuss** — Facilitate a focused, structured discussion on a topic. Helps
   crystallize thoughts, develop ideas, or explore a problem.
 
   ```
-  npx skills@latest add cederberg/incubator/skills/discuss
+  npx skills@latest add -g cederberg/incubator/skills/discuss
   ```
 
 - **interview-me** — Conduct a deep, structured interview to reach shared
   understanding of a plan or topic, then document the outcome.
 
   ```
-  npx skills@latest add cederberg/incubator/skills/interview-me
+  npx skills@latest add -g cederberg/incubator/skills/interview-me
   ```
 
 - **investigate** — Guide a structured, iterative technical investigation using
@@ -50,7 +50,7 @@ export MANPATH="$HOME/.local/share/man:$MANPATH"
   an unknown cause.
 
   ```
-  npx skills@latest add cederberg/incubator/skills/investigate
+  npx skills@latest add -g cederberg/incubator/skills/investigate
   ```
 
 - **refactor** — Multi-pass convergent refactoring of a specific piece of
@@ -58,22 +58,42 @@ export MANPATH="$HOME/.local/share/man:$MANPATH"
   hasn't found its natural form yet.
 
   ```
-  npx skills@latest add cederberg/incubator/skills/refactor
+  npx skills@latest add -g cederberg/incubator/skills/refactor
+  ```
+
+- **what-we-forgot** — Recall forgotten rules or to-do items from instructions
+  and conversation, then work through them.
+
+  ```
+  npx skills@latest add -g cederberg/incubator/skills/what-we-forgot
   ```
 
 - **technical-writer** — Write or review technical documents including READMEs,
   system overviews, feature docs, and skill files.
 
   ```
-  npx skills@latest add cederberg/incubator/skills/technical-writer
+  npx skills@latest add -g cederberg/incubator/skills/technical-writer
   ```
 
-- **session-review** — Analyzes Claude Code or Copilot session logs to
-  surface learnings — context gaps, capability gaps, process failures, and
-  insights — as a structured report for later action.
+- **review-doc** — Review a document for internal consistency, brevity,
+  clarity, and usefulness.
 
   ```
-  npx skills@latest add cederberg/incubator/skills/session-review
+  npx skills@latest add -g cederberg/incubator/skills/review-doc
+  ```
+
+- **review-instructions** — Review a prompt, skill, or instructions file for
+  language, structure, and precision problems.
+
+  ```
+  npx skills@latest add -g cederberg/incubator/skills/review-instructions
+  ```
+
+- **review-session** — Analyze agent session logs for knowledge, guideline,
+  and capability gaps. Produce remedies for the highest-leverage ones.
+
+  ```
+  npx skills@latest add -g cederberg/incubator/skills/review-session
   ```
 
 - **distill-context** — Creates and maintains `AGENTS.md`, the agent context
@@ -81,5 +101,5 @@ export MANPATH="$HOME/.local/share/man:$MANPATH"
   realigns a stale file.
 
   ```
-  npx skills@latest add cederberg/incubator/skills/distill-context
+  npx skills@latest add -g cederberg/incubator/skills/distill-context
   ```
