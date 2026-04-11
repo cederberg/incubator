@@ -9,6 +9,7 @@
 - Store persistent project knowledge as entries in `AGENTS.md`.
 
 ## Skill Guidelines
+- Use `bin/frontmatter <file>...` to read front-matter from skill files.
 - Prefer open-ended instructions; agents are competent to fill gaps.
 - Codify rules when evidence indicates a problem or to reduce agent exploration.
 - Confirm changes with user first, then batch edits in one pass.

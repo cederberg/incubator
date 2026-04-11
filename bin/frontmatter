@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+#
+# Prints the front-matter block from one or more files.
+#
+# Syntax: frontmatter [<options>] <file>...
+#
+# Arguments:
+#   -h, --help   - Show usage information
+#   <file>...    - The files to read
+
+PROGRAM=$0
+COLOR_ERR="$(tput setaf 1; tput bold)"
+COLOR_OFF="$(tput sgr0)"
+
+die() {
+    echo "${COLOR_ERR}ERROR:${COLOR_OFF}" "$@" >&2
+    exit 1
+}
+
+usage() {
+    while IFS= read -r LINE ; do
+        [[ ${LINE:0:1} == "#" ]] || break
+        echo "${LINE:2}" >&2
+    done < <(tail -n +3 "${PROGRAM}")
+    exit 1
+}
+
+print-frontmatter() {
+    [[ -r "$1" ]] || die "cannot read file: $1"
+    awk '/^---$/ { n++; if (n == 1) next; if (n == 2) exit } n == 1 { print }' "$1"
+}
+
+if [[ $# -eq 0 || "$1" == "-h" || "$1" == "--help" ]] ; then
+    usage
+fi
+if [[ $# -eq 1 ]] ; then
+    print-frontmatter "$1"
+else
+    for f in "$@"; do
+        echo "==> $f <=="
+        print-frontmatter "$f"
+        echo
+    done
+fi
