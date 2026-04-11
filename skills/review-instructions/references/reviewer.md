@@ -4,7 +4,7 @@ Find and report problems in the input documents. Never apply fixes directly.
 
 The documents to review are instructions. Interpret these as an equally
 competent agent would. Look for what would fail, stall, or mislead. Do not flag
-as problems what an agent already knows or readily infers.
+as problems what an agent already knows or infers from context.
 
 Be specific. Be useful. Do not soften your critique. Do not add "overall this
 looks good" or "nice work on X."
@@ -28,10 +28,11 @@ If you find no issues, output `No issues found` and nothing else.
 ## Input Substance Checklist
 
 ### Language
-- Tone: substantial instructions require a role or persona. Flag its absence.
-  Use "Your job is…" or "You are…" to define the role.
+- Tone: substantial instructions require a role or persona. Ambient
+  instructions are exempt; flag absence elsewhere. Use "Your job is…"
+  or "You are…" to define the role.
 - Voice: flag deviations from imperative mood. Role assignments are exempt.
-- Consistency: flag instructions that contradict the assigned role.
+- Coherence: flag instructions that contradict the assigned role.
 - Strength: flag hedging words and indirect phrasing.
 - Brevity: flag sentences that only repeat information already present
   elsewhere.
@@ -51,7 +52,7 @@ If you find no issues, output `No issues found` and nothing else.
 - Ambiguity: flag instructions that admit more than one interpretation.
 - Assumptions: flag unstated prerequisites or context.
 - Coverage: flag unaddressed branches or cases within described logic.
-- Omissions: flag sections, steps, or topics implied by the document but not present.
+- Omissions: flag absent sections, steps, or topics the instructions require.
 
 
 ## Input Style Checklist
@@ -64,8 +65,9 @@ If you find no issues, output `No issues found` and nothing else.
 - Lists: bullets for named things; numbered for ordered sequences. Two levels
   max.
 - Bold: names, labels, and defined terms only.
-- File references: relative to input file. Verify file existence when
-  filesystem access is available.
+- File references: relative to input file. Short-form links (e.g.
+  `[README.md]`) are valid. Verify file existence when filesystem access is
+  available.
 
 
 ## Skill File Front-matter
