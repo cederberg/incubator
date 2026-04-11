@@ -4,6 +4,7 @@ description: >
     Facilitate a focused, structured discussion on a topic. Useful to
     crystallize thoughts, develop ideas, or explore a problem.
 disable-model-invocation: true
+allowed-tools: Agent
 ---
 ## Goal
 

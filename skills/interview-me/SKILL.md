@@ -1,8 +1,10 @@
 ---
 name: interview-me
-description: Conduct a deep, structured interview to reach shared understanding
-  of a plan or topic.
+description: >
+    Conduct a deep, structured interview to reach shared understanding
+    of a plan or topic, then document the outcome.
 disable-model-invocation: true
+allowed-tools: Write
 ---
 
 # Interview Me

@@ -31,8 +31,8 @@ export MANPATH="$HOME/.local/share/man:$MANPATH"
   npx skills@latest add -g cederberg/incubator/skills/brainstorm
   ```
 
-- **discuss** — Facilitate a focused, structured discussion on a topic. Helps
-  crystallize thoughts, develop ideas, or explore a problem.
+- **discuss** — Facilitate a focused, structured discussion on a topic. Useful
+  to crystallize thoughts, develop ideas, or explore a problem.
 
   ```
   npx skills@latest add -g cederberg/incubator/skills/discuss
@@ -46,8 +46,8 @@ export MANPATH="$HOME/.local/share/man:$MANPATH"
   ```
 
 - **investigate** — Guide a structured, iterative technical investigation using
-  hypothesis tree reasoning. Use when debugging or tracing a regression with
-  an unknown cause.
+  hypothesis tree reasoning. Use when debugging a slow endpoint, tracing a
+  regression, or investigating complex problems with unknown cause.
 
   ```
   npx skills@latest add -g cederberg/incubator/skills/investigate
@@ -55,20 +55,22 @@ export MANPATH="$HOME/.local/share/man:$MANPATH"
 
 - **refactor** — Multi-pass convergent refactoring of a specific piece of
   code. Use when code works but feels tangled, over-complicated, or like it
-  hasn't found its natural form yet.
+  hasn't found its natural form yet. Not for applying known patterns or fixing
+  bugs — for discovering what the code wants to become through repeated small
+  transformations.
 
   ```
   npx skills@latest add -g cederberg/incubator/skills/refactor
   ```
 
-- **what-we-forgot** — Recall forgotten rules or to-do items from instructions
-  and conversation, then work through them.
+- **what-we-forgot** — Tries to recall forgotten instructions or todo items.
+  Then starts working through them.
 
   ```
   npx skills@latest add -g cederberg/incubator/skills/what-we-forgot
   ```
 
-- **technical-writer** — Write or review technical documents including READMEs,
+- **technical-writer** — Write or review technical documents, including READMEs,
   system overviews, feature docs, and skill files.
 
   ```
@@ -82,15 +84,18 @@ export MANPATH="$HOME/.local/share/man:$MANPATH"
   npx skills@latest add -g cederberg/incubator/skills/review-doc
   ```
 
-- **review-instructions** — Review a prompt, skill, or instructions file for
-  language, structure, and precision problems.
+- **review-instructions** — Review a prompt, skill, or other instructions for
+  problems. Checks language (brevity, clarity, terminology, tone, voice),
+  structure (consistency, flow, format, redundancy), and precision (ambiguity,
+  assumptions, coverage, omissions). Sub-agent isolates review from
+  conversation context.
 
   ```
   npx skills@latest add -g cederberg/incubator/skills/review-instructions
   ```
 
 - **review-session** — Analyze agent session logs for knowledge, guideline,
-  and capability gaps. Produce remedies for the highest-leverage ones.
+  and capability gaps. Produces a findings report with remedies.
 
   ```
   npx skills@latest add -g cederberg/incubator/skills/review-session

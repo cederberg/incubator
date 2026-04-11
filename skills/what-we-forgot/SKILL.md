@@ -1,8 +1,8 @@
 ---
 name: what-we-forgot
 description: >
-    Recalls forgotten rules or todo items from instructions and conversation.
-    Then starts working through them.
+    Tries to recall forgotten instructions or todo items. Then starts working
+    through them.
 disable-model-invocation: true
 ---
 Review your instructions and extract all rules relevant to the current

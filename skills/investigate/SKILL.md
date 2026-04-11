@@ -1,11 +1,12 @@
 ---
 name: investigate
-description: Guide a structured, iterative technical investigation using
-  hypothesis tree reasoning. Use when debugging a slow endpoint, tracing
-  a regression, or investigating complex problems with unknown cause.
-  Not suitable for one-shot lookups or unbounded exploration. Invoke as
-  /investigate <topic> or /investigate @<file>.
+description: >
+    Guide a structured, iterative technical investigation using hypothesis tree
+    reasoning. Use when debugging a slow endpoint, tracing a regression, or
+    investigating complex problems with unknown cause.
 disable-model-invocation: true
+argument-hint: "[topic]"
+allowed-tools: Agent, Read, Write, Glob, Bash
 ---
 ## Goal
 

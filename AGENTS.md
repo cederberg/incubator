@@ -9,7 +9,8 @@
 - Store persistent project knowledge as entries in `AGENTS.md`.
 
 ## Skill Guidelines
-- Use `bin/frontmatter <file>...` to read front-matter from skill files.
+- Use `bin/frontmatter <file>...` to read skill file front-matter.
+- Set `disable-model-invocation: true` to only trigger via `/<skill-name>`.
 - Prefer open-ended instructions; agents are competent to fill gaps.
 - Codify rules when evidence indicates a problem or to reduce agent exploration.
 - Confirm changes with user first, then batch edits in one pass.

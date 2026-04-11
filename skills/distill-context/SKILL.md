@@ -1,6 +1,7 @@
 ---
 name: distill-context
 description: "Creates and maintains AGENTS.md, the agent context file for a project. Trigger when the user says \"distill context\", \"update AGENTS.md\", \"init agent context\", or \"sync context\"."
+disable-model-invocation: true
 argument-hint: "[update|research|realign]"
 allowed-tools: Read, Write, Glob, Bash
 ---

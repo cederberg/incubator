@@ -4,7 +4,7 @@ description: >
     Analyze agent session logs for knowledge, guideline, and capability gaps.
     Produces a findings report with remedies.
 disable-model-invocation: true
-argument-hint: "[session-id | 'latest']"
+argument-hint: "[session-id|latest]"
 allowed-tools: Agent, Read, Grep, Glob, Bash(python *)
 ---
 ## Goal
