@@ -4,19 +4,19 @@
 - [README.md] — tools, skills, usage examples
 
 ## General Guidelines
-- Always use brief and precise wording.
-- Confirm feature additions with user.
-- Store persistent project knowledge as entries in `AGENTS.md`.
+- Use brief and precise wording.
+- Confirm feature additions (new options, capabilities, etc.) with user.
+- Store project conventions, knowledge and rules in `AGENTS.md` (not in memory tool entries).
+- Update `README.md` when tool or skill usage changes.
 
 ## Skill Guidelines
 - Use `bin/frontmatter <file>...` to read skill file front-matter.
-- Set `disable-model-invocation: true` to only trigger via `/<skill-name>`.
-- Prefer open-ended instructions; agents are competent to fill gaps.
-- Codify rules when evidence indicates a problem or to reduce agent exploration.
+- Set `disable-model-invocation: true` to prevent automatic triggering.
+- Codify rules when recurring mistakes or unnecessary searches appear.
+- Only add instructions where agents will err without them.
 - Confirm changes with user first, then batch edits in one pass.
 - After edit, remind user to run /review-instructions.
-- After add, rename or remove, update `README.md`
 
-## Sub-agents
+## Sub-agent Guidelines
 - Resolve document-relative paths to absolute before passing to sub-agents.
 - For open-ended exploration, ask for all ideas — valid or not.
