@@ -1,0 +1,43 @@
+COMMIT  := $(shell GIT_CONFIG_GLOBAL=/dev/null git rev-parse --short=8 HEAD)
+DATE    := $(or $(DATE),$(shell date '+%F'))
+VER     := $(if $(VERSION),$(patsubst v%,%,$(VERSION)),$(shell date '+%Y.%m.%d').$(COMMIT)-SNAPSHOT)
+
+.PHONY: all clean build test outdated publish
+
+all:
+	@echo '🌈 Makefile commands'
+	@grep -E -A 1 '^#' Makefile | awk 'BEGIN { RS = "--\n"; FS = "\n" }; { sub("#+ +", "", $$1); sub(":.*", "", $$2); printf " · make %-18s- %s\n", $$2, $$1}'
+	@echo
+	@echo '🚀 Release builds'
+	@echo ' · make VERSION=v1.0.0 clean build test publish'
+
+# Cleanup build artifacts
+clean:
+	rm -rf tmp
+
+# Build the project
+build:
+	mkdir -p tmp/build
+	CGO_ENABLED=0 go build -ldflags='-s -w' -o tmp/build/journald-plus .
+
+# Run tests & code style checks
+test:
+	go vet ./...
+	@test -z "$$(gofmt -l .)" || (echo "Formatting issues in: $$(gofmt -l . | xargs)"; exit 1)
+	go test ./...
+
+# List outdated dependencies and code modernizations
+outdated:
+	@echo --== go toolchain ==--
+	@echo "current: $$(go env GOVERSION)"
+	@echo "latest:  $$(curl -sf 'https://go.dev/VERSION?m=text' | head -1)"
+	@echo
+	@echo --== go dependencies ==--
+	@go list -u -m all
+	@echo
+	@echo --== go modernizations ==--
+	@go fix -diff ./...
+
+# Build and publish release
+publish: clean build test
+	# TBD

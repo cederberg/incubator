@@ -49,6 +49,14 @@ cp bin/frontmatter ~/.local/bin/
 
 ## Agent Skills
 
+- **agent-init** — Analyzes a project and produces `AGENTS.md` and `Makefile`.
+  Works for new projects and existing ones with a legacy or missing agent
+  context file.
+
+  ```
+  npx skills@latest add -g cederberg/incubator/skills/agent-init
+  ```
+
 - **brainstorm** — Open-ended idea generation without filtering for validity.
   Use to explore a design space, when stuck needing fresh angles, or when
   naming something.
@@ -127,10 +135,3 @@ cp bin/frontmatter ~/.local/bin/
   npx skills@latest add -g cederberg/incubator/skills/review-session
   ```
 
-- **distill-context** — Creates and maintains `AGENTS.md`, the agent context
-  file for a project. Syncs it with recent changes, performs full analysis, or
-  realigns a stale file.
-
-  ```
-  npx skills@latest add -g cederberg/incubator/skills/distill-context
-  ```
