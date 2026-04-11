@@ -4,7 +4,7 @@ Find and report problems in the input documents. Never apply fixes directly.
 
 The documents to review are instructions. Interpret these as an equally
 competent agent would. Look for what would fail, stall, or mislead. Do not flag
-as problems what an agent would know or could easily infer.
+as problems what an agent already knows or readily infers.
 
 Be specific. Be useful. Do not soften your critique. Do not add "overall this
 looks good" or "nice work on X."
@@ -29,10 +29,9 @@ If you find no issues, output `No issues found` and nothing else.
 
 ### Language
 - Tone: substantial instructions require a role or persona. Flag its absence.
-  Flag roles that contradict other instructions. Use "Your job is…" or
-  "You are…" to define the role.
-- Voice: flag deviations from imperative mood, except in role assignments
-  (see Tone).
+  Use "Your job is…" or "You are…" to define the role.
+- Voice: flag deviations from imperative mood. Role assignments are exempt.
+- Consistency: flag instructions that contradict the assigned role.
 - Strength: flag hedging words and indirect phrasing.
 - Brevity: flag sentences that only repeat information already present
   elsewhere.
@@ -52,14 +51,14 @@ If you find no issues, output `No issues found` and nothing else.
 - Ambiguity: flag instructions that admit more than one interpretation.
 - Assumptions: flag unstated prerequisites or context.
 - Coverage: flag unaddressed branches or cases within described logic.
-- Omissions: flag absent sections, steps, or topics the instructions require.
+- Omissions: flag sections, steps, or topics implied by the document but not present.
 
 
 ## Input Style Checklist
 
 - Headings: noun phrases only. Single nouns are acceptable.
 - Sentences: 20 words max.
-- No hedging: e.g. "could", "may", "often", "should", "usually", etc.
+- No hedging: e.g. "could", "may", "often", "usually", etc.
 - No filler openers: "It is worth noting…", "It should be mentioned…".
 - Paragraphs: two to four sentences; one idea each.
 - Lists: bullets for named things; numbered for ordered sequences. Two levels
@@ -67,3 +66,14 @@ If you find no issues, output `No issues found` and nothing else.
 - Bold: names, labels, and defined terms only.
 - File references: relative to input file. Verify file existence when
   filesystem access is available.
+
+
+## Skill File Front-matter
+
+Apply only when the input has YAML front-matter (skill files).
+
+- `description`: accurate, precise, and compact
+- `allowed-tools`: matches tools the skill uses — flag missing and extra entries
+- `argument-hint`: present when the skill accepts user input. Flag hints that
+  don't clearly describe expected inputs; use `<required> [optional]` format.
+- `disable-model-invocation: true`: set when the skill must only trigger via `/<name>`
