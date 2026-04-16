@@ -86,14 +86,14 @@ Apply corrections before proceeding to Step 3.
 ## Step 3: Write AGENTS.md
 
 **Rules:**
-- First line: tagline — ≤12 words, what it does and why/how
+- First line: H1 with filename
+- Second line: tagline — ≤12 words, what it does and why/how
 - Use whatever H2 sections the project warrants
 - One fact per bullet; max 15 words
 - Use file references; do not reproduce their content
 - Add rules requiring updates to README and other docs when code changes
 - Include command reference for build targets when inferred
-- Use per-filetype sections to limit rule scope (e.g. `## Go Guidelines`,
-  `## Shell Script Guidelines`)
+- Use per-filetype sections to limit rule scope (e.g. `## Go Code`, `## Shell Scripts`)
 
 **Checklist:**
 - Every referenced file exists in the repo
