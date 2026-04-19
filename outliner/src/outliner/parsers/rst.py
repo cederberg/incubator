@@ -32,7 +32,7 @@ def _underline_char(line: str, min_len: int = 1) -> str | None:
     return None
 
 
-def detect_content(lines: list[str]) -> bool:
+def detect(lines: list[str]) -> bool:
     """Return True if content has strong RST signals not present in plain Markdown."""
     for line in lines:
         stripped = line.strip()
@@ -69,14 +69,10 @@ def parse(text: str) -> list[OutlineItem]:
 
         i += 1
 
-    if not headings:
-        from outliner.parsers.markdown import _sandwich_fallback
-        return _sandwich_fallback(lines)
-
     items: list[OutlineItem] = []
 
-    # Preamble: content before the first heading
-    first_idx = headings[0][0]
+    # Preamble before first heading, or whole-file item when there are no headings.
+    first_idx = headings[0][0] if headings else n
     if any(lines[k].strip() for k in range(first_idx)):
         sig = next(lines[k].strip() for k in range(first_idx) if lines[k].strip())
         items.append(OutlineItem(start=1, count=first_idx, signature=sig))

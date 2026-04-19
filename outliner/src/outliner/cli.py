@@ -1,12 +1,16 @@
 """outline — print structural outline of source files."""
 
 import argparse
+import os
 import re
 import sys
 
-from outliner.autodetect import detect_syntax
-from outliner.parsers import get_parser
+from outliner.parsers import detect, outline, NAMES, EXTENSIONS
 from outliner.types import OutlineItem
+
+
+def guess_syntax(src: str) -> str | None:
+    return EXTENSIONS.get(os.path.splitext(src.lower())[1])
 
 
 def _format_items(items: list[OutlineItem], grep: re.Pattern | None) -> list[str]:
@@ -26,14 +30,6 @@ def _format_items(items: list[OutlineItem], grep: re.Pattern | None) -> list[str
     return lines
 
 
-def _outline_text(text: str, syntax: str, source_name: str) -> list[OutlineItem]:
-    parser = get_parser(syntax)
-    if parser is None:
-        print(f"outline: unsupported syntax '{syntax}' for {source_name}", file=sys.stderr)
-        return []
-    return parser(text)
-
-
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         prog="outline",
@@ -44,7 +40,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("-g", "--grep", metavar="EXPR",
                     help="Only show items whose signature matches EXPR")
     ap.add_argument("-s", "--syntax", metavar="LANG",
-                    help="Override syntax auto-detection")
+                    help=f"Override syntax auto-detection (available: {', '.join(NAMES)})")
     args = ap.parse_args(argv)
 
     grep_re: re.Pattern | None = None
@@ -66,10 +62,6 @@ def main(argv: list[str] | None = None) -> int:
 
     exit_code = 0
     for src, explicit_syntax in sources:
-        # Extension-based detection first
-        syntax = explicit_syntax or detect_syntax(src)
-
-        # Read content (needed for parsing and content-based detection)
         try:
             if src == "-":
                 text = sys.stdin.read()
@@ -81,9 +73,7 @@ def main(argv: list[str] | None = None) -> int:
             exit_code = 1
             continue
 
-        # Content-based fallback when extension gave nothing
-        if syntax is None:
-            syntax = detect_syntax(None, text)
+        syntax = explicit_syntax or guess_syntax(src) or detect(text)
 
         if syntax is None:
             print(f"outline: cannot auto-detect syntax for '{src}'; use --syntax",
@@ -91,7 +81,14 @@ def main(argv: list[str] | None = None) -> int:
             exit_code = 2
             continue
 
-        items = _outline_text(text, syntax, src)
+        items = outline(syntax, text)
+        if items is None:
+            available = ", ".join(NAMES)
+            print(f"outline: unsupported syntax '{syntax}'; available: {available}",
+                  file=sys.stderr)
+            exit_code = 2
+            continue
+
         output_lines = _format_items(items, grep_re)
 
         if multi:

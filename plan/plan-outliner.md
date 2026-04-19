@@ -175,9 +175,9 @@ YAML are deferred to last as their output format needs separate design thought.
 
 - [x] **Markdown** (`parsers/markdown.py`) — ATX/Setext headings with nesting;
       simplest parser, good baseline for understanding the output format
-- [ ] **reStructuredText** (`parsers/rst.py`) — underline/overline headings with
+- [x] **reStructuredText** (`parsers/rst.py`) — underline/overline headings with
       any decoration character (`= - ~ ^ * + # < >`); level determined by
-      order of first appearance; add `.rst` to autodetect
+      order of first appearance; `.rst`/`.rest` extensions + content detection
 - [ ] **Python** (`parsers/python.py`) — use `ast` module; functions, classes,
       methods, module-level assignments
 - [ ] **Go** (`parsers/go.py`) — func, method, type, const/var blocks;
@@ -222,6 +222,14 @@ YAML are deferred to last as their output format needs separate design thought.
 - [ ] **Zig** (`parsers/zig.py`) — fn, struct/enum/union, top-level const/var
 - [ ] **YAML** (`parsers/yaml_parser.py`) — TBD
 - [ ] **JSON** (`parsers/json_parser.py`) — TBD
+- [ ] **XML** (`parsers/xml_parser.py`) — TBD
+- [ ] **HTML** (`parsers/html_parser.py`) — TBD
+- [ ] **AsciiDoc** (`parsers/asciidoc.py`) — `=`-prefixed headings (like ATX but
+      with `=` and `==`), section titles; `.adoc`/`.asciidoc` extensions
+- [ ] **Org-mode** (`parsers/org.py`) — `*`-prefixed headings (`*`, `**`, …);
+      widely used in Emacs / literate-programming workflows; `.org` extension
+- [ ] **LaTeX** (`parsers/latex.py`) — `\chapter`, `\section`, `\subsection`,
+      `\subsubsection`; `.tex` extension
 
 ### Polish
 

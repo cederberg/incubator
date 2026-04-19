@@ -3,9 +3,9 @@
 from pathlib import Path
 
 from outliner.parsers.markdown import parse, _whitespace_filter
-from outliner.autodetect import detect_syntax
+from outliner.cli import guess_syntax
 
-FIXTURES = Path(__file__).parent / "fixtures" / "md"
+FIXTURES_MD = Path(__file__).parent / "fixtures" / "md"
 FIXTURES_TXT = Path(__file__).parent / "fixtures" / "txt"
 
 
@@ -64,7 +64,7 @@ def test_atx_nested_range_extends_past_children():
 
 
 def test_atx_fixture():
-    text = (FIXTURES / "atx.md").read_text()
+    text = (FIXTURES_MD / "atx.md").read_text()
     items = parse(text)
     sigs = [it.signature for it in items]
     assert "Title" in sigs
@@ -90,7 +90,7 @@ def test_setext_level2():
 
 
 def test_setext_fixture():
-    text = (FIXTURES / "setext.md").read_text()
+    text = (FIXTURES_MD / "setext.md").read_text()
     items = parse(text)
     sigs = [it.signature for it in items]
     assert "Title" in sigs
@@ -109,7 +109,7 @@ def test_setext_not_triggered_by_atx_line():
 # ---------------------------------------------------------------------------
 
 def test_mixed_fixture():
-    text = (FIXTURES / "mixed.md").read_text()
+    text = (FIXTURES_MD / "mixed.md").read_text()
     items = parse(text)
     sigs = [it.signature for it in items]
     assert "ATX Title" in sigs
@@ -211,20 +211,21 @@ def test_whitespace_filter_mixed_no_filter():
 
 
 # ---------------------------------------------------------------------------
-# autodetect
+# guess_syntax
 # ---------------------------------------------------------------------------
 
-def test_autodetect_markdown_extensions():
+def test_guess_syntax_markdown_extensions():
     for ext in (".md", ".markdown", ".mdown", ".mkd"):
-        assert detect_syntax(f"file{ext}") == "markdown"
+        assert guess_syntax(f"file{ext}") == "markdown"
 
 
-def test_autodetect_text_extensions():
+def test_guess_syntax_text_extensions():
     for ext in (".txt", ".text"):
-        assert detect_syntax(f"file{ext}") == "markdown"
+        assert guess_syntax(f"file{ext}") == "markdown"
 
 
-def test_autodetect_unknown_returns_none():
-    assert detect_syntax("file.py") is None
-    assert detect_syntax("file.rs") is None
-    assert detect_syntax("-") is None
+def test_guess_syntax_unknown_returns_none():
+    assert guess_syntax("file.py") is None
+    assert guess_syntax("file.rs") is None
+    assert guess_syntax("-") is None
+    assert guess_syntax("README") is None

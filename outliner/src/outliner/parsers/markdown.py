@@ -19,14 +19,12 @@ SYNTAX = "markdown"
 EXTENSIONS = frozenset({".md", ".markdown", ".mdown", ".mkd", ".txt", ".text"})
 
 _ATX_RE = re.compile(r"^(#{1,6})(?:\s+(.*?))?\s*#*\s*$")
-_ATX_START = re.compile(r"^#{1,6} ")
 _SETEXT_RE = re.compile(r"^(=+|-+)\s*$")
 _THRESHOLD = 0.75
 
 
-def detect_content(lines: list[str]) -> bool:
-    """Return True if content has ATX headings (unambiguous Markdown signal)."""
-    return any(_ATX_START.match(line) for line in lines)
+def detect(lines: list[str]) -> bool:
+    return True
 
 
 def _is_setext_underline(line: str) -> tuple[bool, int]:

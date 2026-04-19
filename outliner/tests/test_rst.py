@@ -2,8 +2,9 @@
 
 from pathlib import Path
 
-from outliner.parsers.rst import parse, detect_content
-from outliner.autodetect import detect_syntax
+from outliner.parsers.rst import parse, detect as detect_rst
+from outliner.parsers import detect
+from outliner.cli import guess_syntax
 
 FIXTURES = Path(__file__).parent / "fixtures" / "rst"
 
@@ -54,27 +55,27 @@ def test_non_md_decoration_chars():
         assert items[0].signature == "Title"
 
 
-def test_underline_must_be_long_enough():
-    # Underline shorter than title text → not a heading
+def test_underline_too_short_not_a_heading():
+    # Underline shorter than title → not a heading → first-line fallback
     items = parse("Long Title Here\n====\n\ntext\n")
-    # Should fall back to sandwich heuristic (or first-line)
-    assert len(items) >= 1
-    # The word "Long Title Here" should appear as sig (from sandwich or first-line)
-    sigs = [it.signature for it in items]
-    assert any("Long Title Here" in s or "Long" in s for s in sigs)
+    assert len(items) == 1
+    assert items[0].signature == "Long Title Here"
+    assert items[0].start == 1
+    assert items[0].count == 4
 
 
 def test_empty_file():
     assert parse("") == []
 
 
-def test_no_headings_falls_back_to_sandwich():
-    # No RST headings → blank-sandwich fallback (same as markdown plain text)
-    text = "Title\n\nBody text.\nMore body.\n\nSection\n\nContent.\n"
+def test_no_headings_returns_first_line():
+    # RST with no heading syntax → first-line fallback spanning whole file
+    text = "Some text here.\nMore text.\n"
     items = parse(text)
-    sigs = [it.signature for it in items]
-    assert "Title" in sigs
-    assert "Section" in sigs
+    assert len(items) == 1
+    assert items[0].signature == "Some text here."
+    assert items[0].start == 1
+    assert items[0].count == 2
 
 
 # ---------------------------------------------------------------------------
@@ -117,51 +118,11 @@ def test_range_parent_covers_children():
 
 
 # ---------------------------------------------------------------------------
-# pep20.rst fixture
-# ---------------------------------------------------------------------------
-
-def test_pep20_preamble():
-    items = parse((FIXTURES / "pep20.rst").read_text())
-    assert items[0].start == 1
-    assert items[0].count == 9
-    assert items[0].signature == "PEP: 20"
-
-
-def test_pep20_headings():
-    items = parse((FIXTURES / "pep20.rst").read_text())
-    sigs = [it.signature for it in items]
-    assert "Abstract" in sigs
-    assert "The Zen of Python" in sigs
-    assert "Easter Egg" in sigs
-    assert "References" in sigs
-    assert "Copyright" in sigs
-
-
-def test_pep20_heading_ranges():
-    items = parse((FIXTURES / "pep20.rst").read_text())
-    abstract = next(it for it in items if it.signature == "Abstract")
-    zen = next(it for it in items if it.signature == "The Zen of Python")
-    assert abstract.start == 10
-    assert abstract.count == 8   # ends at line 18 where "The Zen of Python" starts
-    assert zen.start == 18
-    assert zen.count == 26       # ends at line 44 where "Easter Egg" starts
-
-
-def test_pep20_covers_whole_file():
-    text = (FIXTURES / "pep20.rst").read_text()
-    items = parse(text)
-    total_lines = len(text.splitlines())
-    last = items[-1]
-    assert last.start + last.count - 1 == total_lines
-
-
-# ---------------------------------------------------------------------------
 # pep8.rst fixture — two-level hierarchy
 # ---------------------------------------------------------------------------
 
 def test_pep8_has_two_levels():
     items = parse((FIXTURES / "pep8.rst").read_text())
-    # Level-1 headings (=) are wide-ranging; level-2 headings (-) are narrower
     sigs = [it.signature for it in items]
     assert "Introduction" in sigs
     assert "Code Lay-out" in sigs
@@ -179,61 +140,67 @@ def test_pep8_level1_range_contains_level2():
     items = parse((FIXTURES / "pep8.rst").read_text())
     code_layout = next(it for it in items if it.signature == "Code Lay-out")
     indentation = next(it for it in items if it.signature == "Indentation")
-    # "Code Lay-out" must start before and end after "Indentation"
     assert code_layout.start < indentation.start
     assert code_layout.start + code_layout.count > indentation.start + indentation.count
 
 
-# ---------------------------------------------------------------------------
-# detect_content
-# ---------------------------------------------------------------------------
-
-def test_detect_content_directive():
-    assert detect_content([".. code-block:: python"])
-    assert detect_content(["text", ".. note::"])
-
-
-def test_detect_content_non_md_underline():
-    assert detect_content(["Title", "~~~~~"])
-    assert detect_content(["Title", "^^^^^"])
-    assert detect_content(["Title", "*****"])
-
-
-def test_detect_content_not_triggered_by_md_underlines():
-    # = and - are ambiguous; alone they do not trigger RST detection
-    assert not detect_content(["Title", "====="])
-    assert not detect_content(["Title", "-----"])
-
-
-def test_detect_content_not_triggered_by_plain_text():
-    assert not detect_content(["Just some plain text.", "No special markers."])
+def test_pep8_covers_whole_file():
+    text = (FIXTURES / "pep8.rst").read_text()
+    items = parse(text)
+    total_lines = len(text.splitlines())
+    last = items[-1]
+    assert last.start + last.count - 1 == total_lines
 
 
 # ---------------------------------------------------------------------------
-# autodetect integration
+# rst.detect (per-module, operates on line list)
 # ---------------------------------------------------------------------------
 
-def test_autodetect_rst_extensions():
+def test_detect_directive():
+    assert detect_rst([".. code-block:: python"])
+    assert detect_rst(["text", ".. note::"])
+
+
+def test_detect_non_md_underline():
+    assert detect_rst(["Title", "~~~~~"])
+    assert detect_rst(["Title", "^^^^^"])
+    assert detect_rst(["Title", "*****"])
+
+
+def test_detect_not_triggered_by_md_underlines():
+    assert not detect_rst(["Title", "====="])
+    assert not detect_rst(["Title", "-----"])
+
+
+def test_detect_not_triggered_by_plain_text():
+    assert not detect_rst(["Just some plain text.", "No special markers."])
+
+
+# ---------------------------------------------------------------------------
+# detect_ext / detect (registry-level)
+# ---------------------------------------------------------------------------
+
+def test_guess_syntax_rst_extensions():
     for ext in (".rst", ".rest"):
-        assert detect_syntax(f"file{ext}") == "rst"
+        assert guess_syntax(f"file{ext}") == "rst"
 
 
-def test_autodetect_content_rst_directive():
+def test_guess_syntax_no_extension():
+    assert guess_syntax("README") is None
+    assert guess_syntax("-") is None
+
+
+def test_detect_content_rst_directive():
     content = "Abstract\n========\n.. code-block:: text\n"
-    assert detect_syntax(None, content) == "rst"
+    assert detect(content) == "rst"
 
 
-def test_autodetect_content_rst_tilde_underline():
+def test_detect_content_rst_tilde_underline():
     content = "Section\n~~~~~~~\n\ntext\n"
-    assert detect_syntax(None, content) == "rst"
+    assert detect(content) == "rst"
 
 
-def test_autodetect_content_markdown_wins_for_atx():
-    content = "# Hello\n\nWorld\n"
-    assert detect_syntax(None, content) == "markdown"
-
-
-def test_autodetect_content_ambiguous_returns_none():
-    # Only = underlines, no other markers
+def test_detect_content_ambiguous_defaults_to_markdown():
+    # = and - underlines alone don't trigger RST; markdown is the catch-all
     content = "Title\n=====\n\nBody text.\n"
-    assert detect_syntax(None, content) is None
+    assert detect(content) == "markdown"

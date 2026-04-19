@@ -62,11 +62,11 @@ def test_grep_no_match_empty_output():
 # Stdin
 # ---------------------------------------------------------------------------
 
-def test_stdin_no_detectable_syntax():
-    # Empty content with no --syntax and no detectable markers → fails
-    _, stderr, rc = run(stdin_text="")
-    assert rc == 2
-    assert "auto-detect" in stderr
+def test_stdin_no_syntax_uses_markdown_fallback():
+    # No --syntax and no extension → markdown catch-all → empty outline, rc=0
+    stdout, _, rc = run(stdin_text="")
+    assert rc == 0
+    assert stdout.strip() == ""
 
 
 def test_stdin_with_syntax():
@@ -86,16 +86,16 @@ def test_missing_file():
     assert "outline:" in stderr
 
 
-def test_unknown_extension():
-    # File with unknown extension and ambiguous content → auto-detect fails
+def test_unknown_extension_falls_back_to_markdown():
+    # Unknown extension → content detection → markdown catch-all
     import tempfile, os
     with tempfile.NamedTemporaryFile(suffix=".unknown_ext_xyz", mode="w", delete=False) as f:
-        f.write("")
+        f.write("# Hello\n\nworld\n")
         fname = f.name
     try:
-        _, stderr, rc = run(fname)
-        assert rc == 2
-        assert "--syntax" in stderr
+        stdout, _, rc = run(fname)
+        assert rc == 0
+        assert "Hello" in stdout
     finally:
         os.unlink(fname)
 
@@ -108,8 +108,9 @@ def test_bad_grep_regex():
 
 def test_unsupported_syntax():
     _, stderr, rc = run("--syntax", "cobol", str(FIXTURES / "atx.md"))
-    assert rc == 0
+    assert rc == 2
     assert "unsupported syntax" in stderr
+    assert "available:" in stderr
 
 
 # ---------------------------------------------------------------------------
