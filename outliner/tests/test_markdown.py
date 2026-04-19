@@ -5,7 +5,8 @@ from pathlib import Path
 from outliner.parsers.markdown import parse, _whitespace_filter
 from outliner.autodetect import detect_syntax
 
-FIXTURES = Path(__file__).parent / "fixtures"
+FIXTURES = Path(__file__).parent / "fixtures" / "md"
+FIXTURES_TXT = Path(__file__).parent / "fixtures" / "txt"
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +157,7 @@ def test_sandwich_preamble_promoted():
 
 def test_sandwich_whitespace_filter_plain():
     # GPL-style: mostly indented headings → plain outlier dropped
-    items = parse((FIXTURES / "gpl3.txt").read_text())
+    items = parse((FIXTURES_TXT / "gpl3.txt").read_text())
     sigs = [it.signature for it in items]
     assert "GNU GENERAL PUBLIC LICENSE" in sigs  # preamble
     assert "Preamble" in sigs
@@ -169,7 +170,7 @@ def test_sandwich_whitespace_filter_plain():
 
 def test_sandwich_whitespace_filter_indented():
     # RFC-style: mostly plain headings → indented body paragraphs dropped
-    items = parse((FIXTURES / "rfc_sample.txt").read_text())
+    items = parse((FIXTURES_TXT / "rfc_sample.txt").read_text())
     sigs = [it.signature for it in items]
     assert "HTTP/2" in sigs       # preamble hit
     assert "Abstract" in sigs

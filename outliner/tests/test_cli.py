@@ -7,7 +7,7 @@ from pathlib import Path
 
 from outliner.cli import main
 
-FIXTURES = Path(__file__).parent / "fixtures"
+FIXTURES = Path(__file__).parent / "fixtures" / "md"
 
 
 def run(*args, stdin_text=None):
@@ -62,8 +62,9 @@ def test_grep_no_match_empty_output():
 # Stdin
 # ---------------------------------------------------------------------------
 
-def test_stdin_requires_syntax():
-    _, stderr, rc = run()  # no files, no syntax — "-" has no extension to detect
+def test_stdin_no_detectable_syntax():
+    # Empty content with no --syntax and no detectable markers → fails
+    _, stderr, rc = run(stdin_text="")
     assert rc == 2
     assert "auto-detect" in stderr
 
@@ -86,9 +87,17 @@ def test_missing_file():
 
 
 def test_unknown_extension():
-    _, stderr, rc = run(str(FIXTURES / "atx.md") + ".unknown_ext_xyz")
-    assert rc == 2
-    assert "--syntax" in stderr
+    # File with unknown extension and ambiguous content → auto-detect fails
+    import tempfile, os
+    with tempfile.NamedTemporaryFile(suffix=".unknown_ext_xyz", mode="w", delete=False) as f:
+        f.write("")
+        fname = f.name
+    try:
+        _, stderr, rc = run(fname)
+        assert rc == 2
+        assert "--syntax" in stderr
+    finally:
+        os.unlink(fname)
 
 
 def test_bad_grep_regex():

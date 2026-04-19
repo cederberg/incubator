@@ -1,20 +1,12 @@
 """outline — print structural outline of source files."""
 
 import argparse
-import contextlib
-import io
 import re
 import sys
 
 from outliner.autodetect import detect_syntax
+from outliner.parsers import get_parser
 from outliner.types import OutlineItem
-
-
-def _get_parser(syntax: str):  # -> Callable[[str], list[OutlineItem]] | None
-    if syntax == "markdown":
-        from outliner.parsers.markdown import parse
-        return parse
-    return None
 
 
 def _format_items(items: list[OutlineItem], grep: re.Pattern | None) -> list[str]:
@@ -23,7 +15,6 @@ def _format_items(items: list[OutlineItem], grep: re.Pattern | None) -> list[str
     if not items:
         return []
 
-    # Right-align start numbers; pad "start,count" field uniformly.
     max_start_width = max(len(str(it.start)) for it in items)
     max_field_width = max(len(f"{it.start},{it.count}") for it in items)
 
@@ -36,7 +27,7 @@ def _format_items(items: list[OutlineItem], grep: re.Pattern | None) -> list[str
 
 
 def _outline_text(text: str, syntax: str, source_name: str) -> list[OutlineItem]:
-    parser = _get_parser(syntax)
+    parser = get_parser(syntax)
     if parser is None:
         print(f"outline: unsupported syntax '{syntax}' for {source_name}", file=sys.stderr)
         return []
@@ -64,7 +55,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"outline: invalid --grep expression: {exc}", file=sys.stderr)
             return 2
 
-    sources: list[tuple[str, str | None]] = []  # (path_or_"-", explicit_syntax)
+    sources: list[tuple[str, str | None]] = []
     if not args.files:
         sources = [("-", args.syntax)]
     else:
@@ -75,14 +66,10 @@ def main(argv: list[str] | None = None) -> int:
 
     exit_code = 0
     for src, explicit_syntax in sources:
-        # Determine syntax
+        # Extension-based detection first
         syntax = explicit_syntax or detect_syntax(src)
-        if syntax is None:
-            print(f"outline: cannot auto-detect syntax for '{src}'; use --syntax", file=sys.stderr)
-            exit_code = 2
-            continue
 
-        # Read content
+        # Read content (needed for parsing and content-based detection)
         try:
             if src == "-":
                 text = sys.stdin.read()
@@ -92,6 +79,16 @@ def main(argv: list[str] | None = None) -> int:
         except OSError as exc:
             print(f"outline: {exc}", file=sys.stderr)
             exit_code = 1
+            continue
+
+        # Content-based fallback when extension gave nothing
+        if syntax is None:
+            syntax = detect_syntax(None, text)
+
+        if syntax is None:
+            print(f"outline: cannot auto-detect syntax for '{src}'; use --syntax",
+                  file=sys.stderr)
+            exit_code = 2
             continue
 
         items = _outline_text(text, syntax, src)
