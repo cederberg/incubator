@@ -158,12 +158,14 @@ outliner/
 
 ### Infrastructure
 
-- [ ] Initialise `outliner/` Python project (`pyproject.toml`, `uvx` entry
+- [x] Initialise `outliner/` Python project (`pyproject.toml`, `uvx` entry
       point)
-- [ ] `types.py` — `OutlineItem` dataclass + `Kind` enum
-- [ ] `autodetect.py` — extension/shebang → syntax name
-- [ ] `cli.py` — `--grep`, `--syntax`, multi-file + stdin support
-- [ ] `tests/test_cli.py` — smoke tests for CLI entry point
+- [x] `types.py` — `OutlineItem` dataclass
+- [x] `autodetect.py` — extension/shebang → syntax name
+- [ ] `autodetect.py` — content-based fallback (detect RST by underline
+      pattern, etc.) when extension is absent or ambiguous
+- [x] `cli.py` — `--grep`, `--syntax`, multi-file + stdin support
+- [x] `tests/test_cli.py` — smoke tests for CLI entry point
 
 ### Language Parsers (each with fixture + TDD red-green tests)
 
@@ -171,8 +173,11 @@ Order reflects: user priority first, then complex/weird syntaxes early (to
 surface output format edge cases), then remaining popular languages. JSON and
 YAML are deferred to last as their output format needs separate design thought.
 
-- [ ] **Markdown** (`parsers/markdown.py`) — ATX/Setext headings with nesting;
+- [x] **Markdown** (`parsers/markdown.py`) — ATX/Setext headings with nesting;
       simplest parser, good baseline for understanding the output format
+- [ ] **reStructuredText** (`parsers/rst.py`) — underline/overline headings with
+      any decoration character (`= - ~ ^ * + # < >`); level determined by
+      order of first appearance; add `.rst` to autodetect
 - [ ] **Python** (`parsers/python.py`) — use `ast` module; functions, classes,
       methods, module-level assignments
 - [ ] **Go** (`parsers/go.py`) — func, method, type, const/var blocks;

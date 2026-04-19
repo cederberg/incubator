@@ -1,0 +1,152 @@
+Internet Engineering Task Force (IETF)                        M. Thomson
+Request for Comments: 9113                                       Mozilla
+Obsoletes: 7540, 8740                                        C. Benfield
+Category: Standards Track                                          Apple
+ISSN: 2070-1721                                                June 2022
+
+
+                            HTTP/2
+
+Abstract
+
+   This document describes an optimized expression of the semantics of
+   the Hypertext Transfer Protocol (HTTP), referred to as HTTP version 2
+   (HTTP/2).  HTTP/2 enables a more efficient use of network resources
+   and a reduced latency by introducing field compression and allowing
+   multiple concurrent exchanges on the same connection.
+
+   This document obsoletes RFCs 7540 and 8740.
+
+Status of This Memo
+
+   This is an Internet Standards Track document.
+
+   This document is a product of the Internet Engineering Task Force
+   (IETF).  It represents the consensus of the IETF community.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .  3
+   2.  HTTP/2 Protocol Overview  . . . . . . . . . . . . . . . . . .  6
+      2.1.  Document Organization  . . . . . . . . . . . . . . . . .  6
+      2.2.  Conventions and Terminology  . . . . . . . . . . . . . .  7
+
+1.  Introduction
+
+   The Hypertext Transfer Protocol (HTTP) is a wildly successful
+   protocol.  However, the way HTTP/1.1 uses the underlying transport
+   (TCP) can be inefficient.
+
+   HTTP/1.1 persistent connections allow multiple requests per
+   connection.  However, only one request can be outstanding at a time
+   on a given connection.
+
+1.1.  HTTP/1.1 Problems
+
+   HTTP/1.1 head-of-line blocking means a single slow response can
+   delay all subsequent responses on a connection.
+
+   Browsers work around this by opening multiple connections, but that
+   has costs: TCP slow start, additional round trips, and wasted
+   bandwidth.
+
+1.2.  Prior Work
+
+   SPDY was the predecessor to HTTP/2.  It demonstrated that
+   multiplexing over a single connection was feasible and beneficial.
+
+2.  HTTP/2 Protocol Overview
+
+   This document defines HTTP/2, a transport for HTTP semantics.  The
+   goal is to reduce perceived latency by enabling request and response
+   multiplexing, minimizing protocol overhead, and adding support for
+   request prioritization and server push.
+
+2.1.  Document Organization
+
+   This document is split into several sections.  The core protocol is
+   defined in Sections 3 through 10.
+
+   Section 3 describes how HTTP/2 connections are started.
+
+2.2.  Conventions and Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174].
+
+3.  Starting HTTP/2
+
+   An HTTP/2 connection begins with a connection preface sent by each
+   endpoint.
+
+   The server connection preface consists of a potentially empty
+   SETTINGS frame.
+
+3.1.  HTTP/2 Version Identification
+
+   The protocol defined in this document has two identifiers.
+
+   o  The string "h2" identifies the protocol where HTTP/2 uses
+      Transport Layer Security (TLS).
+
+   o  The string "h2c" identifies the protocol where HTTP/2 is run over
+      cleartext TCP.
+
+3.2.  Starting HTTP/2 for "https" URIs
+
+   A client that makes a request to an "https" URI uses TLS with the
+   application-layer protocol negotiation (ALPN) extension.
+
+   HTTP/2 over TLS uses the "h2" protocol identifier.  The "h2c"
+   protocol identifier MUST NOT be sent by a client or selected by a
+   server for "https" URIs.
+
+4.  HTTP Frames
+
+   Once the HTTP/2 connection is established, endpoints can begin
+   exchanging frames.
+
+4.1.  Frame Format
+
+   All frames begin with a fixed 9-octet header followed by a variable-
+   length payload.
+
+   +-----------------------------------------------+
+   |                 Length (24)                   |
+   +---------------+---------------+---------------+
+   |   Type (8)    |   Flags (8)   |
+   +-+-------------+---------------+
+   |R|                 Stream Identifier (31)      |
+   +=+=============+================================+
+   |                   Frame Payload (0...)      ...
+   +-----------------------------------------------+
+
+4.2.  Frame Size
+
+   The size of a frame payload is limited by the maximum size that a
+   receiver advertises in the SETTINGS_MAX_FRAME_SIZE setting.
+
+   The value advertised by an endpoint MUST be between 2^14 and 2^24-1
+   octets, inclusive.
+
+5.  Streams and Multiplexing
+
+   A "stream" is an independent, bidirectional sequence of frames
+   exchanged between the client and server within an HTTP/2 connection.
+
+5.1.  Stream States
+
+   The lifecycle of a stream is shown in the following figure.
+
+   A stream can be in one of several states: idle, reserved, open,
+   half-closed, or closed.
+
+5.1.1.  Stream Identifiers
+
+   Streams are identified with an unsigned 31-bit integer.  Streams
+   initiated by a client MUST use odd-numbered stream identifiers;
+   streams initiated by a server MUST use even-numbered stream
+   identifiers.
+
