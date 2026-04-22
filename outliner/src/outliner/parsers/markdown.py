@@ -15,9 +15,16 @@ from section titles and vice-versa.
 import re
 from outliner.types import OutlineItem
 
+SYNTAX = "markdown"
+EXTENSIONS = (".md", ".markdown", ".mdown", ".mkd", ".txt", ".text")
+
 _ATX_RE = re.compile(r"^(#{1,6})(?:\s+(.*?))?\s*#*\s*$")
 _SETEXT_RE = re.compile(r"^(=+|-+)\s*$")
 _THRESHOLD = 0.75
+
+
+def detect(lines: list[str]) -> bool:
+    return True
 
 
 def _is_setext_underline(line: str) -> tuple[bool, int]:
