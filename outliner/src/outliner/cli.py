@@ -19,8 +19,8 @@ def _format_items(items: list[OutlineItem], grep: re.Pattern | None) -> list[str
     if not items:
         return []
 
-    max_start_width = max(len(str(it.start)) for it in items)
-    max_field_width = max(len(f"{it.start},{it.count}") for it in items)
+    max_start_width = max(3, max(len(str(it.start)) for it in items))
+    max_field_width = 2 * max_start_width + 1
 
     lines = []
     for it in items:
