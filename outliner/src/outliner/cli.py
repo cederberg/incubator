@@ -32,7 +32,7 @@ def _format_items(items: list[OutlineItem], grep: re.Pattern | None) -> list[str
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
-        prog="outline",
+        prog="outliner",
         description="Print the structural outline of source files.",
     )
     ap.add_argument("files", nargs="*", metavar="FILE",
@@ -52,6 +52,9 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
     sources = args.files or ["-"]
+    if sources == ["-"] and sys.stdin.isatty():
+        ap.print_help()
+        return 0
     multi = len(sources) > 1
 
     exit_code = 0
