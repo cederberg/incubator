@@ -90,7 +90,6 @@ outliner/
       __init__.py
       cli.py              # entry point
       types.py            # OutlineItem dataclass, Kind enum
-      autodetect.py       # extension/shebang → syntax name
       parsers/
         __init__.py
         python.py
@@ -161,9 +160,6 @@ outliner/
 - [x] Initialise `outliner/` Python project (`pyproject.toml`, `uvx` entry
       point)
 - [x] `types.py` — `OutlineItem` dataclass
-- [x] `autodetect.py` — extension/shebang → syntax name
-- [ ] `autodetect.py` — content-based fallback (detect RST by underline
-      pattern, etc.) when extension is absent or ambiguous
 - [x] `cli.py` — `--grep`, `--syntax`, multi-file + stdin support
 - [x] `tests/test_cli.py` — smoke tests for CLI entry point
 
