@@ -2,12 +2,14 @@
 
 import contextlib
 import io
+import os
 import sys
+import tempfile
 from pathlib import Path
 
 from outliner.cli import main
 
-FIXTURES = Path(__file__).parent / "fixtures"
+FIXTURES = Path(__file__).parent / "fixtures" / "md"
 
 
 def run(*args, stdin_text=None):
@@ -62,10 +64,11 @@ def test_grep_no_match_empty_output():
 # Stdin
 # ---------------------------------------------------------------------------
 
-def test_stdin_requires_syntax():
-    _, stderr, rc = run()  # no files, no syntax — "-" has no extension to detect
-    assert rc == 2
-    assert "auto-detect" in stderr
+def test_stdin_no_syntax_uses_markdown_fallback():
+    # No --syntax and no extension → markdown catch-all → empty outline, rc=0
+    stdout, _, rc = run(stdin_text="")
+    assert rc == 0
+    assert stdout.strip() == ""
 
 
 def test_stdin_with_syntax():
@@ -85,10 +88,17 @@ def test_missing_file():
     assert "outline:" in stderr
 
 
-def test_unknown_extension():
-    _, stderr, rc = run(str(FIXTURES / "atx.md") + ".unknown_ext_xyz")
-    assert rc == 2
-    assert "--syntax" in stderr
+def test_unknown_extension_falls_back_to_markdown():
+    # Unknown extension → content detection → markdown catch-all
+    with tempfile.NamedTemporaryFile(suffix=".unknown_ext_xyz", mode="w", delete=False) as f:
+        f.write("# Hello\n\nworld\n")
+        fname = f.name
+    try:
+        stdout, _, rc = run(fname)
+        assert rc == 0
+        assert "Hello" in stdout
+    finally:
+        os.unlink(fname)
 
 
 def test_bad_grep_regex():
@@ -99,8 +109,9 @@ def test_bad_grep_regex():
 
 def test_unsupported_syntax():
     _, stderr, rc = run("--syntax", "cobol", str(FIXTURES / "atx.md"))
-    assert rc == 0
+    assert rc == 2
     assert "unsupported syntax" in stderr
+    assert "available:" in stderr
 
 
 # ---------------------------------------------------------------------------
