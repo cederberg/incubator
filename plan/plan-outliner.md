@@ -178,7 +178,7 @@ YAML are deferred to last as their output format needs separate design thought.
 - [x] **reStructuredText** (`parsers/rst.py`) — underline/overline headings with
       any decoration character (`= - ~ ^ * + # < >`); level determined by
       order of first appearance; `.rst`/`.rest` extensions + content detection
-- [ ] **Python** (`parsers/python.py`) — use `ast` module; functions, classes,
+- [x] **Python** (`parsers/python.py`) — regex-based; functions, classes,
       methods, module-level assignments
 - [ ] **Go** (`parsers/go.py`) — func, method, type, const/var blocks;
       multi-line signature merging
