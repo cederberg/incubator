@@ -1,7 +1,7 @@
-from . import rst, markdown
+from . import rst, python, markdown
 from outliner.types import OutlineItem
 
-_MODULES = [rst, markdown]
+_MODULES = [rst, python, markdown]
 _PARSERS = {mod.SYNTAX: mod.parse for mod in _MODULES}
 NAMES = sorted(_PARSERS)
 EXTENSIONS = {ext: mod.SYNTAX for mod in _MODULES for ext in mod.EXTENSIONS}
