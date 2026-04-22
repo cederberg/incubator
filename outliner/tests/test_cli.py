@@ -124,7 +124,7 @@ def test_output_columns_aligned():
     lines = [l for l in stdout.splitlines() if l.strip()]
     # Each line must have a "start,count  signature" structure
     for line in lines:
-        parts = line.split("  ", 1)
+        parts = line.lstrip().split("  ", 1)
         assert len(parts) == 2, f"bad line: {line!r}"
         loc = parts[0].strip()
         assert "," in loc
