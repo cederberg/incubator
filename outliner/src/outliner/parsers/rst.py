@@ -112,7 +112,7 @@ def parse(text: str) -> list[OutlineItem]:
         items.append(OutlineItem(
             start=line_idx + 1,
             count=end_line - line_idx,
-            signature=sig,
+            signature="  " * (level - 1) + sig,
         ))
 
     return items

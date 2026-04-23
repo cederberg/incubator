@@ -132,7 +132,7 @@ def test_class_methods_included():
     items = parse(text)
     sigs = [it.signature for it in items]
     assert "class Foo" in sigs
-    assert "def bar(self)" in sigs
+    assert "    def bar(self)" in sigs
 
 
 # ---------------------------------------------------------------------------
@@ -195,14 +195,14 @@ def test_nested_function_appears():
     items = parse(text)
     sigs = [it.signature for it in items]
     assert "def outer()" in sigs
-    assert "def inner()" in sigs
+    assert "    def inner()" in sigs
 
 
 def test_outer_range_covers_inner():
     text = "def outer():\n    def inner():\n        pass\n"
     items = parse(text)
     outer = next(it for it in items if it.signature == "def outer()")
-    inner = next(it for it in items if it.signature == "def inner()")
+    inner = next(it for it in items if it.signature == "    def inner()")
     assert outer.start <= inner.start
     assert outer.start + outer.count >= inner.start + inner.count
 
@@ -271,12 +271,12 @@ def test_fixture_class_range_contains_methods():
 
 def test_fixture_multiline_fetch_sig():
     items = parse((FIXTURES / "sample.py").read_text())
-    # Dog.fetch has a multi-line signature
+    # Dog.fetch has a multi-line signature; it is a method (4-space indent)
     fetch = next(
         it for it in items
-        if it.signature.startswith("def fetch(") and "item" in it.signature
+        if it.signature.startswith("    def fetch(") and "item" in it.signature
     )
-    assert fetch.signature == "def fetch(self, item: str, distance: float = 1.0) -> bool"
+    assert fetch.signature == "    def fetch(self, item: str, distance: float = 1.0) -> bool"
 
 
 # ---------------------------------------------------------------------------

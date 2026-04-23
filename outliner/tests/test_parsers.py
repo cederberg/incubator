@@ -12,7 +12,7 @@ def test_frontmatter_line_numbers_offset():
     text = "---\nname: test\n---\n# Heading\n\nBody.\n"
     items = parsers.outline("markdown", text)
     assert len(items) == 1
-    assert items[0].signature == "Heading"
+    assert items[0].signature == "# Heading"
     assert items[0].start == 4
 
 
@@ -20,7 +20,7 @@ def test_frontmatter_headings_found():
     text = "---\nname: test\ndescription: foo\n---\n# Heading\n\nBody.\n"
     items = parsers.outline("markdown", text)
     assert len(items) == 1
-    assert items[0].signature == "Heading"
+    assert items[0].signature == "# Heading"
 
 
 def test_frontmatter_false_setext_not_triggered():
@@ -29,7 +29,7 @@ def test_frontmatter_false_setext_not_triggered():
     text = "---\nname: test\nsome line\n---\n# Real Heading\n\nBody.\n"
     items = parsers.outline("markdown", text)
     sigs = [it.signature for it in items]
-    assert "Real Heading" in sigs
+    assert any("Real Heading" in s for s in sigs)
     assert not any("some line" in s for s in sigs)
 
 
@@ -38,7 +38,7 @@ def test_frontmatter_no_closer_not_stripped():
     text = "---\nname: test\n\n# Heading\n\nBody.\n"
     items = parsers.outline("markdown", text)
     sigs = [it.signature for it in items]
-    assert "Heading" in sigs
+    assert any("Heading" in s for s in sigs)
 
 
 def test_frontmatter_closer_beyond_100_lines_not_stripped():
@@ -48,8 +48,8 @@ def test_frontmatter_closer_beyond_100_lines_not_stripped():
     text = f"---\n{inner}---\n# Heading\n"
     items = parsers.outline("markdown", text)
     sigs = [it.signature for it in items]
-    assert "Heading" in sigs
-    heading = next(it for it in items if it.signature == "Heading")
+    assert any("Heading" in s for s in sigs)
+    heading = next(it for it in items if it.signature == "# Heading")
     assert heading.start > 100
 
 

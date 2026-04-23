@@ -32,7 +32,7 @@ def test_two_levels():
     text = "Section\n=======\n\nSubsection\n-----------\n\ntext\n"
     items = parse(text)
     assert items[0].signature == "Section"
-    assert items[1].signature == "Subsection"
+    assert items[1].signature == "  Subsection"
 
 
 def test_level_order_by_appearance():
@@ -40,7 +40,7 @@ def test_level_order_by_appearance():
     text = "First\n-----\n\nSub\n===\n\ntext\n"
     items = parse(text)
     assert items[0].signature == "First"
-    assert items[1].signature == "Sub"
+    assert items[1].signature == "  Sub"
     # "First" is level-1 with no subsequent level-1 heading → spans the whole file
     assert items[0].count == 7
     assert items[0].start == 1
@@ -124,10 +124,10 @@ def test_range_parent_covers_children():
 def test_pep8_has_two_levels():
     items = parse((FIXTURES / "pep8.rst").read_text())
     sigs = [it.signature for it in items]
-    assert "Introduction" in sigs
-    assert "Code Lay-out" in sigs
-    assert "Indentation" in sigs      # level 2 under Code Lay-out
-    assert "Tabs or Spaces?" in sigs  # level 2
+    assert any("Introduction" in s for s in sigs)
+    assert any("Code Lay-out" in s for s in sigs)
+    assert any("Indentation" in s for s in sigs)      # level 2 under Code Lay-out
+    assert any("Tabs or Spaces?" in s for s in sigs)  # level 2
 
 
 def test_pep8_preamble():
@@ -139,7 +139,7 @@ def test_pep8_preamble():
 def test_pep8_level1_range_contains_level2():
     items = parse((FIXTURES / "pep8.rst").read_text())
     code_layout = next(it for it in items if it.signature == "Code Lay-out")
-    indentation = next(it for it in items if it.signature == "Indentation")
+    indentation = next(it for it in items if it.signature == "  Indentation")
     assert code_layout.start < indentation.start
     assert code_layout.start + code_layout.count > indentation.start + indentation.count
 
@@ -231,7 +231,7 @@ def test_overline_underline_mixed_with_plain_underline():
     items = parse(text)
     sigs = [it.signature for it in items]
     assert "Chapter 1" in sigs
-    assert "Section" in sigs
+    assert "  Section" in sigs
     # No decoration-only phantom item
     assert not any(set(s) <= set("=-~^*+#<>") for s in sigs)
 

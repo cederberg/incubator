@@ -55,12 +55,13 @@ def _collect_sig(lines: list[str], start: int, n: int) -> tuple[str, int]:
     Bracket depth is counted on raw characters; brackets inside string literals
     may confuse the depth counter, which is an accepted limitation.
     """
+    indent = " " * _indent(lines[start])
     depth = 0
     parts: list[str] = []
     i = start
     while i < n:
         raw = lines[i].rstrip("\r\n")
-        # First line: strip leading indent; continuation lines: strip both ends.
+        # Strip leading indent for joining; indent is re-applied at the end.
         text = raw.lstrip() if i == start else raw.strip()
         for ch in raw:
             if ch in "([{":
@@ -77,7 +78,7 @@ def _collect_sig(lines: list[str], start: int, n: int) -> tuple[str, int]:
     sig = re.sub(r"\(\s+", "(", sig)
     sig = re.sub(r",\s*\)", ")", sig)
     sig = sig.rstrip(":").rstrip()
-    return sig, i
+    return indent + sig, i
 
 
 def _block_end(lines: list[str], def_line: int, sig_end: int, n: int) -> int:
