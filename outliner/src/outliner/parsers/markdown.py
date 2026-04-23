@@ -130,7 +130,8 @@ def parse(text: str) -> list[OutlineItem]:
         m = _ATX_RE.match(line)
         if m:
             level = len(m.group(1))
-            sig = (m.group(2) or "").strip()
+            body = (m.group(2) or "").strip()
+            sig = f"{'#' * level} {body}".rstrip()
             md_headings.append((i, level, sig))
             i += 1
             continue
@@ -139,7 +140,8 @@ def parse(text: str) -> list[OutlineItem]:
             is_ul, level = _is_setext_underline(lines[i + 1])
             stripped = line.strip()
             if is_ul and stripped and not stripped.startswith("#"):
-                md_headings.append((i, level, stripped))
+                sig = f"{'#' * level} {stripped}"
+                md_headings.append((i, level, sig))
                 i += 2
                 continue
 
