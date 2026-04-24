@@ -85,7 +85,7 @@ def test_stdin_with_syntax():
 def test_missing_file():
     _, stderr, rc = run("/nonexistent/path/file.md")
     assert rc == 1
-    assert "outline:" in stderr
+    assert "outliner:" in stderr
 
 
 def test_unknown_extension_falls_back_to_markdown():
