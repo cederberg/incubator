@@ -176,7 +176,7 @@ YAML are deferred to last as their output format needs separate design thought.
       order of first appearance; `.rst`/`.rest` extensions + content detection
 - [x] **Python** (`parsers/python.py`) — regex-based; functions, classes,
       methods, module-level assignments
-- [ ] **Go** (`parsers/go.py`) — func, method, type, const/var blocks;
+- [x] **Go** (`parsers/go.py`) — func, method, type, const/var blocks;
       multi-line signature merging
 - [ ] **Rust** (`parsers/rust.py`) — fn, impl, struct, enum, trait, mod;
       lifetime/generic handling
