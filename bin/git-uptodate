@@ -15,21 +15,24 @@
 
 PROGRAM=$0
 BASEDIR=$(realpath . 2>/dev/null)
-COLOR_ERR="$(tput setaf 1; tput bold)"
-COLOR_WARN="$(tput setaf 3)"
-COLOR_OK="$(tput setaf 2; tput bold)"
-COLOR_GREY="$(tput setaf 7)"
-COLOR_OFF="$(tput sgr0)"
+COLOR_ERR=$(tput setaf 1; tput bold 2>/dev/null || echo '')
+COLOR_WARN=$(tput setaf 3 2>/dev/null || echo '')
+COLOR_OK=$(tput setaf 2; tput bold 2>/dev/null || echo '')
+COLOR_GREY=$(tput setaf 7 2>/dev/null || echo '')
+COLOR_OFF=$(tput sgr0 2>/dev/null || echo '')
 PULL=false
 
+# Print error message
 error() {
     echo "${COLOR_ERR}ERROR:${COLOR_OFF}" "$@" >&2
 }
 
+# Print warning message
 warn() {
-    echo "${COLOR_WARN}WARNING:${COLOR_OFF}" "$@" >&2
+    echo "${COLOR_WARN}warning:${COLOR_OFF}" "$@" >&2
 }
 
+# Print usage from header comments
 usage() {
     while IFS= read -r LINE ; do
         [[ ${LINE:0:1} == "#" ]] || break
@@ -39,12 +42,14 @@ usage() {
     exit 1
 }
 
+# Remove BASEDIR prefix from PWD for display
 repo-name() {
     local REPO="${PWD#${BASEDIR}/}"
     [[ "${REPO}" == "${PWD}" ]] && REPO="${PWD##*/}"
     echo -n "${REPO}"
 }
 
+# Print branch info with ahead/behind counts
 print-branch() {
     local BRANCH=$1 UPSTREAM=$2 ACTIVE=$3 AHEAD BEHIND
     AHEAD=$(git rev-list --count "${UPSTREAM}..${BRANCH}")
@@ -61,6 +66,7 @@ print-branch() {
         "${COLOR_OFF}"
 }
 
+# Print detached HEAD info
 print-detached() {
     local DETACHED
     DETACHED=$(git branch --points-at HEAD | cut -c 3-)
@@ -72,6 +78,7 @@ print-detached() {
         "${COLOR_OFF}"
 }
 
+# Print stash info
 print-stash() {
     local STASH=$1 LOG=$2 FILES INSERTS DELETES
     IFS=',' read -r FILES INSERTS DELETES <<< "$(git stash show "${STASH}" --shortstat)"
@@ -92,6 +99,7 @@ print-stash() {
         "${COLOR_OFF}"
 }
 
+# Print repository status
 print-repo() {
     local LINE STAGED MODIFIED UNTRACKED CURRENT ACTIVE
     LINE="──── $(repo-name) ──────────────────────────────────────────────────────"
@@ -123,12 +131,15 @@ print-repo() {
     printf "\n"
 }
 
-if [[ "$1" == "-h" || "$1" == "--help" ]] ; then
-    usage
-elif [[ "$1" == "--pull" ]] ; then
-    PULL=true
+# Main processing
+while [[ $# -gt 0 ]] ; do
+    case "$1" in
+        -h|--help) usage ;;
+        --pull) PULL=true ;;
+        *) break ;;
+    esac
     shift
-fi
+done
 if [[ $# -eq 0 ]] ; then
     set -- "."
 fi
