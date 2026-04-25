@@ -1,0 +1,4 @@
+---
+key: value
+---
+Text file with front-matter.

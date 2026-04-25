@@ -1,22 +1,30 @@
 #!/usr/bin/env bash
 #
-# Prints the front-matter block from one or more files.
+# Prints the front-matter block from one or more files or directories.
 #
-# Syntax: frontmatter [<options>] <file>...
+# Syntax: frontmatter [<options>] <file|dir>...
 #
 # Arguments:
-#   -h, --help   - Show usage information
-#   <file>...    - The files to read
+#   -h, --help     - Show usage information
+#   <file|dir>...  - The files or directories to process
 
 PROGRAM=$0
-COLOR_ERR="$(tput setaf 1; tput bold)"
-COLOR_OFF="$(tput sgr0)"
+COLOR_ERR=$(tput setaf 1; tput bold 2>/dev/null || echo '')
+COLOR_WARN=$(tput setaf 3 2>/dev/null || echo '')
+COLOR_OFF=$(tput sgr0 2>/dev/null || echo '')
 
+# Exit with error message
 die() {
     echo "${COLOR_ERR}ERROR:${COLOR_OFF}" "$@" >&2
     exit 1
 }
 
+# Print warning message
+warn() {
+    echo "${COLOR_WARN}warning:${COLOR_OFF}" "$@" >&2
+}
+
+# Print usage from header comments
 usage() {
     while IFS= read -r LINE ; do
         [[ ${LINE:0:1} == "#" ]] || break
@@ -25,20 +33,43 @@ usage() {
     exit 1
 }
 
+# Extract and print front-matter, return non-zero if not found
 print-frontmatter() {
     [[ -r "$1" ]] || die "cannot read file: $1"
-    awk '/^---$/ { n++; if (n == 1) next; if (n == 2) exit } n == 1 { print }' "$1"
+    awk '/^---$/ { n++; if (n == 1) next; if (n == 2) exit } n == 1 { print } END { exit (n == 0) }' "$1"
 }
 
+# Find files and filter those with front-matter
+find-files() {
+    find "$1" -type f 2>/dev/null | while read -r f ; do
+        head -n 1 "$f" 2>/dev/null | grep -aq '^---$' && echo "$f"
+    done
+}
+
+# Main processing
 if [[ $# -eq 0 || "$1" == "-h" || "$1" == "--help" ]] ; then
     usage
-fi
-if [[ $# -eq 1 ]] ; then
-    print-frontmatter "$1"
+elif [[ $# -eq 1 && -f "$1" ]] ; then
+    print-frontmatter "$1" || warn "no front-matter found in: $1"
 else
-    for f in "$@"; do
-        echo "==> $f <=="
-        print-frontmatter "$f"
-        echo
+    for arg in "$@" ; do
+        if [[ -d "$arg" ]] ; then
+            found=false
+            while IFS= read -r f ; do
+                [[ -z "$f" ]] && continue
+                echo "==> $f <=="
+                print-frontmatter "$f"
+                echo
+                found=true
+            done < <(find-files "$arg")
+            $found || warn "no front-matter files found in: $arg"
+        elif [[ -f "$arg" ]] ; then
+            echo "==> $arg <=="
+            print-frontmatter "$arg" || warn "no front-matter found in: $arg"
+            echo
+        else
+            warn "not a file or directory: $arg"
+            continue
+        fi
     done
 fi
