@@ -27,24 +27,14 @@ def _indent(line: str) -> int:
 
 
 def _walk_back(lines: list[str], def_line: int) -> int:
-    """Walk back through contiguous # comments and @ decorators above def_line.
-
-    A blank line stops the walk; the def's range does not cross blank lines.
-    """
-    if def_line == 0:
-        return 0
+    """Walk back through contiguous # comments and @ decorators above def_line."""
     def_ind = _indent(lines[def_line])
     start = def_line
-    i = def_line - 1
-    while i >= 0:
-        stripped = lines[i].strip()
-        if not stripped:
+    for i in range(def_line - 1, -1, -1):
+        s = lines[i].strip()
+        if not s or _indent(lines[i]) < def_ind or s[0] not in "#@":
             break
-        if _indent(lines[i]) >= def_ind and (stripped.startswith("#") or stripped.startswith("@")):
-            start = i
-            i -= 1
-        else:
-            break
+        start = i
     return start
 
 

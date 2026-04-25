@@ -20,59 +20,21 @@ def detect(lines: list[str]) -> bool:
 
 def _walk_back(lines: list[str], def_line: int) -> int:
     """Walk back through contiguous // comments above def_line."""
-    if def_line == 0:
-        return 0
     start = def_line
-    i = def_line - 1
-    while i >= 0:
-        stripped = lines[i].strip()
-        if not stripped:
+    for i in range(def_line - 1, -1, -1):
+        s = lines[i].strip()
+        if not s or not s.startswith("//"):
             break
-        if stripped.startswith("//"):
-            start = i
-            i -= 1
-        else:
-            break
+        start = i
     return start
 
 
-def _collect_func_sig(lines: list[str], start: int, n: int) -> tuple[str, int]:
-    """Collect a multi-line Go function signature, stopping at the opening {.
+def _collect_sig(lines: list[str], start: int, n: int, *, until_brace: bool = False) -> tuple[str, int, bool]:
+    """Collect a possibly multi-line Go signature.
 
-    Tracks () and [] depth; stops when both are balanced and the line ends
-    with {.  Returns (signature_without_trailing_{, last_sig_line_0based).
-    """
-    paren_depth = 0
-    bracket_depth = 0
-    parts: list[str] = []
-    i = start
-    while i < n:
-        raw = lines[i].rstrip("\r\n")
-        for ch in raw:
-            if ch == "(":
-                paren_depth += 1
-            elif ch == ")":
-                paren_depth -= 1
-            elif ch == "[":
-                bracket_depth += 1
-            elif ch == "]":
-                bracket_depth -= 1
-        parts.append(raw.strip())
-        if paren_depth <= 0 and bracket_depth <= 0 and raw.rstrip().endswith("{"):
-            break
-        i += 1
-    sig = re.sub(r"\s+", " ", " ".join(parts)).strip()
-    sig = re.sub(r"\(\s+", "(", sig)
-    sig = re.sub(r",\s*\)", ")", sig)
-    sig = sig.rstrip("{").rstrip()
-    return sig, i
-
-
-def _collect_type_sig(lines: list[str], start: int, n: int) -> tuple[str, int, bool]:
-    """Collect a Go type signature.
-
-    Returns (signature, last_sig_line_0based, has_body).
-    has_body is True when the declaration opens a brace block (struct/interface).
+    until_brace=True (func): keep collecting until balanced and trailing '{'.
+    until_brace=False (type): stop as soon as depth hits zero.
+    Returns (signature_without_trailing_{, last_sig_line, has_body).
     """
     paren_depth = 0
     bracket_depth = 0
@@ -94,9 +56,12 @@ def _collect_type_sig(lines: list[str], start: int, n: int) -> tuple[str, int, b
         if paren_depth <= 0 and bracket_depth <= 0:
             if raw.rstrip().endswith("{"):
                 has_body = True
-            break
+            if has_body or not until_brace:
+                break
         i += 1
     sig = re.sub(r"\s+", " ", " ".join(parts)).strip()
+    sig = re.sub(r"\(\s+", "(", sig)
+    sig = re.sub(r",\s*\)", ")", sig)
     sig = sig.rstrip("{").rstrip()
     return sig, i, has_body
 
@@ -135,14 +100,14 @@ def parse(text: str) -> list[OutlineItem]:
             continue
 
         if _FUNC_RE.match(raw):
-            sig, sig_end = _collect_func_sig(lines, i, n)
+            sig, sig_end, _ = _collect_sig(lines, i, n, until_brace=True)
             start = _walk_back(lines, i)
             end = _find_brace_end(lines, sig_end, n)
             items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
             i = end
 
         elif _TYPE_RE.match(raw):
-            sig, sig_end, has_body = _collect_type_sig(lines, i, n)
+            sig, sig_end, has_body = _collect_sig(lines, i, n)
             start = _walk_back(lines, i)
             end = _find_brace_end(lines, sig_end, n) if has_body else sig_end + 1
             items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
