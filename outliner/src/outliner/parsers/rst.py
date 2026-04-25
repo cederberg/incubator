@@ -11,23 +11,13 @@ yet supported; plain underline headings cover all common RST documents.
 
 import re
 from outliner.types import OutlineItem
+from outliner.parsers.util import extract_summary
 
 SYNTAX = "rst"
 EXTENSIONS = (".rst", ".rest")
 
 _DECORATION_CHARS = frozenset("=-~^*+#<>")
 _DIRECTIVE_RE = re.compile(r"^\.\. ")
-_MAX_SIG_LEN = 120
-
-
-def _truncate(sig: str) -> str:
-    """Truncate to _MAX_SIG_LEN chars, stopping at first period when possible."""
-    if len(sig) <= _MAX_SIG_LEN:
-        return sig
-    period_idx = sig.find('.')
-    if 0 < period_idx < _MAX_SIG_LEN:
-        return sig[:period_idx + 1]
-    return sig[:_MAX_SIG_LEN]
 
 
 def _underline_char(line: str, min_len: int = 1) -> str | None:
@@ -99,7 +89,7 @@ def parse(text: str) -> list[OutlineItem]:
             None,
         )
         if sig is not None:
-            sig = _truncate(sig)
+            sig = extract_summary(sig)
         if sig:
             items.append(OutlineItem(start=1, count=first_idx, signature=sig))
 

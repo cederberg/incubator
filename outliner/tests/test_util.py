@@ -18,10 +18,13 @@ def test_extract_signature():
 
 def test_extract_summary():
     assert util.extract_summary("Hello world. More text.") == "Hello world."
-    assert util.extract_summary("Hello! More text.") == "Hello!"
+    assert util.extract_summary("Hello there! More text.") == "Hello there!"
     assert util.extract_summary("No sentence here", max_len=5) == "No se"
     assert util.extract_summary("Hello world. More.", max_len=5) == "Hello"
     assert util.extract_summary("") == ""
+    # short prefix before punctuation is not a sentence boundary
+    assert util.extract_summary("1. Introduction") == "1. Introduction"
+    assert util.extract_summary("No. It worked.") == "No. It worked."
 
 
 def test_seek_comment_start():
