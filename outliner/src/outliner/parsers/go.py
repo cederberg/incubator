@@ -3,6 +3,7 @@
 import re
 
 from outliner.types import OutlineItem
+from outliner.parsers.util import extract_signature, seek_comment_start, seek_brace_end
 
 SYNTAX = "go"
 EXTENSIONS = (".go",)
@@ -16,17 +17,6 @@ def detect(lines: list[str]) -> bool:
     has_package = any(_PACKAGE_RE.match(l) for l in lines)
     has_go = any(_FUNC_RE.match(l) or _TYPE_RE.match(l) for l in lines)
     return has_package and has_go
-
-
-def _walk_back(lines: list[str], def_line: int) -> int:
-    """Walk back through contiguous // comments above def_line."""
-    start = def_line
-    for i in range(def_line - 1, -1, -1):
-        s = lines[i].strip()
-        if not s or not s.startswith("//"):
-            break
-        start = i
-    return start
 
 
 def _collect_sig(lines: list[str], start: int, n: int, *, until_brace: bool = False) -> tuple[str, int, bool]:
@@ -59,31 +49,7 @@ def _collect_sig(lines: list[str], start: int, n: int, *, until_brace: bool = Fa
             if has_body or not until_brace:
                 break
         i += 1
-    sig = re.sub(r"\s+", " ", " ".join(parts)).strip()
-    sig = re.sub(r"\(\s+", "(", sig)
-    sig = re.sub(r",\s*\)", ")", sig)
-    sig = sig.rstrip("{").rstrip()
-    return sig, i, has_body
-
-
-def _find_brace_end(lines: list[str], sig_line: int, n: int) -> int:
-    """Return the 0-based exclusive end of a brace-delimited body.
-
-    sig_line is the line whose trailing { opens the body.
-    """
-    depth = 1
-    i = sig_line + 1
-    while i < n:
-        raw = lines[i].rstrip("\r\n")
-        for ch in raw:
-            if ch == "{":
-                depth += 1
-            elif ch == "}":
-                depth -= 1
-        if depth <= 0:
-            return i + 1
-        i += 1
-    return n
+    return extract_signature(parts, strip="{"), i, has_body
 
 
 def parse(text: str) -> list[OutlineItem]:
@@ -101,15 +67,15 @@ def parse(text: str) -> list[OutlineItem]:
 
         if _FUNC_RE.match(raw):
             sig, sig_end, _ = _collect_sig(lines, i, n, until_brace=True)
-            start = _walk_back(lines, i)
-            end = _find_brace_end(lines, sig_end, n)
+            start = seek_comment_start(lines, i, lambda _, s: s.startswith("//"))
+            end = seek_brace_end(lines, sig_end)
             items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
             i = end
 
         elif _TYPE_RE.match(raw):
             sig, sig_end, has_body = _collect_sig(lines, i, n)
-            start = _walk_back(lines, i)
-            end = _find_brace_end(lines, sig_end, n) if has_body else sig_end + 1
+            start = seek_comment_start(lines, i, lambda _, s: s.startswith("//"))
+            end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
             items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
             i = end
 

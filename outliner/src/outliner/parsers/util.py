@@ -25,9 +25,9 @@ def extract_signature(parts: list[str], strip: str = "") -> str:
 
 
 # Extract short summary sentence or at max a number of chars
-def extract_summary(text: str, max_len: int = 120) -> str:
+def extract_summary(text: str, max_len: int = 120, min_sentence: int = 10) -> str:
     limit = min(len(text), max_len)
-    indices = [pos for c in ".!?" if 0 < (pos := text.find(c)) < limit]
+    indices = [pos for c in ".!?" if min_sentence <= (pos := text.find(c)) < limit]
     return text[:min(indices) + 1] if indices else text[:limit]
 
 

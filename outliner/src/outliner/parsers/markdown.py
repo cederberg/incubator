@@ -14,6 +14,7 @@ from section titles and vice-versa.
 
 import re
 from outliner.types import OutlineItem
+from outliner.parsers.util import extract_summary
 
 SYNTAX = "markdown"
 EXTENSIONS = (".md", ".markdown", ".mdown", ".mkd", ".txt", ".text")
@@ -21,17 +22,6 @@ EXTENSIONS = (".md", ".markdown", ".mdown", ".mkd", ".txt", ".text")
 _ATX_RE = re.compile(r"^(#{1,6})(?:\s+(.*?))?\s*#*\s*$")
 _SETEXT_RE = re.compile(r"^(=+|-+)\s*$")
 _THRESHOLD = 0.75
-_MAX_SIG_LEN = 120
-
-
-def _truncate(sig: str) -> str:
-    """Truncate to _MAX_SIG_LEN chars, stopping at first period when possible."""
-    if len(sig) <= _MAX_SIG_LEN:
-        return sig
-    period_idx = sig.find('.')
-    if 0 < period_idx < _MAX_SIG_LEN:
-        return sig[:period_idx + 1]
-    return sig[:_MAX_SIG_LEN]
 
 
 def detect(lines: list[str]) -> bool:
@@ -104,14 +94,14 @@ def _sandwich_fallback(lines: list[str]) -> list[OutlineItem]:
     filtered = _whitespace_filter(candidates)
 
     if not filtered:
-        first = _truncate(next((l.strip() for l in lines if l.strip()), ""))
+        first = extract_summary(next((l.strip() for l in lines if l.strip()), ""))
         return [OutlineItem(start=1, count=n, signature=first)] if n else []
 
     # Build (idx, sig) list, prepending a preamble item if content precedes first heading.
-    headings: list[tuple[int, str]] = [(i, _truncate(s.strip())) for i, s in filtered]
+    headings: list[tuple[int, str]] = [(i, extract_summary(s.strip())) for i, s in filtered]
     first_idx = headings[0][0]
     if any(lines[i].strip() for i in range(first_idx)):
-        sig = _truncate(_preamble_sig(lines, first_idx))
+        sig = extract_summary(_preamble_sig(lines, first_idx))
         headings = [(0, sig)] + headings
 
     return _items_from_headings(headings, n)

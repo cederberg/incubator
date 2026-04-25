@@ -3,6 +3,7 @@
 import re
 
 from outliner.types import OutlineItem
+from outliner.parsers.util import extract_signature, indent_level, seek_comment_start, seek_brace_end
 
 SYNTAX = "java"
 EXTENSIONS = (".java",)
@@ -52,34 +53,6 @@ def detect(lines: list[str]) -> bool:
     return has_java_marker and has_type
 
 
-def _indent(line: str) -> int:
-    raw = line.rstrip("\r\n")
-    return len(raw) - len(raw.lstrip())
-
-
-def _walk_back(lines: list[str], def_line: int) -> int:
-    """Walk back past Javadoc blocks, // comments, and @Annotation lines."""
-    if def_line == 0:
-        return 0
-    start = def_line
-    i = def_line - 1
-    while i >= 0:
-        stripped = lines[i].strip()
-        if not stripped:
-            break
-        if (
-            stripped.startswith("//")
-            or stripped.startswith("/*")
-            or stripped.startswith("*")
-            or stripped.startswith("@")
-        ):
-            start = i
-            i -= 1
-        else:
-            break
-    return start
-
-
 def _collect_sig(lines: list[str], start: int, n: int) -> tuple[str, int, bool]:
     """Collect a possibly multi-line Java signature.
 
@@ -89,7 +62,7 @@ def _collect_sig(lines: list[str], start: int, n: int) -> tuple[str, int, bool]:
     depth = 0
     parts: list[str] = []
     i = start
-    indent = " " * _indent(lines[start])
+    ind = " " * indent_level(lines[start])
     has_body = False
     while i < n:
         raw = lines[i].rstrip("\r\n")
@@ -107,28 +80,7 @@ def _collect_sig(lines: list[str], start: int, n: int) -> tuple[str, int, bool]:
             if stripped.endswith(";"):
                 break
         i += 1
-    sig = re.sub(r"\s+", " ", " ".join(parts)).strip()
-    sig = re.sub(r"\(\s+", "(", sig)
-    sig = re.sub(r",\s*\)", ")", sig)
-    sig = sig.rstrip("{").rstrip(";").rstrip()
-    return indent + sig, i, has_body
-
-
-def _find_brace_end(lines: list[str], sig_line: int, n: int) -> int:
-    """Return the 0-based exclusive end of the brace-delimited body."""
-    depth = 1
-    i = sig_line + 1
-    while i < n:
-        raw = lines[i].rstrip("\r\n")
-        for ch in raw:
-            if ch == "{":
-                depth += 1
-            elif ch == "}":
-                depth -= 1
-        if depth <= 0:
-            return i + 1
-        i += 1
-    return n
+    return ind + extract_signature(parts, strip="{;"), i, has_body
 
 
 def _is_method_line(raw: str) -> bool:
@@ -154,18 +106,10 @@ def parse(text: str) -> list[OutlineItem]:
             i += 1
             continue
 
-        if _TYPE_RE.match(raw):
+        if _TYPE_RE.match(raw) or _is_method_line(raw):
             sig, sig_end, has_body = _collect_sig(lines, i, n)
-            start = _walk_back(lines, i)
-            end = _find_brace_end(lines, sig_end, n) if has_body else sig_end + 1
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
-            i += 1
-            continue
-
-        if _is_method_line(raw):
-            sig, sig_end, has_body = _collect_sig(lines, i, n)
-            start = _walk_back(lines, i)
-            end = _find_brace_end(lines, sig_end, n) if has_body else sig_end + 1
+            start = seek_comment_start(lines, i, lambda _, s: s[0] in "/*@")
+            end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
             items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
             i += 1
             continue
