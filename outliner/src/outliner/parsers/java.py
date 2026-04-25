@@ -9,7 +9,6 @@ SYNTAX = "java"
 EXTENSIONS = (".java",)
 
 _PACKAGE_RE = re.compile(r"^\s*package\s+[\w.]+\s*;")
-_IMPORT_SKIP_RE = re.compile(r"^\s*import\s+")
 _IMPORT_DETECT_RE = re.compile(r"^\s*import\s+[\w.*]+\s*;")
 
 # Type declarations: class, interface, enum, record, @interface
@@ -53,7 +52,7 @@ def detect(lines: list[str]) -> bool:
     return has_java_marker and has_type
 
 
-def _collect_sig(lines: list[str], start: int, n: int) -> tuple[str, int, bool]:
+def _collect_sig(lines: list[str], start: int) -> tuple[str, int, bool]:
     """Collect a possibly multi-line Java signature.
 
     Tracks parenthesis depth; stops when balanced and line ends with { or ;.
@@ -61,25 +60,22 @@ def _collect_sig(lines: list[str], start: int, n: int) -> tuple[str, int, bool]:
     """
     depth = 0
     parts: list[str] = []
-    i = start
     ind = " " * indent_level(lines[start])
     has_body = False
-    while i < n:
-        raw = lines[i].rstrip("\r\n")
+    for i in range(start, len(lines)):
+        raw = lines[i]
         for ch in raw:
             if ch == "(":
                 depth += 1
             elif ch == ")":
                 depth -= 1
         parts.append(raw.strip())
-        stripped = raw.rstrip()
         if depth <= 0:
-            if stripped.endswith("{"):
+            if "{" in raw:
                 has_body = True
                 break
-            if stripped.endswith(";"):
+            if raw.rstrip().endswith(";"):
                 break
-        i += 1
     return ind + extract_signature(parts, strip="{;"), i, has_body
 
 
@@ -88,32 +84,20 @@ def _is_method_line(raw: str) -> bool:
     if _STMT_START_RE.match(raw):
         return False
     m = _METHOD_RE.match(raw)
-    if m is None:
-        return False
-    name = m.group(1)
-    return name not in _CONTROL_FLOW
+    return (
+        m is not None
+        and m.group(1) not in _CONTROL_FLOW
+        and bool(raw[:m.start(1)].strip())
+    )
 
 
 def parse(text: str) -> list[OutlineItem]:
-    lines = text.splitlines(keepends=True)
-    n = len(lines)
+    lines = text.splitlines()
     items: list[OutlineItem] = []
-    i = 0
-    while i < n:
-        raw = lines[i].rstrip("\r\n")
-
-        if _IMPORT_SKIP_RE.match(raw) or _PACKAGE_RE.match(raw):
-            i += 1
-            continue
-
+    for i, raw in enumerate(lines):
         if _TYPE_RE.match(raw) or _is_method_line(raw):
-            sig, sig_end, has_body = _collect_sig(lines, i, n)
+            sig, sig_end, has_body = _collect_sig(lines, i)
             start = seek_comment_start(lines, i, lambda _, s: s[0] in "/*@")
             end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
             items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
-            i += 1
-            continue
-
-        i += 1
-
     return items
