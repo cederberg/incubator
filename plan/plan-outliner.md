@@ -132,7 +132,7 @@ YAML are deferred to last as their output format needs separate design thought.
       methods
 - [x] **Go** (`parsers/go.py`) — func, method, type, const/var blocks;
       multi-line signature merging
-- [ ] **Java** — class/interface/enum/record, constructor, method; annotation
+- [x] **Java** — class/interface/enum/record, constructor, method; annotation
       type declaration (`@interface`); annotations as modifiers
 - [ ] **Rust** — fn, impl, struct, enum, trait, mod, type alias;
       lifetime/generic handling
