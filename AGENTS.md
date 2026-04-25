@@ -1,22 +1,29 @@
 # AGENTS.md
 
-## References
+## File Reference
 - [README.md] — tools, skills, usage examples
 
-## General Guidelines
-- Use brief and precise wording.
-- Confirm feature additions (new options, capabilities, etc.) with user.
-- Store project conventions, knowledge and rules in `AGENTS.md` (not in memory tool entries).
+## General
+- Radical brevity — in code, rules, and responses
+- Read related reference documents before starting a task
 - Update `README.md` when tool or skill usage changes.
+- Write project notes to `AGENTS.md` or `DEVELOPMENT.md`, not to the memory tool
+- Explore feature additions with the user; implement only once intent is mutually clear
+- Verify examples against source or command output
 
-## Skill Guidelines
-- Use `bin/frontmatter <file>...` to read skill file front-matter.
-- Set `disable-model-invocation: true` to prevent automatic triggering.
-- Codify rules when recurring mistakes or unnecessary searches appear.
-- Only add instructions where agents will err without them.
-- Confirm changes with user first, then batch edits in one pass.
-- After edit, remind user to run /review-instructions.
+## Skills
+- Use `bin/frontmatter <file>...` to read skill file front-matter
+- Set `disable-model-invocation: true` to prevent automatic triggering
+- Codify rules when recurring mistakes or unnecessary searches appear
+- Only add instructions where agents will err without them
+- Confirm changes with user first, then batch edits in one pass
+- After edit, remind user to run /review-instructions
 
-## Sub-agent Guidelines
-- Resolve document-relative paths to absolute before passing to sub-agents.
-- For open-ended exploration, ask for all ideas — valid or not.
+## Shell Scripts
+- Use kebab-case function names with single-line comment above
+- Color constants: `COLOR_X=$(tput ... 2>/dev/null || echo '')`
+- Binary safety: `grep -a`, `head -n 1 ... 2>/dev/null`
+- Use ` ; ` (spaces around semicolon): `if cond ; then`, `while cond ; do`
+
+## Sub-Agents
+- Resolve document-relative paths to absolute before passing to sub-agents
