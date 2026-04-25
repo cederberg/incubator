@@ -64,10 +64,10 @@ def _whitespace_filter(candidates: list[tuple[int, str]]) -> list[tuple[int, str
     if not candidates:
         return candidates
     n_indent = sum(1 for _, s in candidates if s[0:1] in (' ', '\t'))
-    total = len(candidates)
-    if n_indent / total >= _THRESHOLD:
+    ratio = n_indent / len(candidates)
+    if ratio >= _THRESHOLD:
         return [(i, s) for i, s in candidates if s[0:1] in (' ', '\t')]
-    if (total - n_indent) / total >= _THRESHOLD:
+    if 1 - ratio >= _THRESHOLD:
         return [(i, s) for i, s in candidates if s[0:1] not in (' ', '\t')]
     return candidates
 
