@@ -34,7 +34,10 @@ Some items naturally span large ranges that contain other items:
 
 These overlapping ranges are intentional and useful: the agent can read the
 whole section/class in one call, or navigate to a specific method within it. The
-output is sorted by start line; nesting is visible from the ranges alone.
+output is sorted by start line. Nesting is expressed in two complementary ways:
+overlapping ranges (a class range contains its methods' ranges) and native-format
+indentation in the signature — indentation for code files, ATX heading levels
+(`#`, `##`, …) for Markdown.
 
 ### Multi-file output
 
@@ -76,9 +79,21 @@ extensionless scripts, or `.h` files that could be C or C++).
 - **Signatures**: Leading/trailing whitespace stripped; trailing `{` stripped.
   Multi-line signatures are joined into one line (whitespace-normalised).
 - **Import statements**: Always excluded from output.
+- **Module globals / constants**: Excluded — module-level variable assignments
+  are more noise than signal when outlining a codebase. This may be revisited.
 - **Blocks** (`var (...)`): Print the opener as one item.
 - **Class members**: Always included — the tool outlines the whole file.
 - **Plain text**: Treat as Markdown (heading lines only).
+- **Content auto-detection**: Each parser implements `detect(lines)` that
+  returns True/False based on file content. Detection must be
+  **conservative**: use language-specific co-occurring markers, never a single
+  generic keyword. `class`, `def`, `function`, `module`, etc. appear in many
+  languages and must never be used as sole detection signals. Good markers:
+  Go requires both `package` and `func`/`type`; Python checks that
+  `def`/`class` lines end with `:` (not `{`). When uncertain, prefer false
+  negative (fall through to next detector) over false positive (misidentify
+  the file). Markdown's `detect()` always returns True and is registered last
+  as a catch-all fallback.
 
 ## Project Layout
 
@@ -87,70 +102,9 @@ outliner/
   pyproject.toml          # uvx-compatible packaging
   src/
     outliner/
-      __init__.py
-      cli.py              # entry point
-      types.py            # OutlineItem dataclass, Kind enum
-      parsers/
-        __init__.py
-        python.py
-        markdown.py
-        go.py
-        rust.py
-        javascript.py
-        typescript.py
-        java.py
-        haskell.py
-        clojure.py
-        elixir.py
-        erlang.py
-        c_cpp.py
-        csharp.py
-        swift.py
-        kotlin.py
-        scala.py
-        ruby.py
-        php.py
-        shell.py
-        lua.py
-        perl.py
-        r_lang.py
-        ocaml.py
-        fsharp.py
-        dart.py
-        zig.py
-        yaml_parser.py
-        json_parser.py
+      parsers/            # one module per language
   tests/
     fixtures/             # sample source files per language
-    test_cli.py
-    test_markdown.py
-    test_python.py
-    test_go.py
-    test_rust.py
-    test_haskell.py
-    test_clojure.py
-    test_javascript.py
-    test_typescript.py
-    test_java.py
-    test_c_cpp.py
-    test_csharp.py
-    test_elixir.py
-    test_erlang.py
-    test_swift.py
-    test_kotlin.py
-    test_scala.py
-    test_ruby.py
-    test_php.py
-    test_shell.py
-    test_lua.py
-    test_perl.py
-    test_r_lang.py
-    test_ocaml.py
-    test_fsharp.py
-    test_dart.py
-    test_zig.py
-    test_yaml.py
-    test_json.py
 ```
 
 ## Implementation Tasks
@@ -175,58 +129,56 @@ YAML are deferred to last as their output format needs separate design thought.
       any decoration character (`= - ~ ^ * + # < >`); level determined by
       order of first appearance; `.rst`/`.rest` extensions + content detection
 - [x] **Python** (`parsers/python.py`) — regex-based; functions, classes,
-      methods, module-level assignments
+      methods
 - [x] **Go** (`parsers/go.py`) — func, method, type, const/var blocks;
       multi-line signature merging
-- [ ] **Rust** (`parsers/rust.py`) — fn, impl, struct, enum, trait, mod;
+- [ ] **Java** — class/interface/enum/record, constructor, method; annotation
+      type declaration (`@interface`); annotations as modifiers
+- [ ] **Rust** — fn, impl, struct, enum, trait, mod, type alias;
       lifetime/generic handling
-- [ ] **Haskell** (`parsers/haskell.py`) — module, top-level type sigs
-      (`name ::`) + definitions, data/newtype/type, class/instance
-- [ ] **Clojure** (`parsers/clojure.py`) — ns, defn, defmacro, deftype,
-      defrecord, def; S-expression structure
-- [ ] **JavaScript** (`parsers/javascript.py`) — function, arrow function,
-      class, const/let/var at top level
-- [ ] **TypeScript** (`parsers/typescript.py`) — extends JS; interface, type
-      alias, enum, decorators
-- [ ] **Java** (`parsers/java.py`) — class/interface/enum, method signatures,
-      annotations
-- [ ] **C/C++** (`parsers/c_cpp.py`) — function definitions, struct/class/enum,
-      `#define` macros, template lines
-- [ ] **C#** (`parsers/csharp.py`) — namespace, class/interface/enum, method,
-      property, attributes
-- [ ] **Elixir** (`parsers/elixir.py`) — defmodule, def/defp, defmacro,
+- [ ] **JavaScript/TypeScript** — function declaration, class; top-level
+      function-valued `const`/`let` (arrow functions, class expressions) but
+      not plain value assignments; TypeScript: interface, type alias, enum,
+      namespace, decorators; `.js`/`.jsx`/`.ts`/`.tsx` extensions
+- [ ] **C/C++** — function definitions, struct/class/enum, namespace (C++),
+      `#define` macros, template declarations
+- [ ] **C#** — namespace, class/interface/struct/enum/record, method, property,
+      attributes
+- [ ] **Haskell** — module, top-level type sigs (`name ::`) + definitions,
+      data/newtype/type, class/instance
+- [ ] **Clojure** — ns, defn, defmacro, deftype, defrecord, defprotocol,
+      defmulti, def; S-expression structure
+- [ ] **Elixir** — defmodule, def/defp, defmacro, defprotocol, defimpl,
       `@spec`-aware; multiple-clause functions
-- [ ] **Erlang** (`parsers/erlang.py`) — `-module`, function clauses
-      (name/arity), `-spec`
-- [ ] **Swift** (`parsers/swift.py`) — func, class/struct/enum/protocol,
-      extension, top-level var/let
-- [ ] **Kotlin** (`parsers/kotlin.py`) — fun, class/object/interface, top-level
-      val/var
-- [ ] **Scala** (`parsers/scala.py`) — def, class/object/trait, case class,
-      top-level val/var
-- [ ] **Ruby** (`parsers/ruby.py`) — module, class, def, attr\_\*
-- [ ] **PHP** (`parsers/php.py`) — namespace, function, class/interface/trait,
-      method
-- [ ] **Shell/Bash** (`parsers/shell.py`) — function definitions (both syntaxes)
-- [ ] **Lua** (`parsers/lua.py`) — local/global function definitions
-- [ ] **Perl** (`parsers/perl.py`) — package, sub
-- [ ] **R** (`parsers/r_lang.py`) — function assignments (`name <- function`)
-- [ ] **OCaml** (`parsers/ocaml.py`) — let/let rec, type, module
-- [ ] **F#** (`parsers/fsharp.py`) — let/let rec, type, module
-- [ ] **Dart** (`parsers/dart.py`) — class/mixin/extension, function, top-level
-      variables
-- [ ] **Zig** (`parsers/zig.py`) — fn, struct/enum/union, top-level const/var
-- [ ] **YAML** (`parsers/yaml_parser.py`) — TBD
-- [ ] **JSON** (`parsers/json_parser.py`) — TBD
-- [ ] **XML** (`parsers/xml_parser.py`) — TBD
-- [ ] **HTML** (`parsers/html_parser.py`) — TBD
-- [ ] **AsciiDoc** (`parsers/asciidoc.py`) — `=`-prefixed headings (like ATX but
-      with `=` and `==`), section titles; `.adoc`/`.asciidoc` extensions
-- [ ] **Org-mode** (`parsers/org.py`) — `*`-prefixed headings (`*`, `**`, …);
-      widely used in Emacs / literate-programming workflows; `.org` extension
-- [ ] **LaTeX** (`parsers/latex.py`) — `\chapter`, `\section`, `\subsection`,
-      `\subsubsection`; `.tex` extension
+- [ ] **Erlang** — `-module`, function clauses (name/arity), `-spec`, `-type`,
+      `-record`
+- [ ] **Swift** — func, class/struct/enum/protocol/actor, extension
+- [ ] **Kotlin** — fun, class/data class/sealed class/object/interface,
+      typealias
+- [ ] **Scala** — def, class/case class/object/trait, given/extension (Scala 3)
+- [ ] **Ruby** — module, class, def, attr\_\*
+- [ ] **PHP** — namespace, function, class/interface/trait/enum, method
+- [ ] **Shell/Bash** — function definitions (both syntaxes: `name()` and
+      `function name`)
+- [ ] **Lua** — local/global function definitions
+- [ ] **Perl** — package, sub
+- [ ] **R** — function assignments (`name <- function`)
+- [ ] **OCaml** — let/let rec, type, module, module type
+- [ ] **F#** — let/let rec, type, module
+- [ ] **Dart** — class/mixin/extension, function
+- [ ] **Zig** — fn, struct/enum/union; top-level `const` only where value is a
+      type or function (not plain numeric/string constants)
+- [ ] **YAML** — TBD
+- [ ] **JSON** — TBD
+- [ ] **XML** — TBD
+- [ ] **HTML** — TBD
+- [ ] **AsciiDoc** — `=`-prefixed headings (like ATX but with `=` and `==`),
+      section titles; `.adoc`/`.asciidoc` extensions
+- [ ] **Org-mode** — `*`-prefixed headings (`*`, `**`, …); widely used in
+      Emacs / literate-programming workflows; `.org` extension
+- [ ] **LaTeX** — `\chapter`, `\section`, `\subsection`, `\subsubsection`;
+      `.tex` extension
 
 ### Polish
 
-- [ ] `README.md` for the `outliner/` package
+- [x] `README.md` for the `outliner/` package
