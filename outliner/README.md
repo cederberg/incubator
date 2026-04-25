@@ -9,10 +9,10 @@ so an LLM agent (or human) can navigate a file without reading it whole.
 outliner [OPTIONS] [FILE...]
 ```
 
-| Option              | Description                                          |
-| ------------------- | ---------------------------------------------------- |
-| `-g, --grep EXPR`   | Only show items whose signature matches EXPR         |
-| `-s, --syntax LANG` | Override syntax auto-detection when it is ambiguous  |
+| Option              | Description                                                     |
+| ------------------- | --------------------------------------------------------------- |
+| `-g, --grep EXPR`   | Only show items whose signature matches EXPR (case-insensitive) |
+| `-s, --syntax LANG` | Override syntax auto-detection when it is ambiguous             |
 
 Pass a file, a directory (walked recursively), or omit arguments to read stdin.
 Use `-` to read stdin explicitly. `--syntax` is only needed when content

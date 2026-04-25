@@ -52,7 +52,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("files", nargs="*", metavar="FILE",
                     help="Files to outline (omit or use - for stdin)")
     ap.add_argument("-g", "--grep", metavar="EXPR",
-                    help="Only show items whose signature matches EXPR")
+                    help="Only show items whose signature matches EXPR (case-insensitive)")
     ap.add_argument("-s", "--syntax", metavar="LANG",
                     help=f"Override syntax auto-detection (available: {', '.join(NAMES)})")
     args = ap.parse_args(argv)
@@ -60,7 +60,7 @@ def main(argv: list[str] | None = None) -> int:
     grep_re: re.Pattern | None = None
     if args.grep:
         try:
-            grep_re = re.compile(args.grep)
+            grep_re = re.compile(args.grep, re.IGNORECASE)
         except re.error as exc:
             print(f"outliner: invalid --grep expression: {exc}", file=sys.stderr)
             return 2
@@ -103,9 +103,9 @@ def main(argv: list[str] | None = None) -> int:
 
         output_lines = _format_items(items, grep_re)
 
-        if multi:
-            print(f"\n==> {src} <==")
         if output_lines:
+            if multi:
+                print(f"\n==> {src} <==")
             print("\n".join(output_lines))
 
     return exit_code
