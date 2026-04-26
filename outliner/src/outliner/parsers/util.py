@@ -4,7 +4,7 @@ import re
 
 _RE_WS    = re.compile(r"\s+")
 _RE_OPEN  = re.compile(r"\(\s+")
-_RE_CLOSE = re.compile(r",\s*\)")
+_RE_CLOSE = re.compile(r"[,\s]*\)")
 
 
 # Returns number of indentation chars
