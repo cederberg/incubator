@@ -142,7 +142,7 @@ YAML are deferred to last as their output format needs separate design thought.
       namespace, decorators; `.js`/`.jsx`/`.ts`/`.tsx` extensions
 - [x] **C/C++** — function definitions, struct/class/enum, namespace (C++),
       `#define` macros, template declarations
-- [ ] **C#** — namespace, class/interface/struct/enum/record, method, property,
+- [x] **C#** — namespace, class/interface/struct/enum/record, method, property,
       attributes
 - [ ] **Swift** — func, class/struct/enum/protocol/actor, extension
 - [ ] **Ruby** — module, class, def, attr\_\*
