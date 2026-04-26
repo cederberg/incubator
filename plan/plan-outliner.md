@@ -136,7 +136,7 @@ YAML are deferred to last as their output format needs separate design thought.
       type declaration (`@interface`); annotations as modifiers
 - [x] **Rust** — fn, impl, struct, enum, trait, mod, type alias;
       lifetime/generic handling
-- [ ] **JavaScript/TypeScript** — function declaration, class; top-level
+- [x] **JavaScript/TypeScript** — function declaration, class; top-level
       function-valued `const`/`let` (arrow functions, class expressions) but
       not plain value assignments; TypeScript: interface, type alias, enum,
       namespace, decorators; `.js`/`.jsx`/`.ts`/`.tsx` extensions
