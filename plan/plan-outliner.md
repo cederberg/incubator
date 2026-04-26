@@ -134,7 +134,7 @@ YAML are deferred to last as their output format needs separate design thought.
       multi-line signature merging
 - [x] **Java** — class/interface/enum/record, constructor, method; annotation
       type declaration (`@interface`); annotations as modifiers
-- [ ] **Rust** — fn, impl, struct, enum, trait, mod, type alias;
+- [x] **Rust** — fn, impl, struct, enum, trait, mod, type alias;
       lifetime/generic handling
 - [ ] **JavaScript/TypeScript** — function declaration, class; top-level
       function-valued `const`/`let` (arrow functions, class expressions) but

@@ -225,6 +225,6 @@ def test_guess_syntax_text_extensions():
 
 
 def test_guess_syntax_unknown_returns_none():
-    assert guess_syntax("file.rs") is None
+    assert guess_syntax("file.xyz") is None
     assert guess_syntax("-") is None
     assert guess_syntax("README") is None
