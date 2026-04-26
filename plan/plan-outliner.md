@@ -140,7 +140,7 @@ YAML are deferred to last as their output format needs separate design thought.
       function-valued `const`/`let` (arrow functions, class expressions) but
       not plain value assignments; TypeScript: interface, type alias, enum,
       namespace, decorators; `.js`/`.jsx`/`.ts`/`.tsx` extensions
-- [ ] **C/C++** — function definitions, struct/class/enum, namespace (C++),
+- [x] **C/C++** — function definitions, struct/class/enum, namespace (C++),
       `#define` macros, template declarations
 - [ ] **C#** — namespace, class/interface/struct/enum/record, method, property,
       attributes

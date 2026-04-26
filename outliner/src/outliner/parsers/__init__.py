@@ -1,9 +1,9 @@
 import re
 
-from . import python, go, java, rust, javascript, rst, markdown
+from . import python, go, java, rust, c, javascript, rst, markdown
 from outliner.types import OutlineItem
 
-_MODULES = [python, go, java, rust, javascript, rst, markdown]
+_MODULES = [python, go, java, rust, c, javascript, rst, markdown]
 _PARSERS = {mod.SYNTAX: mod.parse for mod in _MODULES}
 NAMES = sorted(_PARSERS)
 EXTENSIONS = {ext: mod.SYNTAX for mod in _MODULES for ext in mod.EXTENSIONS}
