@@ -144,30 +144,30 @@ YAML are deferred to last as their output format needs separate design thought.
       `#define` macros, template declarations
 - [ ] **C#** — namespace, class/interface/struct/enum/record, method, property,
       attributes
-- [ ] **Haskell** — module, top-level type sigs (`name ::`) + definitions,
-      data/newtype/type, class/instance
+- [ ] **Swift** — func, class/struct/enum/protocol/actor, extension
+- [ ] **Ruby** — module, class, def, attr\_\*
+- [ ] **PHP** — namespace, function, class/interface/trait/enum, method
+- [ ] **Shell/Bash** — function definitions (both syntaxes: `name()` and
+      `function name`)
+- [ ] **Perl** — package, sub
+- [ ] **Zig** — fn, struct/enum/union; top-level `const` only where value is a
+      type or function (not plain numeric/string constants)
+- [ ] **Scala** — def, class/case class/object/trait, given/extension (Scala 3)
 - [ ] **Clojure** — ns, defn, defmacro, deftype, defrecord, defprotocol,
       defmulti, def; S-expression structure
 - [ ] **Elixir** — defmodule, def/defp, defmacro, defprotocol, defimpl,
       `@spec`-aware; multiple-clause functions
 - [ ] **Erlang** — `-module`, function clauses (name/arity), `-spec`, `-type`,
       `-record`
-- [ ] **Swift** — func, class/struct/enum/protocol/actor, extension
+- [ ] **Haskell** — module, top-level type sigs (`name ::`) + definitions,
+      data/newtype/type, class/instance
 - [ ] **Kotlin** — fun, class/data class/sealed class/object/interface,
       typealias
-- [ ] **Scala** — def, class/case class/object/trait, given/extension (Scala 3)
-- [ ] **Ruby** — module, class, def, attr\_\*
-- [ ] **PHP** — namespace, function, class/interface/trait/enum, method
-- [ ] **Shell/Bash** — function definitions (both syntaxes: `name()` and
-      `function name`)
 - [ ] **Lua** — local/global function definitions
-- [ ] **Perl** — package, sub
 - [ ] **R** — function assignments (`name <- function`)
 - [ ] **OCaml** — let/let rec, type, module, module type
 - [ ] **F#** — let/let rec, type, module
 - [ ] **Dart** — class/mixin/extension, function
-- [ ] **Zig** — fn, struct/enum/union; top-level `const` only where value is a
-      type or function (not plain numeric/string constants)
 - [ ] **YAML** — TBD
 - [ ] **JSON** — TBD
 - [ ] **XML** — TBD
