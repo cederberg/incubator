@@ -145,7 +145,7 @@ YAML are deferred to last as their output format needs separate design thought.
 - [x] **C#** — namespace, class/interface/struct/enum/record, method, property,
       attributes
 - [x] **Swift** — func, class/struct/enum/protocol/actor, extension
-- [ ] **Ruby** — module, class, def, attr\_\*
+- [x] **Ruby** — module, class, def, attr\_\*
 - [ ] **PHP** — namespace, function, class/interface/trait/enum, method
 - [ ] **Shell/Bash** — function definitions (both syntaxes: `name()` and
       `function name`)
