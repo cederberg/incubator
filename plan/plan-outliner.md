@@ -150,7 +150,7 @@ YAML are deferred to last as their output format needs separate design thought.
 - [x] **Shell/Bash** — function definitions (both syntaxes: `name()` and
       `function name`)
 - [x] **Perl** — package, sub
-- [ ] **Zig** — fn, struct/enum/union; top-level `const` only where value is a
+- [x] **Zig** — fn, struct/enum/union; top-level `const` only where value is a
       type or function (not plain numeric/string constants)
 - [ ] **Scala** — def, class/case class/object/trait, given/extension (Scala 3)
 - [ ] **Clojure** — ns, defn, defmacro, deftype, defrecord, defprotocol,
