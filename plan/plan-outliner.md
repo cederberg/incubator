@@ -152,7 +152,7 @@ YAML are deferred to last as their output format needs separate design thought.
 - [x] **Perl** — package, sub
 - [x] **Zig** — fn, struct/enum/union; top-level `const` only where value is a
       type or function (not plain numeric/string constants)
-- [ ] **Scala** — def, class/case class/object/trait, given/extension (Scala 3)
+- [x] **Scala** — def, class/case class/object/trait, given/extension (Scala 3)
 - [ ] **Clojure** — ns, defn, defmacro, deftype, defrecord, defprotocol,
       defmulti, def; S-expression structure
 - [ ] **Elixir** — defmodule, def/defp, defmacro, defprotocol, defimpl,
