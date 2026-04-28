@@ -149,7 +149,7 @@ YAML are deferred to last as their output format needs separate design thought.
 - [x] **PHP** — namespace, function, class/interface/trait/enum, method
 - [x] **Shell/Bash** — function definitions (both syntaxes: `name()` and
       `function name`)
-- [ ] **Perl** — package, sub
+- [x] **Perl** — package, sub
 - [ ] **Zig** — fn, struct/enum/union; top-level `const` only where value is a
       type or function (not plain numeric/string constants)
 - [ ] **Scala** — def, class/case class/object/trait, given/extension (Scala 3)
