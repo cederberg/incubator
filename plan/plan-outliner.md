@@ -147,7 +147,7 @@ YAML are deferred to last as their output format needs separate design thought.
 - [x] **Swift** — func, class/struct/enum/protocol/actor, extension
 - [x] **Ruby** — module, class, def, attr\_\*
 - [x] **PHP** — namespace, function, class/interface/trait/enum, method
-- [ ] **Shell/Bash** — function definitions (both syntaxes: `name()` and
+- [x] **Shell/Bash** — function definitions (both syntaxes: `name()` and
       `function name`)
 - [ ] **Perl** — package, sub
 - [ ] **Zig** — fn, struct/enum/union; top-level `const` only where value is a
