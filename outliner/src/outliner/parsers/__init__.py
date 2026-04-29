@@ -8,7 +8,7 @@ _PARSERS = {mod.SYNTAX: mod.parse for mod in _MODULES}
 NAMES = sorted(_PARSERS)
 EXTENSIONS = {ext: mod.SYNTAX for mod in _MODULES for ext in mod.EXTENSIONS}
 
-_FRONTMATTER_RE = re.compile(r'\A---\n(?:.*\n){0,98}?---\n')
+_FRONTMATTER_RE = re.compile(r'\A(?:---\n(?:.*\n){0,98}?---\n|\+\+\+\n(?:.*\n){0,98}?\+\+\+\n)')
 
 
 def _strip_frontmatter(content: str) -> str:

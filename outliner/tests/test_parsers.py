@@ -54,6 +54,39 @@ def test_frontmatter_closer_beyond_100_lines_not_stripped():
 
 
 # ---------------------------------------------------------------------------
+# TOML front-matter (+++ delimiters, used by Hugo etc.)
+# ---------------------------------------------------------------------------
+
+def test_toml_frontmatter_line_numbers_offset():
+    text = "+++\ntitle = \"x\"\n+++\n# Heading\n\nBody.\n"
+    items = parsers.outline("markdown", text)
+    assert len(items) == 1
+    assert items[0].signature == "# Heading"
+    assert items[0].start == 4
+
+
+def test_toml_frontmatter_headings_found():
+    text = "+++\ntitle = \"Page\"\ndate = 2024\n+++\n# Heading\n\nBody.\n"
+    items = parsers.outline("markdown", text)
+    assert items[0].signature == "# Heading"
+
+
+def test_toml_frontmatter_no_closer_not_stripped():
+    text = "+++\ntitle = \"x\"\n\n# Heading\n\nBody.\n"
+    items = parsers.outline("markdown", text)
+    sigs = [it.signature for it in items]
+    assert any("Heading" in s for s in sigs)
+
+
+def test_toml_frontmatter_closer_beyond_100_lines_not_stripped():
+    inner = "".join(f"field{i} = {i}\n" for i in range(100))
+    text = f"+++\n{inner}+++\n# Heading\n"
+    items = parsers.outline("markdown", text)
+    heading = next(it for it in items if it.signature == "# Heading")
+    assert heading.start > 100
+
+
+# ---------------------------------------------------------------------------
 # Front-matter stripping via detect()
 # ---------------------------------------------------------------------------
 
