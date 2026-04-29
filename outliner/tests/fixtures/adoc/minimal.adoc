@@ -1,0 +1,3 @@
+== Only Section
+
+Just one section with no nesting.
