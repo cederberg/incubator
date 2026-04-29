@@ -1,0 +1,39 @@
+= Document Title
+:author: Jane Doe
+:revdate: 2024-01-01
+:toc:
+
+This is the document preamble.
+
+== Introduction
+
+Some introductory text here.
+
+=== Background
+
+Background information goes here.
+More background detail.
+
+=== Motivation
+
+Why we are doing this.
+
+== Main Content
+
+The main part of the document.
+
+=== Section A
+
+Content A here.
+
+==== Subsection A.1
+
+Deep nested content.
+
+=== Section B
+
+Content B here.
+
+== Conclusion
+
+Final thoughts and summary.
