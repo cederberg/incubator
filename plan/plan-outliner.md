@@ -167,3 +167,8 @@ YAML are deferred to last as their output format needs separate design thought.
 ### Polish
 
 - [x] `README.md` for the `outliner/` package
+- [ ] Auto-exclude `.gitignore` files/dirs from directory walk
+- [ ] Add `--exclude` option to exclude file patterns from directory walk
+- [ ] JSON output mode for programmatic consumption by agents and other tools
+- [ ] End-line display option — show `start-end` instead of (or alongside)
+      `start,count` for easier navigation

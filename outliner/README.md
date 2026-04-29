@@ -65,3 +65,46 @@ uv run pytest
 
 Python, Go, Markdown, reStructuredText — with Java, Rust, JavaScript/TypeScript,
 C/C++, C#, and many more in progress.
+
+## Example Use Cases
+
+**Structural overview** — Run on a directory to see all declarations across many files before reading anything:
+
+```
+$ outliner src/
+==> src/billing.py <==
+ 12,8   class Invoice
+ 22,4   def create(customer_id: str, items: list[Item]) -> Invoice
+ 38,6   def send(invoice: Invoice, method: str) -> bool
+
+==> src/payments.py <==
+  8,3   class PaymentMethod
+ 14,12  def charge(method: PaymentMethod, amount: Decimal) -> Receipt
+```
+
+**Find all copies of a pattern** — `--grep serialize` across a source tree locates every implementation of a repeated function in one command:
+
+```
+$ outliner --grep serialize src/
+==> src/invoice.py <==
+ 44,5   def serialize(self) -> dict
+
+==> src/receipt.py <==
+ 31,3   def serialize(self) -> dict
+```
+
+**Find functions whose interface mentions a term** — `--grep` searches signatures, not bodies. It finds functions whose interface involves a concept, skipping internal uses, comments, and call sites:
+
+```
+$ outliner --grep payment src/
+ 14,12  def charge(method: PaymentMethod, amount: Decimal) -> Receipt
+ 61,4   def refund(payment: Payment) -> bool
+```
+
+**Find functions accepting a specific type** — `--grep PaymentMethod` locates every function where the type appears in parameters, return types, or generic bounds. Multi-line signatures are merged into a single line before matching, so nothing is missed:
+
+```
+$ outliner --grep PaymentMethod src/
+ 14,12  def charge(method: PaymentMethod, amount: Decimal) -> Receipt
+ 88,4   def validate(m: PaymentMethod) -> bool
+```
