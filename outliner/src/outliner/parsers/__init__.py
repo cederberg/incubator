@@ -1,9 +1,9 @@
 import re
 
-from . import python, scala, go, java, rust, swift, c, ruby, php, shell, javascript, csharp, perl, zig, clojure, asciidoc, rst, markdown
+from . import python, scala, go, java, rust, swift, c, ruby, php, shell, javascript, csharp, perl, zig, clojure, asciidoc, orgmode, rst, markdown
 from outliner.types import OutlineItem
 
-_MODULES = [python, scala, go, java, rust, swift, c, ruby, php, shell, javascript, csharp, perl, zig, clojure, asciidoc, rst, markdown]
+_MODULES = [python, scala, go, java, rust, swift, c, ruby, php, shell, javascript, csharp, perl, zig, clojure, asciidoc, orgmode, rst, markdown]
 _PARSERS = {mod.SYNTAX: mod.parse for mod in _MODULES}
 NAMES = sorted(_PARSERS)
 EXTENSIONS = {ext: mod.SYNTAX for mod in _MODULES for ext in mod.EXTENSIONS}

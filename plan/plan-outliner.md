@@ -155,9 +155,9 @@ YAML are deferred to last as their output format needs separate design thought.
 - [x] **Scala** — def, class/case class/object/trait, given/extension (Scala 3)
 - [x] **Clojure** — ns, defn, defmacro, deftype, defrecord, defprotocol,
       defmulti, def; S-expression structure
-- [ ] **AsciiDoc** — `=`-prefixed headings (like ATX but with `=` and `==`),
+- [x] **AsciiDoc** — `=`-prefixed headings (like ATX but with `=` and `==`),
       section titles; `.adoc`/`.asciidoc` extensions
-- [ ] **Org-mode** — `*`-prefixed headings (`*`, `**`, …); widely used in
+- [x] **Org-mode** — `*`-prefixed headings (`*`, `**`, …); widely used in
       Emacs / literate-programming workflows; `.org` extension
 - [ ] **YAML** — TBD
 - [ ] **JSON** — TBD
