@@ -19,6 +19,12 @@
 - Confirm changes with user first, then batch edits in one pass
 - After edit, remind user to run /review-instructions
 
+## Python Code
+- Name what a variable is; e.g. `line` not `raw`
+- Prioritize fewer lines; e.g. named lambda vars to allow compact single-line below
+- Prefer returning iterators over lists
+- Use positive guards, not `if not COND: continue`
+
 ## Shell Scripts
 - Use kebab-case function names with single-line comment above
 - Color constants: `COLOR_X=$(tput ... 2>/dev/null || echo '')`
