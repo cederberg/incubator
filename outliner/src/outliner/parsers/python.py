@@ -1,6 +1,7 @@
 """Python outline parser (regex-based)."""
 
 import re
+from collections.abc import Iterator
 
 from outliner.types import OutlineItem
 from outliner.parsers.util import extract_signature, indent_level, seek_comment_start
@@ -61,29 +62,12 @@ def _block_end(lines: list[str], def_line: int, sig_end: int) -> int:
     return last + 1
 
 
-def parse(text: str) -> list[OutlineItem]:
-    lines = text.splitlines()
-    n = len(lines)
-    items: list[OutlineItem] = []
-
-    i = 0
-    while i < n:
-        raw = lines[i]
-
-        m = _DEF_RE.match(raw)
-        if m:
+def parse(text: str) -> Iterator[OutlineItem]:
+    for i, line in enumerate(lines := text.splitlines()):
+        if _DEF_RE.match(line):
             sig, sig_end = _collect_sig(lines, i)
             def_ind = indent_level(lines[i])
-            start = seek_comment_start(lines, i, lambda ln, s: indent_level(ln) >= def_ind and s[0] in "#@")
+            _is_attached = lambda ln, s: indent_level(ln) >= def_ind and s[0] in "#@"
+            start = seek_comment_start(lines, i, _is_attached)
             end = _block_end(lines, i, sig_end)
-            items.append(OutlineItem(
-                start=start + 1,
-                count=end - start,
-                signature=sig,
-            ))
-            i = sig_end + 1
-            continue
-
-        i += 1
-
-    return items
+            yield OutlineItem(start=start + 1, count=end - start, signature=sig)

@@ -14,6 +14,8 @@ Content detection looks for AsciiDoc-specific co-occurring markers:
 """
 
 import re
+from collections.abc import Iterator
+
 from outliner.types import OutlineItem
 from outliner.parsers.util import extract_summary
 
@@ -57,14 +59,14 @@ def detect(lines: list[str]) -> bool:
     return False
 
 
-def parse(text: str) -> list[OutlineItem]:
+def parse(text: str) -> Iterator[OutlineItem]:
     lines = text.splitlines(keepends=True)
     n = len(lines)
 
     headings: list[tuple[int, int, str]] = []  # (0-based idx, level, sig)
 
-    for i, raw in enumerate(lines):
-        stripped = raw.rstrip("\r\n")
+    for i, line in enumerate(lines):
+        stripped = line.rstrip("\r\n")
         m = _HEADING_RE.match(stripped)
         if m:
             level = len(m.group(1))
@@ -74,21 +76,14 @@ def parse(text: str) -> list[OutlineItem]:
     if not headings:
         # Fallback: first non-empty line spans the whole file
         first_sig = next((l.strip() for l in lines if l.strip()), "")
-        if not first_sig:
-            return []
-        return [OutlineItem(start=1, count=n, signature=extract_summary(first_sig))]
+        if first_sig:
+            yield OutlineItem(start=1, count=n, signature=extract_summary(first_sig))
+        return
 
-    items: list[OutlineItem] = []
     for idx, (line_idx, level, sig) in enumerate(headings):
         end_line = n
         for future_line_idx, future_level, _ in headings[idx + 1:]:
             if future_level <= level:
                 end_line = future_line_idx
                 break
-        items.append(OutlineItem(
-            start=line_idx + 1,
-            count=end_line - line_idx,
-            signature=sig,
-        ))
-
-    return items
+        yield OutlineItem(start=line_idx + 1, count=end_line - line_idx, signature=sig)

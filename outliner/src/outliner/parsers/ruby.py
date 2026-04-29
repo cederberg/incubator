@@ -1,6 +1,7 @@
 """Ruby outline parser (regex-based)."""
 
 import re
+from collections.abc import Iterator
 
 from outliner.types import OutlineItem
 from outliner.parsers.util import extract_signature, indent_level, seek_comment_start
@@ -77,25 +78,11 @@ def _block_end(lines: list[str], start: int) -> int:
     return len(lines)
 
 
-def parse(text: str) -> list[OutlineItem]:
-    lines = text.splitlines()
-    items: list[OutlineItem] = []
-
-    for i, raw in enumerate(lines):
-        is_block = bool(_MODULE_RE.match(raw) or _CLASS_RE.match(raw) or _DEF_RE.match(raw))
-        is_attr  = bool(_ATTR_RE.match(raw))
-
-        if not is_block and not is_attr:
-            continue
-
-        def_ind = indent_level(raw)
-        sig, _sig_end = _collect_sig(lines, i)
-        start = seek_comment_start(
-            lines, i,
-            lambda ln, s, _d=def_ind: indent_level(ln) >= _d and s[0] == '#',
-        )
-        end = _block_end(lines, i) if is_block else i + 1
-
-        items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
-
-    return items
+def parse(text: str) -> Iterator[OutlineItem]:
+    for i, line in enumerate(lines := text.splitlines()):
+        if any(r.match(line) for r in [_MODULE_RE, _CLASS_RE, _DEF_RE, _ATTR_RE]):
+            _is_comment = lambda ln, s, d=indent_level(line): indent_level(ln) >= d and s[0] == '#'
+            sig, _sig_end = _collect_sig(lines, i)
+            start = seek_comment_start(lines, i, _is_comment)
+            end = i + 1 if _ATTR_RE.match(line) else _block_end(lines, i)
+            yield OutlineItem(start=start + 1, count=end - start, signature=sig)

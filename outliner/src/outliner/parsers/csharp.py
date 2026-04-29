@@ -1,6 +1,7 @@
 """C# outline parser (regex-based)."""
 
 import re
+from collections.abc import Iterator
 
 from outliner.types import OutlineItem
 from outliner.parsers.util import extract_signature, indent_level, seek_comment_start, seek_brace_end
@@ -195,74 +196,64 @@ def _is_method_line(raw: str) -> bool:
     return True
 
 
-def _is_comment_line(line: str, s: str) -> bool:
-    return bool(s) and (
-        s.startswith("///")
-        or s.startswith("//")
-        or s.startswith("/*")
-        or s[0] == "*"
-        or s[0] == "["  # attribute
-    )
-
-
-def parse(text: str) -> list[OutlineItem]:
+def parse(text: str) -> Iterator[OutlineItem]:
+    _is_comment = lambda _, s: s[:1] in '/*['
     lines = text.splitlines()
     n = len(lines)
-    items: list[OutlineItem] = []
     i = 0
 
     while i < n:
-        raw = lines[i]
-        s = raw.strip()
+        line = lines[i]
+        s = line.strip()
 
         # Skip blank, comment, and continuation lines
-        if not s or s.startswith("//") or s.startswith("/*") or s[0:1] == "*":
+        if not s or s.startswith("//") or s.startswith("/*") or s[:1] == "*":
             i += 1
             continue
 
         # Skip using/import directives (including global using)
-        if _USING_RE.match(raw):
+        if _USING_RE.match(line):
             i += 1
             continue
 
         # Skip event declarations (excluded by design — too noisy)
         if re.match(r"^\s*(?:(?:public|protected|internal|private|static|abstract|virtual|"
-                    r"override|sealed|new)\s+)*event\b", raw):
+                    r"override|sealed|new)\s+)*event\b", line):
             i += 1
             continue
 
         # Skip attribute-only lines
-        if _ATTR_RE.match(raw) and not _TYPE_RE.match(raw) and not _NAMESPACE_RE.match(raw):
+        if _ATTR_RE.match(line) and not _TYPE_RE.match(line) and not _NAMESPACE_RE.match(line):
             i += 1
             continue
 
         # --- namespace ---
-        if _NAMESPACE_RE.match(raw):
+        if _NAMESPACE_RE.match(line):
             sig = s.rstrip(";{").strip()
-            start = seek_comment_start(lines, i, _is_comment_line)
-            if "{" in raw:
+            start = seek_comment_start(lines, i, _is_comment)
+            if "{" in line:
                 end = seek_brace_end(lines, i)
             else:
                 end = n  # file-scoped namespace covers rest of file
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
+            yield OutlineItem(start=start + 1, count=end - start, signature=sig)
             i += 1
             continue
 
         # --- type declarations ---
-        if _TYPE_RE.match(raw):
+        if _TYPE_RE.match(line):
             sig, sig_end, has_body = _collect_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_comment_line)
+            start = seek_comment_start(lines, i, _is_comment)
             end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
+            yield OutlineItem(start=start + 1, count=end - start, signature=sig)
             i = sig_end + 1
             continue
 
         # --- methods / constructors / explicit interface implementations ---
-        if _is_method_line(raw):
+        if _is_method_line(line):
             sig, sig_end, has_body = _collect_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_comment_line)
+            start = seek_comment_start(lines, i, _is_comment)
             end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
+            yield OutlineItem(start=start + 1, count=end - start, signature=sig)
             if has_body:
                 i = end
             else:
@@ -270,12 +261,12 @@ def parse(text: str) -> list[OutlineItem]:
             continue
 
         # --- properties ---
-        next_raw = lines[i + 1] if i + 1 < n else ""
-        if _is_property_line(raw, next_raw):
+        next_line = lines[i + 1] if i + 1 < n else ""
+        if _is_property_line(line, next_line):
             sig, sig_end, has_body = _collect_prop_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_comment_line)
+            start = seek_comment_start(lines, i, _is_comment)
             end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
+            yield OutlineItem(start=start + 1, count=end - start, signature=sig)
             if has_body:
                 i = end
             else:
@@ -283,5 +274,3 @@ def parse(text: str) -> list[OutlineItem]:
             continue
 
         i += 1
-
-    return items

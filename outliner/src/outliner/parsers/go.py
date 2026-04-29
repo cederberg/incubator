@@ -1,6 +1,7 @@
 """Go outline parser (regex-based)."""
 
 import re
+from collections.abc import Iterator
 
 from outliner.types import OutlineItem
 from outliner.parsers.util import extract_signature, seek_comment_start, seek_brace_end
@@ -50,34 +51,16 @@ def _collect_sig(lines: list[str], start: int, *, until_brace: bool = False) -> 
     return extract_signature(parts, strip="{"), i, has_body
 
 
-def parse(text: str) -> list[OutlineItem]:
-    lines = text.splitlines()
-    n = len(lines)
-    items: list[OutlineItem] = []
-    i = 0
-    while i < n:
-        raw = lines[i]
-
-        # Only consider top-level declarations (no leading whitespace).
-        if not raw or raw[0].isspace():
-            i += 1
-            continue
-
-        if _FUNC_RE.match(raw):
+def parse(text: str) -> Iterator[OutlineItem]:
+    _is_go_comment = lambda _, s: s.startswith("//")
+    for i, line in enumerate(lines := text.splitlines()):
+        if _FUNC_RE.match(line):
             sig, sig_end, _ = _collect_sig(lines, i, until_brace=True)
-            start = seek_comment_start(lines, i, lambda _, s: s.startswith("//"))
+            start = seek_comment_start(lines, i, _is_go_comment)
             end = seek_brace_end(lines, sig_end)
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
-            i = end
-
-        elif _TYPE_RE.match(raw):
+            yield OutlineItem(start=start + 1, count=end - start, signature=sig)
+        elif _TYPE_RE.match(line):
             sig, sig_end, has_body = _collect_sig(lines, i)
-            start = seek_comment_start(lines, i, lambda _, s: s.startswith("//"))
+            start = seek_comment_start(lines, i, _is_go_comment)
             end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
-            i = end
-
-        else:
-            i += 1
-
-    return items
+            yield OutlineItem(start=start + 1, count=end - start, signature=sig)

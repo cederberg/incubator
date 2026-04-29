@@ -1,6 +1,7 @@
 """Rust outline parser (regex-based)."""
 
 import re
+from collections.abc import Iterator
 
 from outliner.types import OutlineItem
 from outliner.parsers.util import extract_signature, indent_level, seek_comment_start, seek_brace_end
@@ -71,19 +72,11 @@ def _collect_sig(lines: list[str], start: int) -> tuple[str, int, bool]:
     return ind + sig, i, has_body
 
 
-def parse(text: str) -> list[OutlineItem]:
-    lines = text.splitlines()
-    items: list[OutlineItem] = []
-
-    for i, raw in enumerate(lines):
-        if not any(r.match(raw) for r in _ALL_DECLS):
-            continue
-        sig, sig_end, has_body = _collect_sig(lines, i)
-        start = seek_comment_start(
-            lines, i,
-            lambda ln, s: s[0] in "/#*",
-        )
-        end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
-        items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
-
-    return items
+def parse(text: str) -> Iterator[OutlineItem]:
+    for i, line in enumerate(lines := text.splitlines()):
+        if any(r.match(line) for r in _ALL_DECLS):
+            sig, sig_end, has_body = _collect_sig(lines, i)
+            is_comment_chr = lambda _, s: s[0] in "/#*"
+            start = seek_comment_start(lines, i, is_comment_chr)
+            end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
+            yield OutlineItem(start=start + 1, count=end - start, signature=sig)

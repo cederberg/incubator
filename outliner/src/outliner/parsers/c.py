@@ -1,6 +1,7 @@
 """C/C++ outline parser (regex-based)."""
 
 import re
+from collections.abc import Iterator
 
 from outliner.types import OutlineItem
 from outliner.parsers.util import extract_signature, indent_level, seek_comment_start, seek_brace_end
@@ -205,45 +206,27 @@ def _collect_sig(lines: list[str], start: int) -> tuple[str, int, bool]:
     return sig, i, has_body
 
 
-# ---------------------------------------------------------------------------
-# Comment walk-back predicate
-# ---------------------------------------------------------------------------
-
-
-def _is_comment_line(line: str, s: str) -> bool:
-    return bool(s) and (s.startswith("//") or s.startswith("/*") or s[0] == "*")
-
-
-# ---------------------------------------------------------------------------
-# Main parser
-# ---------------------------------------------------------------------------
-
-
-def parse(text: str) -> list[OutlineItem]:
+def parse(text: str) -> Iterator[OutlineItem]:
+    _is_comment = lambda _, s: s[:1] in '/*'
     lines = text.splitlines()
     n = len(lines)
-    items: list[OutlineItem] = []
     block_comments = _block_comment_set(lines)
     i = 0
 
     while i < n:
-        raw = lines[i]
+        line = lines[i]
 
         # Skip lines inside /* */ block comments, blank lines, and line comments
-        s = raw.strip()
+        s = line.strip()
         if i in block_comments or not s or s[0] == "*" or s.startswith("//"):
             i += 1
             continue
 
         # --- #define macros ---
-        if _DEFINE_RE.match(raw):
+        if _DEFINE_RE.match(line):
             sig, sig_end = _collect_define(lines, i)
-            start = seek_comment_start(lines, i, _is_comment_line)
-            items.append(OutlineItem(
-                start=start + 1,
-                count=sig_end - start + 1,
-                signature=sig,
-            ))
+            start = seek_comment_start(lines, i, _is_comment)
+            yield OutlineItem(start=start + 1, count=sig_end - start + 1, signature=sig)
             i = sig_end + 1
             continue
 
@@ -253,9 +236,9 @@ def parse(text: str) -> list[OutlineItem]:
             continue
 
         # --- template<...> + following declaration ---
-        if _TEMPLATE_RE.match(raw):
+        if _TEMPLATE_RE.match(line):
             tmpl_sig, tmpl_end = _collect_template_sig(lines, i)
-            comment_start = seek_comment_start(lines, i, _is_comment_line)
+            start = seek_comment_start(lines, i, _is_comment)
             # Find the declaration following the template params (skip blanks and preprocessor)
             j = tmpl_end + 1
             while j < n and (not lines[j].strip() or lines[j].strip().startswith("#")):
@@ -265,11 +248,7 @@ def parse(text: str) -> list[OutlineItem]:
                 decl_sig, decl_end, has_body = _collect_sig(lines, j)
                 full_sig = tmpl_sig + " " + decl_sig.strip()
                 end = seek_brace_end(lines, decl_end) if has_body else decl_end + 1
-                items.append(OutlineItem(
-                    start=comment_start + 1,
-                    count=end - comment_start,
-                    signature=full_sig,
-                ))
+                yield OutlineItem(start=start + 1, count=end - start, signature=full_sig)
                 if has_body and not is_type_decl:
                     i = end  # skip function body entirely
                 else:
@@ -279,20 +258,20 @@ def parse(text: str) -> list[OutlineItem]:
             continue
 
         # --- type declarations (struct/class/union/enum/namespace) ---
-        if _TYPE_RE.match(raw):
+        if _TYPE_RE.match(line):
             sig, sig_end, has_body = _collect_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_comment_line)
+            start = seek_comment_start(lines, i, _is_comment)
             end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
+            yield OutlineItem(start=start + 1, count=end - start, signature=sig)
             i = sig_end + 1  # advance into body to parse members
             continue
 
         # --- function / method declarations and definitions ---
-        if _is_func_line(raw):
+        if _is_func_line(line):
             sig, sig_end, has_body = _collect_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_comment_line)
+            start = seek_comment_start(lines, i, _is_comment)
             end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
+            yield OutlineItem(start=start + 1, count=end - start, signature=sig)
             if has_body:
                 i = end  # skip body to avoid matching statements inside
             else:
@@ -300,5 +279,3 @@ def parse(text: str) -> list[OutlineItem]:
             continue
 
         i += 1
-
-    return items

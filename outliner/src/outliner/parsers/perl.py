@@ -1,6 +1,7 @@
 """Perl outline parser (regex-based)."""
 
 import re
+from collections.abc import Iterator
 
 from outliner.types import OutlineItem
 from outliner.parsers.util import extract_signature, indent_level, seek_comment_start, seek_brace_end
@@ -70,41 +71,30 @@ def _collect_sub_sig(lines: list[str], start: int) -> tuple[str, int, bool]:
     return ind + extract_signature(parts), i, found_brace
 
 
-def parse(text: str) -> list[OutlineItem]:
-    lines = text.splitlines()
-    items: list[OutlineItem] = []
+def parse(text: str) -> Iterator[OutlineItem]:
     in_pod = False
-
-    for i, raw in enumerate(lines):
+    for i, line in enumerate(lines := text.splitlines()):
         if in_pod:
-            if _POD_END_RE.match(raw):
+            if _POD_END_RE.match(line):
                 in_pod = False
             continue
-        if _POD_START_RE.match(raw):
+        if _POD_START_RE.match(line):
             in_pod = True
             continue
 
-        if _PACKAGE_RE.match(raw):
-            ind = " " * indent_level(raw)
-            sig = ind + extract_signature([raw.strip()], strip=";{")
-            def_ind = indent_level(raw)
-            start = seek_comment_start(
-                lines, i,
-                lambda ln, s, _d=def_ind: indent_level(ln) >= _d and s[0] == "#",
-            )
-            end = seek_brace_end(lines, i) if "{" in raw else i + 1
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
+        def_ind = indent_level(line)
+        _is_comment = lambda ln, s, d=def_ind: indent_level(ln) >= d and s[0] == "#"
 
-        elif _SUB_RE.match(raw):
+        if _PACKAGE_RE.match(line):
+            ind = " " * def_ind
+            sig = ind + extract_signature([line.strip()], strip=";{")
+            start = seek_comment_start(lines, i, _is_comment)
+            end = seek_brace_end(lines, i) if "{" in line else i + 1
+            yield OutlineItem(start=start + 1, count=end - start, signature=sig)
+
+        elif _SUB_RE.match(line):
             sig, sig_end, has_body = _collect_sub_sig(lines, i)
-            if not has_body:
-                continue
-            def_ind = indent_level(raw)
-            start = seek_comment_start(
-                lines, i,
-                lambda ln, s, _d=def_ind: indent_level(ln) >= _d and s[0] == "#",
-            )
-            end = seek_brace_end(lines, sig_end)
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
-
-    return items
+            if has_body:
+                start = seek_comment_start(lines, i, _is_comment)
+                end = seek_brace_end(lines, sig_end)
+                yield OutlineItem(start=start + 1, count=end - start, signature=sig)

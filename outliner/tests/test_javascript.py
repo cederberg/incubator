@@ -2,7 +2,10 @@
 
 from pathlib import Path
 
-from outliner.parsers.javascript import parse, detect as detect_js
+from outliner.parsers.javascript import parse as _parse, detect as detect_js
+
+def parse(text):
+    return list(_parse(text))
 from outliner.parsers import detect
 from outliner.cli import guess_syntax
 

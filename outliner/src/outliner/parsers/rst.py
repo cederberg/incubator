@@ -10,6 +10,8 @@ yet supported; plain underline headings cover all common RST documents.
 """
 
 import re
+from collections.abc import Iterator
+
 from outliner.types import OutlineItem
 from outliner.parsers.util import extract_summary
 
@@ -51,7 +53,7 @@ def detect(lines: list[str]) -> bool:
     return False
 
 
-def parse(text: str) -> list[OutlineItem]:
+def parse(text: str) -> Iterator[OutlineItem]:
     lines = text.splitlines(keepends=True)
     n = len(lines)
 
@@ -60,13 +62,13 @@ def parse(text: str) -> list[OutlineItem]:
 
     i = 0
     while i < n:
-        raw = lines[i].rstrip("\r\n")
-        text_stripped = raw.strip()
+        line = lines[i].rstrip("\r\n")
+        text_stripped = line.strip()
 
         if i + 1 < n:
-            next_raw = lines[i + 1].rstrip("\r\n")
-            dec = _underline_char(next_raw, len(raw.strip()))
-            if dec and text_stripped and _underline_char(raw) is None:
+            next_line = lines[i + 1].rstrip("\r\n")
+            dec = _underline_char(next_line, len(line.strip()))
+            if dec and text_stripped and _underline_char(line) is None:
                 if dec not in level_map:
                     level_map[dec] = len(level_map) + 1
                 level = level_map[dec]
@@ -75,8 +77,6 @@ def parse(text: str) -> list[OutlineItem]:
                 continue
 
         i += 1
-
-    items: list[OutlineItem] = []
 
     # Preamble before first heading, or whole-file item when there are no headings.
     # Decoration-only lines (e.g. overlines in overline+underline headings) are
@@ -91,7 +91,7 @@ def parse(text: str) -> list[OutlineItem]:
         if sig is not None:
             sig = extract_summary(sig)
         if sig:
-            items.append(OutlineItem(start=1, count=first_idx, signature=sig))
+            yield OutlineItem(start=1, count=first_idx, signature=sig)
 
     for idx, (line_idx, level, sig) in enumerate(headings):
         end_line = n
@@ -99,10 +99,4 @@ def parse(text: str) -> list[OutlineItem]:
             if future_level <= level:
                 end_line = future_line_idx
                 break
-        items.append(OutlineItem(
-            start=line_idx + 1,
-            count=end_line - line_idx,
-            signature="  " * (level - 1) + sig,
-        ))
-
-    return items
+        yield OutlineItem(start=line_idx + 1, count=end_line - line_idx, signature="  " * (level - 1) + sig)

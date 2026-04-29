@@ -2,7 +2,10 @@
 
 from pathlib import Path
 
-from outliner.parsers.markdown import parse, _whitespace_filter
+from outliner.parsers.markdown import parse as _parse, _whitespace_filter
+
+def parse(text):
+    return list(_parse(text))
 from outliner.cli import guess_syntax
 
 FIXTURES_MD = Path(__file__).parent / "fixtures" / "md"

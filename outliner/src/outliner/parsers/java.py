@@ -1,6 +1,7 @@
 """Java outline parser (regex-based)."""
 
 import re
+from collections.abc import Iterator
 
 from outliner.types import OutlineItem
 from outliner.parsers.util import extract_signature, indent_level, seek_comment_start, seek_brace_end
@@ -63,41 +64,39 @@ def _collect_sig(lines: list[str], start: int) -> tuple[str, int, bool]:
     ind = " " * indent_level(lines[start])
     has_body = False
     for i in range(start, len(lines)):
-        raw = lines[i]
-        for ch in raw:
+        line = lines[i]
+        for ch in line:
             if ch == "(":
                 depth += 1
             elif ch == ")":
                 depth -= 1
-        parts.append(raw.strip())
+        parts.append(line.strip())
         if depth <= 0:
-            if "{" in raw:
+            if "{" in line:
                 has_body = True
                 break
-            if raw.rstrip().endswith(";"):
+            if line.rstrip().endswith(";"):
                 break
     return ind + extract_signature(parts, strip="{;"), i, has_body
 
 
-def _is_method_line(raw: str) -> bool:
+def _is_method_line(line: str) -> bool:
     """Return True if line looks like a method or constructor declaration."""
-    if _STMT_START_RE.match(raw):
+    if _STMT_START_RE.match(line):
         return False
-    m = _METHOD_RE.match(raw)
+    m = _METHOD_RE.match(line)
     return (
         m is not None
         and m.group(1) not in _CONTROL_FLOW
-        and bool(raw[:m.start(1)].strip())
+        and bool(line[:m.start(1)].strip())
     )
 
 
-def parse(text: str) -> list[OutlineItem]:
-    lines = text.splitlines()
-    items: list[OutlineItem] = []
-    for i, raw in enumerate(lines):
-        if _TYPE_RE.match(raw) or _is_method_line(raw):
+def parse(text: str) -> Iterator[OutlineItem]:
+    for i, line in enumerate(lines := text.splitlines()):
+        if _TYPE_RE.match(line) or _is_method_line(line):
             sig, sig_end, has_body = _collect_sig(lines, i)
-            start = seek_comment_start(lines, i, lambda _, s: s[0] in "/*@")
+            _is_javadoc = lambda _, s: s[0] in "/*@"
+            start = seek_comment_start(lines, i, _is_javadoc)
             end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
-    return items
+            yield OutlineItem(start=start + 1, count=end - start, signature=sig)

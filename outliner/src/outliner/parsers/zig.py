@@ -1,6 +1,7 @@
 """Zig outline parser (regex-based)."""
 
 import re
+from collections.abc import Iterator
 
 from outliner.types import OutlineItem
 from outliner.parsers.util import indent_level, seek_comment_start, seek_brace_end
@@ -92,20 +93,11 @@ def _collect_sig(lines: list[str], start: int) -> tuple[str, int, bool]:
     return ind + _strip_body(joined, has_body), i, has_body
 
 
-def parse(text: str) -> list[OutlineItem]:
-    lines = text.splitlines()
-    items: list[OutlineItem] = []
-
-    for i, raw in enumerate(lines):
-        if not (_FN_RE.match(raw) or _CONST_TYPE_RE.match(raw)):
-            continue
-        sig, sig_end, has_body = _collect_sig(lines, i)
-        def_ind = indent_level(raw)
-        start = seek_comment_start(
-            lines, i,
-            lambda ln, s, d=def_ind: indent_level(ln) >= d and s.startswith("//"),
-        )
-        end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
-        items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
-
-    return items
+def parse(text: str) -> Iterator[OutlineItem]:
+    for i, line in enumerate(lines := text.splitlines()):
+        if _FN_RE.match(line) or _CONST_TYPE_RE.match(line):
+            sig, sig_end, has_body = _collect_sig(lines, i)
+            _is_comment = lambda ln, s, d=indent_level(line): indent_level(ln) >= d and s.startswith("//")
+            start = seek_comment_start(lines, i, _is_comment)
+            end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
+            yield OutlineItem(start=start + 1, count=end - start, signature=sig)

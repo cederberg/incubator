@@ -13,6 +13,8 @@ from section titles and vice-versa.
 """
 
 import re
+from collections.abc import Iterator
+
 from outliner.types import OutlineItem
 from outliner.parsers.util import extract_summary
 
@@ -107,7 +109,7 @@ def _sandwich_fallback(lines: list[str]) -> list[OutlineItem]:
     return _items_from_headings(headings, n)
 
 
-def parse(text: str) -> list[OutlineItem]:
+def parse(text: str) -> Iterator[OutlineItem]:
     lines = text.splitlines(keepends=True)
     n = len(lines)
 
@@ -138,19 +140,14 @@ def parse(text: str) -> list[OutlineItem]:
         i += 1
 
     if not md_headings:
-        return _sandwich_fallback(lines)
+        yield from _sandwich_fallback(lines)
+        return
 
     # --- compute ranges for Markdown headings ---
-    items: list[OutlineItem] = []
     for idx, (line_idx, level, sig) in enumerate(md_headings):
         end_line = n
         for future_idx, future_level, _ in md_headings[idx + 1:]:
             if future_level <= level:
                 end_line = future_idx
                 break
-        items.append(OutlineItem(
-            start=line_idx + 1,
-            count=end_line - line_idx,
-            signature=sig,
-        ))
-    return items
+        yield OutlineItem(start=line_idx + 1, count=end_line - line_idx, signature=sig)

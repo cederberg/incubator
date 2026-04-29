@@ -2,7 +2,10 @@
 
 from pathlib import Path
 
-from outliner.parsers.scala import parse, detect as detect_scala
+from outliner.parsers.scala import parse as _parse, detect as detect_scala
+
+def parse(text):
+    return list(_parse(text))
 from outliner.parsers import detect
 from outliner.cli import guess_syntax
 

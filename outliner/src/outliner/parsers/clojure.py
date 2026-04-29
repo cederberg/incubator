@@ -1,6 +1,7 @@
 """Clojure outline parser."""
 
 import re
+from collections.abc import Iterator
 
 from outliner.types import OutlineItem
 from outliner.parsers.util import seek_comment_start
@@ -225,21 +226,13 @@ def _collect_sig(lines: list[str], start: int) -> str:
     return sig
 
 
-def parse(text: str) -> list[OutlineItem]:
+def parse(text: str) -> Iterator[OutlineItem]:
     lines = text.splitlines()
     in_str = _string_interior_lines(lines)
-    items: list[OutlineItem] = []
-    for i, raw in enumerate(lines):
-        if i in in_str:
-            continue
-        if not _TOP_FORM_RE.match(raw):
-            continue
-        sig = _collect_sig(lines, i)
-        form_end = _seek_paren_end(lines, i)
-        start = seek_comment_start(lines, i, lambda _, s: s[0] == ";")
-        items.append(OutlineItem(
-            start=start + 1,
-            count=form_end - start,
-            signature=sig,
-        ))
-    return items
+    for i, line in enumerate(lines):
+        if i not in in_str and _TOP_FORM_RE.match(line):
+            sig = _collect_sig(lines, i)
+            form_end = _seek_paren_end(lines, i)
+            _is_comment = lambda _, s: s[0] == ";"
+            start = seek_comment_start(lines, i, _is_comment)
+            yield OutlineItem(start=start + 1, count=form_end - start, signature=sig)

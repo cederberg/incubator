@@ -1,6 +1,7 @@
 """JavaScript/TypeScript outline parser (regex-based)."""
 
 import re
+from collections.abc import Iterator
 
 from outliner.types import OutlineItem
 from outliner.parsers.util import extract_signature, indent_level, seek_comment_start, seek_brace_end
@@ -75,8 +76,6 @@ _RUST_FN_RE    = re.compile(r"^\s*(?:pub\s+)?(?:async\s+)?fn\s+\w+", re.MULTILIN
 _RUST_IMPL_RE  = re.compile(r"^\s*impl\b", re.MULTILINE)
 _RUST_ARROW_RE = re.compile(r"->\s*\w")
 
-_IMPORT_RE    = re.compile(r"^\s*import\b")
-_DECORATOR_RE = re.compile(r"^\s*@\w+")
 
 
 def detect(lines: list[str]) -> bool:
@@ -255,12 +254,6 @@ def _is_method_line(raw: str) -> bool:
     return m.group(1) not in _JS_CONTROL
 
 
-def _is_walkback_line(line: str, s: str) -> bool:
-    if not s:
-        return False
-    return s[0] in "/*@" or s.startswith("//")
-
-
 def _seek_expression_end(lines: list[str], start_index: int) -> int:
     """Find end of a brace-delimited body or expression-arrow body.
 
@@ -300,59 +293,20 @@ def _seek_expression_end(lines: list[str], start_index: int) -> int:
     return len(lines)
 
 
-def parse(text: str) -> list[OutlineItem]:
-    lines = text.splitlines()
-    items: list[OutlineItem] = []
-
-    for i, raw in enumerate(lines):
-        if _IMPORT_RE.match(raw) or _DECORATOR_RE.match(raw):
-            continue
-
-        if _FUNC_RE.match(raw):
+def parse(text: str) -> Iterator[OutlineItem]:
+    _is_walkback = lambda _, s: s[:1] in "/*@" or s.startswith("//")
+    for i, line in enumerate(lines := text.splitlines()):
+        if any(r.match(line) for r in [_FUNC_RE, _CLASS_RE, _IFACE_RE, _ENUM_RE, _NS_RE]) or _is_method_line(line):
             sig, sig_end, has_body = _collect_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_walkback_line)
+            start = seek_comment_start(lines, i, _is_walkback)
             end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
-
-        elif _CLASS_RE.match(raw):
-            sig, sig_end, has_body = _collect_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_walkback_line)
-            end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
-
-        elif _IFACE_RE.match(raw):
-            sig, sig_end, has_body = _collect_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_walkback_line)
-            end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
-
-        elif _TYPE_RE.match(raw):
+            yield OutlineItem(start=start + 1, count=end - start, signature=sig)
+        elif _TYPE_RE.match(line):
             sig, sig_end = _collect_type_alias_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_walkback_line)
-            items.append(OutlineItem(start=start + 1, count=sig_end - start + 1, signature=sig))
-
-        elif _ENUM_RE.match(raw):
-            sig, sig_end, has_body = _collect_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_walkback_line)
-            end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
-
-        elif _NS_RE.match(raw):
-            sig, sig_end, has_body = _collect_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_walkback_line)
-            end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
-
-        elif _CONST_FN_RE.match(raw):
+            start = seek_comment_start(lines, i, _is_walkback)
+            yield OutlineItem(start=start + 1, count=sig_end - start + 1, signature=sig)
+        elif _CONST_FN_RE.match(line):
             sig, sig_end, has_body = _collect_const_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_walkback_line)
+            start = seek_comment_start(lines, i, _is_walkback)
             end = _seek_expression_end(lines, sig_end) if has_body else sig_end + 1
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
-
-        elif _is_method_line(raw):
-            sig, sig_end, has_body = _collect_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_walkback_line)
-            end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
-
-    return items
+            yield OutlineItem(start=start + 1, count=end - start, signature=sig)

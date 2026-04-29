@@ -2,7 +2,10 @@
 
 from pathlib import Path
 
-from outliner.parsers.asciidoc import parse, detect as detect_adoc
+from outliner.parsers.asciidoc import parse as _parse, detect as detect_adoc
+
+def parse(text):
+    return list(_parse(text))
 from outliner.parsers import detect
 from outliner.cli import guess_syntax
 

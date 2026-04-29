@@ -30,7 +30,7 @@ def outline(syntax: str, content: str) -> list[OutlineItem] | None:
         return None
     m = _FRONTMATTER_RE.match(content)
     if not m:
-        return parse(content)
+        return list(parse(content))
     offset = m.group(0).count('\n')
     return [OutlineItem(start=it.start + offset, count=it.count, signature=it.signature)
             for it in parse(content[m.end():])]

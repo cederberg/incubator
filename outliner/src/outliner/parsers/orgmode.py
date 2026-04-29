@@ -16,6 +16,8 @@ Content detection looks for Org-specific co-occurring markers:
 """
 
 import re
+from collections.abc import Iterator
+
 from outliner.types import OutlineItem
 from outliner.parsers.util import extract_summary
 
@@ -80,14 +82,14 @@ def _preamble_sig(lines: list[str], end: int) -> str | None:
     return extract_summary(non_directive[0])
 
 
-def parse(text: str) -> list[OutlineItem]:
+def parse(text: str) -> Iterator[OutlineItem]:
     lines = text.splitlines(keepends=True)
     n = len(lines)
 
     headings: list[tuple[int, int, str]] = []  # (0-based idx, level, sig)
 
-    for i, raw in enumerate(lines):
-        stripped = raw.rstrip("\r\n")
+    for i, line in enumerate(lines):
+        stripped = line.rstrip("\r\n")
         m = _HEADING_RE.match(stripped)
         if m:
             level = len(m.group(1))
@@ -99,17 +101,15 @@ def parse(text: str) -> list[OutlineItem]:
             (l.strip() for l in lines if l.strip() and not _DIRECTIVE_RE.match(l)),
             next((l.strip() for l in lines if l.strip()), ""),
         )
-        if not first_sig:
-            return []
-        return [OutlineItem(start=1, count=n, signature=extract_summary(first_sig))]
-
-    items: list[OutlineItem] = []
+        if first_sig:
+            yield OutlineItem(start=1, count=n, signature=extract_summary(first_sig))
+        return
 
     # Preamble item if non-directive content precedes first heading
     first_idx = headings[0][0]
     preamble_sig = _preamble_sig(lines, first_idx)
     if preamble_sig:
-        items.append(OutlineItem(start=1, count=first_idx, signature=preamble_sig))
+        yield OutlineItem(start=1, count=first_idx, signature=preamble_sig)
 
     for idx, (line_idx, level, sig) in enumerate(headings):
         end_line = n
@@ -117,10 +117,4 @@ def parse(text: str) -> list[OutlineItem]:
             if future_level <= level:
                 end_line = future_line_idx
                 break
-        items.append(OutlineItem(
-            start=line_idx + 1,
-            count=end_line - line_idx,
-            signature=sig,
-        ))
-
-    return items
+        yield OutlineItem(start=line_idx + 1, count=end_line - line_idx, signature=sig)

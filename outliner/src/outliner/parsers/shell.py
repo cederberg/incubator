@@ -1,6 +1,7 @@
 """Shell/Bash outline parser (regex-based)."""
 
 import re
+from collections.abc import Iterator
 
 from outliner.types import OutlineItem
 from outliner.parsers.util import indent_level, seek_comment_start, seek_brace_end
@@ -51,20 +52,11 @@ def _func_sig(lines: list[str], i: int) -> tuple[str, int]:
     return ind + sig, i
 
 
-def parse(text: str) -> list[OutlineItem]:
-    lines = text.splitlines()
-    items: list[OutlineItem] = []
-
-    for i, raw in enumerate(lines):
-        if not (_POSIX_FUNC_RE.match(raw) or _BASH_FUNC_RE.match(raw)):
-            continue
-        def_ind = indent_level(raw)
-        sig, sig_end = _func_sig(lines, i)
-        start = seek_comment_start(
-            lines, i,
-            lambda ln, s, _d=def_ind: indent_level(ln) >= _d and s.startswith("#"),
-        )
-        end = seek_brace_end(lines, sig_end)
-        items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
-
-    return items
+def parse(text: str) -> Iterator[OutlineItem]:
+    for i, line in enumerate(lines := text.splitlines()):
+        if _POSIX_FUNC_RE.match(line) or _BASH_FUNC_RE.match(line):
+            _is_comment = lambda ln, s, d=indent_level(line): indent_level(ln) >= d and s.startswith("#")
+            sig, sig_end = _func_sig(lines, i)
+            start = seek_comment_start(lines, i, _is_comment)
+            end = seek_brace_end(lines, sig_end)
+            yield OutlineItem(start=start + 1, count=end - start, signature=sig)

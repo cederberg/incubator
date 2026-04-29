@@ -1,6 +1,7 @@
 """Swift outline parser (regex-based)."""
 
 import re
+from collections.abc import Iterator
 
 from outliner.types import OutlineItem
 from outliner.parsers.util import extract_signature, indent_level, seek_comment_start, seek_brace_end
@@ -33,7 +34,6 @@ _OPEN_ACCESS_RE = re.compile(r"\bopen\s+(?:class|func|var)\b")
 _SWIFT_FUNC_RE = re.compile(r"\bfunc\s+\w+")
 # func with labeled parameters (colon notation) — unique to Swift vs Go's "name type" style
 _SWIFT_PARAM_RE = re.compile(r"\bfunc\s+\w+\s*\([^)]*\w+\s*:\s*\w")
-_IMPORT_RE = re.compile(r"^\s*import\s+\w+")
 
 
 def detect(lines: list[str]) -> bool:
@@ -101,50 +101,16 @@ def _collect_sig(lines: list[str], start: int) -> tuple[str, int, bool]:
     return sig, i, has_body
 
 
-def _is_comment_or_attr(line: str, s: str) -> bool:
-    return bool(s) and (
-        s.startswith("//")
-        or s.startswith("/*")
-        or s[0] == "*"
-        or s[0] == "@"
-    )
-
-
-def parse(text: str) -> list[OutlineItem]:
-    lines = text.splitlines()
-    n = len(lines)
-    items: list[OutlineItem] = []
-    i = 0
-
-    while i < n:
-        raw = lines[i]
-        s = raw.strip()
-
-        # Skip blank/comment lines and import statements
-        if not s or s.startswith("//") or s.startswith("/*") or s[:1] == "*":
-            i += 1
-            continue
-        if _IMPORT_RE.match(raw):
-            i += 1
-            continue
-
-        # deinit has no parens — handle specially
-        if _DEINIT_RE.match(raw):
-            sig = " " * indent_level(raw) + "deinit"
-            start = seek_comment_start(lines, i, _is_comment_or_attr)
+def parse(text: str) -> Iterator[OutlineItem]:
+    _is_comment = lambda _, s: s[:1] in '/*@'
+    for i, line in enumerate(lines := text.splitlines()):
+        if _DEINIT_RE.match(line):
+            sig = " " * indent_level(line) + "deinit"
+            start = seek_comment_start(lines, i, _is_comment)
             end = seek_brace_end(lines, i)
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
-            i = end  # skip body; deinit cannot contain nested decls
-            continue
-
-        if any(r.match(raw) for r in [_FUNC_RE, _INIT_RE, _TYPE_RE, _EXT_RE]):
+            yield OutlineItem(start=start + 1, count=end - start, signature=sig)
+        elif any(r.match(line) for r in [_FUNC_RE, _INIT_RE, _TYPE_RE, _EXT_RE]):
             sig, sig_end, has_body = _collect_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_comment_or_attr)
+            start = seek_comment_start(lines, i, _is_comment)
             end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
-            i += 1  # advance one line; body is re-scanned for nested decls
-            continue
-
-        i += 1
-
-    return items
+            yield OutlineItem(start=start + 1, count=end - start, signature=sig)

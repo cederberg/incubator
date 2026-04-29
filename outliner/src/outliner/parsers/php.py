@@ -1,6 +1,7 @@
 """PHP outline parser (regex-based)."""
 
 import re
+from collections.abc import Iterator
 
 from outliner.types import OutlineItem
 from outliner.parsers.util import extract_signature, indent_level, seek_comment_start, seek_brace_end
@@ -11,15 +12,11 @@ EXTENSIONS = (".php", ".phtml", ".php3", ".php4", ".php5", ".phps")
 _OPEN_TAG_RE = re.compile(r"<\?php\b", re.IGNORECASE)
 _PHP_VAR_RE = re.compile(r"^\s*\$[a-zA-Z_]\w*")
 _NAMED_FUNC_RE = re.compile(r"\bfunction\s+\w+\s*\(")
-
 _NAMESPACE_RE = re.compile(r"^\s*namespace\s+[\w\\]+")
-_USE_RE = re.compile(r"^\s*use\b")
-
 _TYPE_RE = re.compile(
     r"^\s*(?:(?:abstract|final|readonly)\s+)*"
     r"(?:class|interface|trait|enum)\s+\w+"
 )
-
 _FUNC_RE = re.compile(
     r"^\s*"
     r"(?:(?:abstract|public|protected|private|static|final|readonly)\s+)*"
@@ -83,24 +80,11 @@ def _collect_sig(lines: list[str], start: int) -> tuple[str, int, bool]:
     return sig, brace_line, has_body
 
 
-def _is_walkback_line(line: str, s: str) -> bool:
-    if not s:
-        return False
-    return s[0] in "/*#" or s.startswith("//")
-
-
-def parse(text: str) -> list[OutlineItem]:
-    lines = text.splitlines()
-    items: list[OutlineItem] = []
-
-    for i, raw in enumerate(lines):
-        if _USE_RE.match(raw):
-            continue
-
-        if _NAMESPACE_RE.match(raw) or _TYPE_RE.match(raw) or _FUNC_RE.match(raw):
+def parse(text: str) -> Iterator[OutlineItem]:
+    _is_walkback = lambda _, s: s[:1] in "/*#" or s.startswith("//")
+    for i, line in enumerate(lines := text.splitlines()):
+        if any(r.match(line) for r in [_NAMESPACE_RE, _TYPE_RE, _FUNC_RE]):
             sig, brace_line, has_body = _collect_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_walkback_line)
+            start = seek_comment_start(lines, i, _is_walkback)
             end = seek_brace_end(lines, brace_line) if has_body else brace_line + 1
-            items.append(OutlineItem(start=start + 1, count=end - start, signature=sig))
-
-    return items
+            yield OutlineItem(start=start + 1, count=end - start, signature=sig)
