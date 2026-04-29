@@ -155,29 +155,14 @@ YAML are deferred to last as their output format needs separate design thought.
 - [x] **Scala** — def, class/case class/object/trait, given/extension (Scala 3)
 - [x] **Clojure** — ns, defn, defmacro, deftype, defrecord, defprotocol,
       defmulti, def; S-expression structure
-- [ ] **Elixir** — defmodule, def/defp, defmacro, defprotocol, defimpl,
-      `@spec`-aware; multiple-clause functions
-- [ ] **Erlang** — `-module`, function clauses (name/arity), `-spec`, `-type`,
-      `-record`
-- [ ] **Haskell** — module, top-level type sigs (`name ::`) + definitions,
-      data/newtype/type, class/instance
-- [ ] **Kotlin** — fun, class/data class/sealed class/object/interface,
-      typealias
-- [ ] **Lua** — local/global function definitions
-- [ ] **R** — function assignments (`name <- function`)
-- [ ] **OCaml** — let/let rec, type, module, module type
-- [ ] **F#** — let/let rec, type, module
-- [ ] **Dart** — class/mixin/extension, function
-- [ ] **YAML** — TBD
-- [ ] **JSON** — TBD
-- [ ] **XML** — TBD
-- [ ] **HTML** — TBD
 - [ ] **AsciiDoc** — `=`-prefixed headings (like ATX but with `=` and `==`),
       section titles; `.adoc`/`.asciidoc` extensions
 - [ ] **Org-mode** — `*`-prefixed headings (`*`, `**`, …); widely used in
       Emacs / literate-programming workflows; `.org` extension
-- [ ] **LaTeX** — `\chapter`, `\section`, `\subsection`, `\subsubsection`;
-      `.tex` extension
+- [ ] **YAML** — TBD
+- [ ] **JSON** — TBD
+- [ ] **XML** — TBD
+- [ ] **HTML** — TBD
 
 ### Polish
 
