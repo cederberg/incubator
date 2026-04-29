@@ -78,6 +78,24 @@ _PROPERTY_NAME_RE = re.compile(
 
 _ATTR_RE = re.compile(r"^\s*\[")
 
+# Event declarations (excluded — too noisy)
+_EVENT_RE = re.compile(
+    r"^\s*(?:(?:public|protected|internal|private|static|abstract|virtual|"
+    r"override|sealed|new)\s+)*event\b"
+)
+
+
+def _is_preceding_line(_raw: str, s: str) -> bool:
+    """True if line is doc-comment, comment continuation, or attribute preceding a declaration."""
+    return s[:1] in '/*['
+
+
+def _emit_range(lines: list[str], i: int, sig: str, sig_end: int, has_body: bool) -> tuple[OutlineItem, int]:
+    """Build an OutlineItem with comment walk-back and brace-end. Returns (item, body_end)."""
+    start = seek_comment_start(lines, i, _is_preceding_line)
+    end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
+    return OutlineItem(start=start + 1, count=end - start, signature=sig), end
+
 
 def detect(lines: list[str]) -> bool:
     """Detect C#: requires using/namespace AND a type declaration."""
@@ -148,7 +166,7 @@ def _collect_prop_sig(lines: list[str], start: int) -> tuple[str, int, bool]:
 
 def _is_property_line(raw: str, next_line: str = "") -> bool:
     """Return True if the line looks like a property declaration."""
-    if _STMT_START_RE.match(raw):
+    if _STMT_START_RE.match(raw) or _EVENT_RE.match(raw):
         return False
     m = _PROPERTY_RE.match(raw)
     if m:
@@ -197,80 +215,29 @@ def _is_method_line(raw: str) -> bool:
 
 
 def parse(text: str) -> Iterator[OutlineItem]:
-    _is_comment = lambda _, s: s[:1] in '/*['
-    lines = text.splitlines()
-    n = len(lines)
-    i = 0
-
-    while i < n:
-        line = lines[i]
+    skip_to = 0
+    for i, line in enumerate(lines := text.splitlines()):
         s = line.strip()
-
-        # Skip blank, comment, and continuation lines
-        if not s or s.startswith("//") or s.startswith("/*") or s[:1] == "*":
-            i += 1
-            continue
-
-        # Skip using/import directives (including global using)
-        if _USING_RE.match(line):
-            i += 1
-            continue
-
-        # Skip event declarations (excluded by design — too noisy)
-        if re.match(r"^\s*(?:(?:public|protected|internal|private|static|abstract|virtual|"
-                    r"override|sealed|new)\s+)*event\b", line):
-            i += 1
-            continue
-
-        # Skip attribute-only lines
-        if _ATTR_RE.match(line) and not _TYPE_RE.match(line) and not _NAMESPACE_RE.match(line):
-            i += 1
-            continue
-
-        # --- namespace ---
-        if _NAMESPACE_RE.match(line):
+        if i < skip_to or not s or s[:1] in '/*':
+            pass
+        elif _NAMESPACE_RE.match(line):
             sig = s.rstrip(";{").strip()
-            start = seek_comment_start(lines, i, _is_comment)
-            if "{" in line:
-                end = seek_brace_end(lines, i)
-            else:
-                end = n  # file-scoped namespace covers rest of file
+            start = seek_comment_start(lines, i, _is_preceding_line)
+            end = seek_brace_end(lines, i) if "{" in line else len(lines)
             yield OutlineItem(start=start + 1, count=end - start, signature=sig)
-            i += 1
-            continue
-
-        # --- type declarations ---
-        if _TYPE_RE.match(line):
+        elif _TYPE_RE.match(line):
             sig, sig_end, has_body = _collect_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_comment)
-            end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
-            yield OutlineItem(start=start + 1, count=end - start, signature=sig)
-            i = sig_end + 1
-            continue
-
-        # --- methods / constructors / explicit interface implementations ---
-        if _is_method_line(line):
+            item, _ = _emit_range(lines, i, sig, sig_end, has_body)
+            yield item
+        elif _is_method_line(line):
             sig, sig_end, has_body = _collect_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_comment)
-            end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
-            yield OutlineItem(start=start + 1, count=end - start, signature=sig)
+            item, end = _emit_range(lines, i, sig, sig_end, has_body)
+            yield item
             if has_body:
-                i = end
-            else:
-                i = sig_end + 1
-            continue
-
-        # --- properties ---
-        next_line = lines[i + 1] if i + 1 < n else ""
-        if _is_property_line(line, next_line):
+                skip_to = end
+        elif _is_property_line(line, lines[i + 1] if i + 1 < len(lines) else ""):
             sig, sig_end, has_body = _collect_prop_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_comment)
-            end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
-            yield OutlineItem(start=start + 1, count=end - start, signature=sig)
+            item, end = _emit_range(lines, i, sig, sig_end, has_body)
+            yield item
             if has_body:
-                i = end
-            else:
-                i = sig_end + 1
-            continue
-
-        i += 1
+                skip_to = end
