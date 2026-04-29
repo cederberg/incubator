@@ -1,0 +1,3 @@
+* Only Heading
+
+Just one heading with no nesting.
