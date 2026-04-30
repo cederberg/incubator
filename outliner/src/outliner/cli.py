@@ -1,6 +1,7 @@
 """outliner — print structural outline of source files."""
 
 import argparse
+import fnmatch
 import os
 import re
 import sys
@@ -13,16 +14,53 @@ def guess_syntax(src: str) -> str | None:
     return EXTENSIONS.get(os.path.splitext(src.lower())[1])
 
 
+def _load_gitignore(dirpath: str) -> list[str]:
+    try:
+        with open(os.path.join(dirpath, ".gitignore"), encoding="utf-8", errors="replace") as f:
+            return [ln.rstrip("\n") for ln in f if ln.strip() and not ln.startswith("#")]
+    except OSError:
+        return []
+
+
+def _gitignore_match(name: str, relpath: str, patterns: list[str], is_dir: bool) -> bool:
+    result = False
+    for pat in patterns:
+        negate = pat.startswith("!")
+        p = pat[1:] if negate else pat
+        dir_only = p.endswith("/")
+        if dir_only:
+            if not is_dir:
+                continue
+            p = p[:-1]
+        target = relpath if "/" in p else name
+        if fnmatch.fnmatch(target, p.lstrip("/")):
+            result = not negate
+    return result
+
+
 def _expand_sources(sources: list[str]) -> list[str]:
     result = []
     for src in sources:
         if src == "-" or not os.path.isdir(src):
             result.append(src)
             continue
+        gi: dict[str, list[str]] = {}
         for root, dirs, files in os.walk(src):
-            dirs.sort()
+            pats = _load_gitignore(root)
+            if pats:
+                gi[root] = pats
+            active = [(d, gi[d]) for d in gi if d == root or root.startswith(d + os.sep)]
+
+            def ignored(name: str, is_dir: bool, _root: str = root, _active=active) -> bool:
+                for gi_dir, pats in _active:
+                    rel = os.path.relpath(os.path.join(_root, name), gi_dir)
+                    if _gitignore_match(name, rel, pats, is_dir):
+                        return True
+                return False
+
+            dirs[:] = sorted(d for d in dirs if not ignored(d, True))
             for name in sorted(files):
-                if os.path.splitext(name.lower())[1] in EXTENSIONS:
+                if os.path.splitext(name.lower())[1] in EXTENSIONS and not ignored(name, False):
                     result.append(os.path.join(root, name))
     return result
 

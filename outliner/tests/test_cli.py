@@ -7,7 +7,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from outliner.cli import main
+from outliner.cli import main, _expand_sources
 
 FIXTURES = Path(__file__).parent / "fixtures" / "md"
 
@@ -128,3 +128,78 @@ def test_output_columns_aligned():
         assert len(parts) == 2, f"bad line: {line!r}"
         loc = parts[0].strip()
         assert "," in loc
+
+
+# ---------------------------------------------------------------------------
+# .gitignore support
+# ---------------------------------------------------------------------------
+
+def _make_pyfile(path: str) -> None:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        f.write("def foo(): pass\n")
+
+
+def test_gitignore_excludes_files():
+    with tempfile.TemporaryDirectory() as d:
+        keep = os.path.join(d, "keep.py")
+        skip = os.path.join(d, "ignore_me.py")
+        _make_pyfile(keep)
+        _make_pyfile(skip)
+        with open(os.path.join(d, ".gitignore"), "w") as f:
+            f.write("ignore_me.py\n")
+        sources = _expand_sources([d])
+        assert keep in sources
+        assert skip not in sources
+
+
+def test_gitignore_excludes_dir():
+    with tempfile.TemporaryDirectory() as d:
+        main_py = os.path.join(d, "main.py")
+        gen_py = os.path.join(d, "build", "gen.py")
+        _make_pyfile(main_py)
+        _make_pyfile(gen_py)
+        with open(os.path.join(d, ".gitignore"), "w") as f:
+            f.write("build/\n")
+        sources = _expand_sources([d])
+        assert main_py in sources
+        assert gen_py not in sources
+
+
+def test_gitignore_negation():
+    with tempfile.TemporaryDirectory() as d:
+        a_py = os.path.join(d, "a.py")
+        keep_py = os.path.join(d, "keep.py")
+        _make_pyfile(a_py)
+        _make_pyfile(keep_py)
+        with open(os.path.join(d, ".gitignore"), "w") as f:
+            f.write("*.py\n!keep.py\n")
+        sources = _expand_sources([d])
+        assert keep_py in sources
+        assert a_py not in sources
+
+
+def test_gitignore_subdirectory():
+    with tempfile.TemporaryDirectory() as d:
+        root_py = os.path.join(d, "root.py")
+        util_py = os.path.join(d, "sub", "util.py")
+        skip_py = os.path.join(d, "sub", "skip.py")
+        _make_pyfile(root_py)
+        _make_pyfile(util_py)
+        _make_pyfile(skip_py)
+        with open(os.path.join(d, "sub", ".gitignore"), "w") as f:
+            f.write("skip.py\n")
+        sources = _expand_sources([d])
+        assert root_py in sources
+        assert util_py in sources
+        assert skip_py not in sources
+
+
+def test_gitignore_does_not_affect_explicit_file():
+    with tempfile.TemporaryDirectory() as d:
+        path = os.path.join(d, "explicit.py")
+        _make_pyfile(path)
+        with open(os.path.join(d, ".gitignore"), "w") as f:
+            f.write("*.py\n")
+        sources = _expand_sources([path])
+        assert path in sources
