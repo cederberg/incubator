@@ -38,10 +38,13 @@ Nesting is visible in two ways: overlapping ranges (a class range contains its
 methods) and native-format indentation in the signature (indented for code,
 `#`/`##` heading levels for Markdown).
 
-## Running
+## Installation
 
-The tool is not yet published to PyPI. Run it directly from this repository
-using [uv](https://docs.astral.sh/uv/):
+```sh
+pip install outliner
+```
+
+## Running
 
 ```sh
 # From within the outliner/ directory
