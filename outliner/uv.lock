@@ -21,7 +21,7 @@ wheels = [
 ]
 
 [[package]]
-name = "outliner"
+name = "outliner-cli"
 version = "0.1.0"
 source = { editable = "." }
 
