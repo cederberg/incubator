@@ -121,7 +121,7 @@ outliner/
 
 Order reflects: user priority first, then complex/weird syntaxes early (to
 surface output format edge cases), then remaining popular languages. JSON and
-YAML are deferred to last as their output format needs separate design thought.
+XML use structural path-based output instead of line ranges.
 
 - [x] **Markdown** (`parsers/markdown.py`) — ATX/Setext headings with nesting;
       simplest parser, good baseline for understanding the output format
@@ -159,10 +159,18 @@ YAML are deferred to last as their output format needs separate design thought.
       section titles; `.adoc`/`.asciidoc` extensions
 - [x] **Org-mode** — `*`-prefixed headings (`*`, `**`, …); widely used in
       Emacs / literate-programming workflows; `.org` extension
-- [ ] **YAML** — TBD
-- [ ] **JSON** — TBD
-- [ ] **XML** — TBD
-- [ ] **HTML** — TBD
+- [ ] **HTML** — document format like Markdown; headings (`h1`-`h6`),
+      semantic landmarks (`<nav>`, `<main>`, `<article>`, `<section>`);
+      line-based output with ranges
+- [ ] **JSON** — structural (path-based) output; no line tracking; show
+      array lengths, object shape, data types per field, an example value,
+      and optional vs always‑present fields; first-line summary: char
+      count, format type (single‑doc vs NDJSON/JSONL), top‑level type
+- [ ] **YAML** — structural output (JSON‑like); parse whole file, show key
+      paths with types; simpler subset of the JSON approach; low priority
+      — large YAML files are rare
+- [ ] **XML** — structural output; XPath‑based location keys; element
+      paths with attributes, text content types, nesting depth
 
 ### Polish
 
