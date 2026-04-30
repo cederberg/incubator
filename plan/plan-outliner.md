@@ -159,7 +159,7 @@ XML use structural path-based output instead of line ranges.
       section titles; `.adoc`/`.asciidoc` extensions
 - [x] **Org-mode** — `*`-prefixed headings (`*`, `**`, …); widely used in
       Emacs / literate-programming workflows; `.org` extension
-- [ ] **HTML** — document format like Markdown; headings (`h1`-`h6`),
+- [x] **HTML** — document format like Markdown; headings (`h1`-`h6`),
       semantic landmarks (`<nav>`, `<main>`, `<article>`, `<section>`);
       line-based output with ranges
 - [ ] **JSON** — structural (path-based) output; no line tracking; show
