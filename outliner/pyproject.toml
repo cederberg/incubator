@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "outliner-cli"
-version = "0.1.0"
+version = "0.2.0"
 description = "Print the structural outline of source files for LLM navigation"
 authors = [{name = "Per Cederberg"}]
 license = "MIT"
@@ -17,7 +17,7 @@ Homepage = "https://github.com/cederberg/incubator/tree/main/outliner"
 Repository = "https://github.com/cederberg/incubator"
 
 [project.scripts]
-outliner = "outliner.cli:main"
+outliner-cli = "outliner.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
