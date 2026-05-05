@@ -14,9 +14,13 @@ git uptodate [<dir>...]
 Install into `~/.local`:
 
 ```bash
-mkdir -p ~/.local/bin ~/.local/share/man/man1
-cp bin/git-uptodate ~/.local/bin/
-cp man/git-uptodate.1 ~/.local/share/man/man1/
+DIR=~/.local/bin
+MAN=~/.local/share/man/man1
+URL=https://raw.githubusercontent.com/cederberg/incubator/main
+mkdir -p $DIR $MAN
+curl -o $DIR/git-uptodate $URL/bin/git-uptodate
+curl -o $MAN/git-uptodate.1 $URL/man/git-uptodate.1
+chmod +x $DIR/git-uptodate
 ```
 
 Update your `PATH`/`MANPATH` if needed in `~/.zshrc`:
@@ -45,7 +49,11 @@ frontmatter <file|dir>...
 Install into `~/.local/bin`:
 
 ```bash
-cp bin/frontmatter ~/.local/bin/
+DIR=~/.local/bin
+URL=https://raw.githubusercontent.com/cederberg/incubator/main
+mkdir -p $DIR
+curl -o $DIR/frontmatter $URL/bin/frontmatter
+chmod +x $DIR/frontmatter
 ```
 
 
