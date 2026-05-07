@@ -56,7 +56,6 @@ else
         if [[ -d "$arg" ]] ; then
             found=false
             while IFS= read -r f ; do
-                [[ -z "$f" ]] && continue
                 echo "==> $f <=="
                 print-frontmatter "$f"
                 echo
@@ -69,7 +68,6 @@ else
             echo
         else
             warn "not a file or directory: $arg"
-            continue
         fi
     done
 fi
