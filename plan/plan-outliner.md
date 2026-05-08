@@ -172,6 +172,32 @@ XML use structural path-based output instead of line ranges.
 - [ ] **XML** — structural output; XPath‑based location keys; element
       paths with attributes, text content types, nesting depth
 
+### JavaScript/TypeScript fixes
+
+The JS/TS regex parser works for well-formed code but has issues with
+real-world npm packages. Each fix needs new test cases and possibly fixture
+files drawn from actual node_modules.
+
+- [ ] **Missing extensions**: Register `.mjs`, `.cjs`, `.mts`, `.cts` in the
+  parser's `EXTENSIONS` tuple and add corresponding
+  `test_detect_extension_*` tests.
+- [ ] **False positives in function bodies**: `const keys = (a || b)[c]` inside
+  a function body looks like a `const` arrow assignment to the regex.
+  Narrow detection to top-level scope only (not inside brace-delimited
+  bodies).
+- [ ] **Method-like calls mistaken for declarations**: `traverse(child, node,
+  visitor)` matches the indented method pattern. Limit method detection to
+  lines inside class/interface/enum/namespace ranges.
+- [ ] **Inline brace in const assignment body**: `const x = fn({a:1})` is
+  currently treated as a body-opening brace. Improve `_seek_expression_end`
+  to handle inline object literals.
+- [ ] **Example real-world files exposing various issues** (each should inform
+  a dedicated test case):
+  - `node_modules/zip-stream/index.js`
+  - `node_modules/yaml-eslint-parser/lib/convert.js`
+  - `node_modules/yaml/dist/stringify/stringifyCollection.js`
+  - `node_modules/uuid/dist/uuid-bin.js`
+
 ### Polish
 
 - [x] `README.md` for the `outliner/` package
