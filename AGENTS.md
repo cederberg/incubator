@@ -12,7 +12,7 @@
 - Verify examples against source or command output
 
 ## Skills
-- Use `bin/frontmatter <file>...` to read skill file front-matter
+- Use `frontmatter <file>...` to read skill file front-matter
 - Set `disable-model-invocation: true` to prevent automatic triggering
 - Codify rules when recurring mistakes or unnecessary searches appear
 - Only add instructions where agents will err without them

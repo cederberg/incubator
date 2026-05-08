@@ -1,4 +1,0 @@
----
-nested: true
----
-Nested file.
