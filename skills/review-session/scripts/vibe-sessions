@@ -66,14 +66,67 @@ def format_hhmm(ts: str) -> str:
 
 
 def format_duration(td: timedelta) -> str:
-    total = int(td.total_seconds())
-    h, rem = divmod(total, 3600)
-    m, s = divmod(rem, 60)
-    if h:
-        return f"{h}h {m}m"
-    if m:
-        return f"{m}m {s}s"
-    return f"{s}s"
+    td = timedelta(seconds=round(td.total_seconds()))
+    return str(td).removeprefix("0:")
+
+
+def format_separator(label: str, char: str = "-", width: int = W) -> str:
+    return label + char * max(0, width - len(label))
+
+
+def format_dir(path: str) -> str:
+    return path.replace(str(Path.home()), "~") if path else "-"
+
+
+def format_usd(v: float) -> str:
+    return f"${v:.4f}" if v else "-"
+
+
+def format_any(v: object) -> str:
+    if v is None:
+        return "?"
+    if isinstance(v, timedelta):
+        return format_duration(v)
+    if isinstance(v, int):
+        return f"{v:,}"
+    if isinstance(v, float):
+        return f"{v:.4f}"
+    s = str(v)
+    return s if s != "-" else ""
+
+
+def print_section(title: str) -> None:
+    print(f"\n\n=== {title} ===\n")
+
+
+def print_properties(props: list[tuple[str, str]]) -> None:
+    key_w = max(len(k) for k, _ in props) + 2
+    for key, val in props:
+        print(f"{key:<{key_w}}{val}")
+
+
+def print_table(rows: list[list[object]]) -> None:
+    ncols = len(rows[0])
+    row_strs = [[format_any(c) for c in r] for r in rows]
+    col_data = [[r[c] for r in rows[1:]] for c in range(ncols)]
+    aligns = [">" if data and all(_is_num(v) for v in data) else "<" for data in col_data]
+    widths = [max(len(s[c]) for s in row_strs) for c in range(ncols)]
+    total = sum(widths) + 2 * (ncols - 1)
+    if total > W:
+        widths[-1] = max(1, widths[-1] - (total - W))
+    for i, r in enumerate(row_strs):
+        cells = [f"{truncate(s, widths[c]):{aligns[c]}{widths[c]}}" for c, s in enumerate(r)]
+        print("  ".join(cells))
+        if i == 0:
+            print("-" * (sum(widths) + 2 * (ncols - 1)))
+
+
+def _is_num(v: object) -> bool:
+    if v is None:
+        return True
+    if isinstance(v, (int, float, timedelta)):
+        return True
+    return isinstance(v, str) and bool(v) and v[0] == "$"
 
 
 def load_meta(session_dir: Path) -> Optional[dict]:
@@ -238,15 +291,6 @@ def parse_session_detail(session_dir: Path) -> Optional[dict]:
     }
 
 
-def ruled(label: str, char: str = "-", width: int = W) -> str:
-    return label + char * max(0, width - len(label))
-
-
-def section(title: str) -> None:
-    print()
-    print(ruled(f"-- {title} "))
-
-
 def _fmt_args(name: str, args: dict) -> str:
     if not args:
         return ""
@@ -293,7 +337,7 @@ def render_transcript(transcript: list[dict], turn_filter: Optional[set] = None)
 
         elif kind == "assistant":
             print()
-            print(ruled("┄ assistant ", "┄", TW))
+            print(format_separator("┄ assistant ", "┄", TW))
             print(item["text"])
 
         elif kind == "tool_call":
@@ -301,7 +345,7 @@ def render_transcript(transcript: list[dict], turn_filter: Optional[set] = None)
             call_id = item["call_id"]
             pending_calls[call_id] = item
             print()
-            print(ruled(f"┄ {name} ", "┄", TW))
+            print(format_separator(f"┄ {name} ", "┄", TW))
             arg_str = _fmt_args(name, item["args"])
             if arg_str:
                 print(arg_str)
@@ -378,7 +422,6 @@ def load_all_summaries() -> list[dict]:
 
 def cmd_dirs(count: int) -> None:
     all_sessions = load_all_summaries()
-    home = str(Path.home())
     tally: Counter = Counter()
     latest: dict[str, str] = {}
     for s in all_sessions:
@@ -392,14 +435,9 @@ def cmd_dirs(count: int) -> None:
         print("No sessions found.")
         return
 
-    n_w = max(max(len(str(tally[d])) for d in dirs), len("Sessions"))
-    print(f"{'Sessions':>{n_w}}  {'Last session':<16}  Directory")
-    print("-" * (n_w + 2 + 16 + 2 + 60))
-    for d in dirs:
-        n = tally[d]
-        last = format_time(latest[d])
-        display = d.replace(home, "~")
-        print(f"{n:>{n_w}}  {last:<16}  {display}")
+    print_table([["Sessions", "Last session", "Directory"]] + [
+        [tally[d], format_time(latest[d]), format_dir(d)] for d in dirs
+    ])
 
 
 def cmd_list(count: int, dir_filter: Optional[str]) -> None:
@@ -419,22 +457,13 @@ def cmd_list(count: int, dir_filter: Optional[str]) -> None:
         print(msg)
         return
 
-    home = str(Path.home())
-    dir_display = (filter_path or str(Path.cwd())).replace(home, "~")
-    print(f"Directory: {dir_display}")
-    print()
+    dir_display = format_dir(filter_path or str(Path.cwd()))
+    print(f"Directory: {dir_display}\n")
 
-    id_w, time_w, turns_w = 8, 16, 5
-    fixed_w = id_w + 2 + time_w + 2 + turns_w + 2
-    prompt_w = max(20, W - fixed_w)
-    print(f"{'Session':>{id_w}}  {'Started':<{time_w}}  {'Turns':>{turns_w}}  First prompt")
-    print("-" * (fixed_w + prompt_w))
-
-    for s in sessions:
-        short_id = s["id"][:8]
-        started = format_time(s["start_time"])
-        prompt = truncate(s["first_prompt"], prompt_w)
-        print(f"{short_id:>{id_w}}  {started:<{time_w}}  {s['turn_count']:>{turns_w}}  {prompt}")
+    print_table([["Session", "Started", "Turns", "First prompt"]] + [
+        [s["id"][:8], format_time(s["start_time"]), s["turn_count"], s["first_prompt"]]
+        for s in sessions
+    ])
 
 
 def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = None) -> None:
@@ -448,65 +477,51 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
         print(f"Could not parse session: {session_id}", file=sys.stderr)
         sys.exit(1)
 
-    home = str(Path.home())
     cwd = d.get("cwd", "")
-    cwd_display = cwd.replace(home, "~") if cwd else "(unknown)"
 
-    print(f"Session:   {d['id']}")
-    print(f"Started:   {format_time(d['start_time'])}")
-    if d.get("end_time"):
-        print(f"Ended:     {format_time(d['end_time'])}")
-    print(f"Duration:  {format_duration(d['duration'])}")
-    print(f"Directory: {cwd_display}")
-    if d["git_branch"]:
-        print(f"Branch:    {d['git_branch']}")
-    if d.get("model"):
-        print(f"Model:     {d['model']}")
-    print()
-    print(f"Turns:        {d['user_turn_count']}")
-    total_tools = sum(d["tool_calls"].values())
-    print(f"Tool calls:   {total_tools}")
+    print_properties([
+        ("Session:", d["id"]),
+        ("Started:", format_time(d["start_time"])),
+        ("Ended:", format_time(d["end_time"]) if d.get("end_time") else "-"),
+        ("Duration:", format_duration(d["duration"])),
+        ("Directory:", format_dir(cwd)),
+        ("Branch:", d.get("git_branch") or "-"),
+        ("Model:", d.get("model") or "-"),
+        ("Turns:", str(d["user_turn_count"])),
+        ("Tool calls:", str(sum(d["tool_calls"].values()))),
+    ])
 
     stats = d.get("stats", {})
     inp = stats.get("session_prompt_tokens", 0)
     out = stats.get("session_completion_tokens", 0)
     cost = stats.get("session_cost")
     if inp or out:
-        section("Tokens")
-        header = f"{'':20}  {'Input':>10}  {'Output':>8}"
-        print(header)
-        print("-" * len(header))
-        print(f"{'Session':<20}  {inp:>10,}  {out:>8,}")
-        if cost is not None:
-            print(f"\nCost: ${cost:.4f}")
+        print_section("Tokens")
+        print_table([["Session", "Input", "Output", "Cost"]] + [
+            ["default", inp, out, format_usd(cost)]
+        ])
 
     tc = d["tool_calls"]
     if tc:
-        section("Tool usage")
-        name_w = max(len(n) for n in tc) + 2
-        print(f"{'Tool':<{name_w}}  {'Calls':>6}  {'Errors':>6}")
-        print("-" * (name_w + 16))
-        for name in sorted(tc, key=lambda n: -tc[n]):
-            errs = d["tool_errors"].get(name, 0)
-            err_str = str(errs) if errs else "-"
-            print(f"{name:<{name_w}}  {tc[name]:>6}  {err_str:>6}")
+        print_section("Tool usage")
+        print_table([["Tool", "Calls", "Errors"]] + [
+            [name, tc[name], d["tool_errors"].get(name, 0) or ""]
+            for name in sorted(tc, key=lambda n: -tc[n])
+        ])
 
     turns = d["turns"]
     if turns:
-        section(f"Turns ({len(turns)})")
-        num_w = len(str(len(turns)))
-        msg_w = max(20, W - num_w - 4)
-        print(f"{'#':>{num_w}}  Message")
-        print(f"{'-'*num_w}  {'-'*msg_w}")
-        for i, turn in enumerate(turns, 1):
-            msg = truncate(turn["text"], msg_w)
-            print(f"{i:>{num_w}}  {msg}")
+        print_section(f"Turns ({len(turns)})")
+        print_table([["#", "Message"]] + [
+            [i, t["text"]]
+            for i, t in enumerate(turns, 1)
+        ])
 
     if raw:
         if turn_filter:
-            section(f"Transcript  (turns {format_turn_range(turn_filter)})")
+            print_section(f"Transcript  (turns {format_turn_range(turn_filter)})")
         else:
-            section("Transcript")
+            print_section("Transcript")
         render_transcript(d["transcript"], turn_filter=turn_filter)
 
 

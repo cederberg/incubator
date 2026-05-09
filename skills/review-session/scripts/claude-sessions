@@ -66,14 +66,8 @@ def format_hhmm(ts: str) -> str:
 
 
 def format_duration(td: timedelta) -> str:
-    total = int(td.total_seconds())
-    h, rem = divmod(total, 3600)
-    m, s = divmod(rem, 60)
-    if h:
-        return f"{h}h {m}m"
-    if m:
-        return f"{m}m {s}s"
-    return f"{s}s"
+    td = timedelta(seconds=round(td.total_seconds()))
+    return str(td).removeprefix("0:")
 
 
 def encode_project_path(path: Path) -> str:
@@ -350,13 +344,16 @@ def parse_session_detail(path: Path) -> Optional[dict]:
 
 
 
-def ruled(label: str, char: str = "-", width: int = W) -> str:
+def format_separator(label: str, char: str = "-", width: int = W) -> str:
     return label + char * max(0, width - len(label))
 
 
-def section(title: str) -> None:
-    print()
-    print(ruled(f"-- {title} "))
+def print_section(title: str) -> None:
+    print(f"\n\n=== {title} ===\n")
+
+
+def format_dir(path: str) -> str:
+    return path.replace(str(Path.home()), "~") if path else "-"
 
 
 def _fmt_args(name: str, args: dict) -> str:
@@ -414,12 +411,12 @@ def render_transcript(transcript: list[dict], turn_filter: Optional[set] = None)
 
         elif kind == "thinking":
             print()
-            print(ruled("┄ thinking ", "┄", TW))
+            print(format_separator("┄ thinking ", "┄", TW))
             print(item["text"])
 
         elif kind == "assistant":
             print()
-            print(ruled("┄ assistant ", "┄", TW))
+            print(format_separator("┄ assistant ", "┄", TW))
             print(item["text"])
 
         elif kind == "tool_call":
@@ -433,12 +430,12 @@ def render_transcript(transcript: list[dict], turn_filter: Optional[set] = None)
                 agent_type = args.get("subagent_type", "?")
                 desc = args.get("description", "")
                 mode = "background" if args.get("run_in_background") else "sync"
-                print(ruled(f"┄ subagent: {desc} [{agent_type}/{mode}] ", "┄", TW))
+                print(format_separator(f"┄ subagent: {desc} [{agent_type}/{mode}] ", "┄", TW))
                 prompt = args.get("prompt", "")
                 if prompt:
                     print(prompt)
             else:
-                print(ruled(f"┄ {name} ", "┄", TW))
+                print(format_separator(f"┄ {name} ", "┄", TW))
                 arg_str = _fmt_args(name, args)
                 if arg_str:
                     print(arg_str)
@@ -540,7 +537,7 @@ def cmd_dirs(count: int) -> None:
     for d in dirs:
         n = tally[d]
         last = format_time(latest[d])
-        display = d.replace(home, "~")
+        display = format_dir(d)
         print(f"{n:>{n_w}}  {last:<16}  {display}")
 
 
@@ -564,21 +561,21 @@ def cmd_list(count: int, dir_filter: Optional[str]) -> None:
         return
 
     home = str(Path.home())
-    dir_display = (filter_path or str(Path.cwd())).replace(home, "~")
+    dir_display = format_dir(filter_path or str(Path.cwd()))
     print(f"Directory: {dir_display}")
     print()
 
     id_w, time_w, turns_w = 8, 16, 5
     fixed_w = id_w + 2 + time_w + 2 + turns_w + 2
     prompt_w = max(20, W - fixed_w)
-    print(f"{'Session':>{id_w}}  {'Started':<{time_w}}  {'Turns':>{turns_w}}  First prompt")
+    print(f"{'Session':<{id_w}}  {'Started':<{time_w}}  {'Turns':>{turns_w}}  First prompt")
     print("-" * (fixed_w + prompt_w))
 
     for s in sessions:
         short_id = s["id"][:8]
         started = format_time(s["start_time"])
         prompt = truncate(s["first_prompt"], prompt_w)
-        print(f"{short_id:>{id_w}}  {started:<{time_w}}  {s['turn_count']:>{turns_w}}  {prompt}")
+        print(f"{short_id:<{id_w}}  {started:<{time_w}}  {s['turn_count']:>{turns_w}}  {prompt}")
 
 
 def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = None) -> None:
@@ -594,7 +591,7 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
 
     home = str(Path.home())
     cwd = d.get("cwd", "")
-    cwd_display = cwd.replace(home, "~") if cwd else "(unknown)"
+    cwd_display = format_dir(cwd)
 
     print(f"Session:   {d['id']}")
     print(f"Started:   {format_time(d['start_time'])}")
@@ -616,7 +613,7 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
     # Tokens
     ubm = d["usage_by_model"]
     if ubm:
-        section("Tokens")
+        print_section("Tokens")
         col_w = max(len(m) for m in ubm) + 2
         header = f"{'Model':<{col_w}}  {'Input':>10}  {'Output':>8}  {'Cache Read':>12}  {'Cache Write':>12}"
         print(header)
@@ -631,7 +628,7 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
     # Tool usage
     tc = d["tool_calls"]
     if tc:
-        section("Tool usage")
+        print_section("Tool usage")
         name_w = max(len(n) for n in tc) + 2
         print(f"{'Tool':<{name_w}}  {'Calls':>6}  {'Errors':>6}")
         print("-" * (name_w + 16))
@@ -643,7 +640,7 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
     # Sub-agents
     agents = d["subagents"]
     if agents:
-        section(f"Sub-agents ({len(agents)})")
+        print_section(f"Sub-agents ({len(agents)})")
         num_w = len(str(len(agents)))
         desc_w = min(max((len(a["description"] or a["agent_type"]) for a in agents), default=4) + 1, 24)
         type_w = max(len(a["agent_type"]) for a in agents) + 4
@@ -665,7 +662,7 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
     # Turns
     turns = d["turns"]
     if turns:
-        section(f"Turns ({len(turns)})")
+        print_section(f"Turns ({len(turns)})")
         num_w = len(str(len(turns)))
         prefix_w = num_w + 2 + 5 + 2 + 8 + 2 + 1 + 2
         msg_w = max(20, W - prefix_w)
@@ -688,9 +685,9 @@ def cmd_detail(session_id: str, raw: bool = False, turn_filter: Optional[set] = 
     # Full transcript
     if raw:
         if turn_filter:
-            section(f"Transcript  (turns {format_turn_range(turn_filter)})")
+            print_section(f"Transcript  (turns {format_turn_range(turn_filter)})")
         else:
-            section("Transcript")
+            print_section("Transcript")
         render_transcript(d["transcript"], turn_filter=turn_filter)
 
 

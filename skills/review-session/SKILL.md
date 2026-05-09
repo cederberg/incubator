@@ -22,6 +22,7 @@ Select the command for your identity and use it as the `[TOOL]` reference.
 | Claude Code    | `python <skill-base-dir>/scripts/claude-sessions`  |
 | GitHub Copilot | `python <skill-base-dir>/scripts/copilot-sessions` |
 | Mistral Vibe   | `python <skill-base-dir>/scripts/vibe-sessions`    |
+| OpenCode       | `python <skill-base-dir>/scripts/opencode-sessions`|
 
 Use the full path to the script. Key usage:
 
@@ -94,7 +95,7 @@ Write the report directly in your response to the user.
 ```markdown
 # Session Review
 
-**Session:** [id (first 8 chars)]
+**Session:** [id (first 12 chars)]
 **Date:** [date]
 **Duration:** [duration]
 **Model:** [model]
