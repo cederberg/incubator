@@ -18,6 +18,10 @@ additional user instructions to the sub-agent. Instruct it to review:
 - Usefulness
 
 Assess whether each issue in the sub-agent response is genuine or mistaken.
+Present each finding in a numbered list. Quote the sub-agent text verbatim,
+then write your assessment inline:
 
-Present a summary to the user. Group findings by theme. Note whether you agree
-or not. Suggest action points.
+    1. {{sub-agent finding}}
+       Assessment: Ignore/Fix/Discuss {{rationale}}
+
+End by asking the user which issues to address or discuss further.

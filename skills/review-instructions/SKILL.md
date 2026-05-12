@@ -15,5 +15,11 @@ Launch a sub-agent using the best available model. Instruct it to read
 `references/reviewer.md` and review the provided file(s), including any
 additional user instructions.
 
-Present the findings verbatim. Assess whether each problem is genuine or
-mistaken and embed your commentary. Ask the user which problems to fix.
+Assess whether each issue in the sub-agent response is genuine or mistaken.
+Present each finding in a numbered list. Quote the sub-agent text verbatim,
+then write your assessment inline:
+
+    1. {{sub-agent finding}}
+       Assessment: Ignore/Fix/Discuss {{rationale}}
+
+End by asking the user which issues to address or discuss further.
