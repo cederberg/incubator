@@ -2,6 +2,7 @@
 
 ## File Reference
 - [README.md] — tools, skills, usage examples
+- [skills/*] - source skill files (edit only these originals)
 
 ## General
 - Radical brevity — in code, rules, and responses
@@ -11,7 +12,7 @@
 - Explore feature additions with the user; implement only once intent is mutually clear
 - Verify examples against source or command output
 
-## Skills
+## Skill Instructions
 - Use `frontmatter <file>...` to read skill file front-matter
 - Set `disable-model-invocation: true` to prevent automatic triggering
 - Codify rules when recurring mistakes or unnecessary searches appear
