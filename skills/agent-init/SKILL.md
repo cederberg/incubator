@@ -26,7 +26,7 @@ match found:
 | `AGENTS.md` | Preferred — agent-neutral |
 | `CLAUDE.md` | Claude Code |
 | `GEMINI.md` | Gemini CLI |
-| <other-file> | [Your agent harness default] |
+| Other file | Your agent harness default |
 
 If the file exists, read it first, then overwrite; otherwise create `AGENTS.md`.
 Condense verbose entries; reorganize into Step 3 structure; discard facts the
@@ -65,18 +65,18 @@ Read in order.
 
 Present findings. Prioritize CI/CD commands as authoritative. Use wrapper
 scripts (`./mvnw`, `./gradlew`) over direct tool invocation. Use the
-toolchain's clean command, or fall back to `rm -rf [build output dirs]`.
+toolchain's clean command, or fall back to `rm -rf <build output dirs>`.
 
 > The project analysis results:
-> - Style: [terse / verbose]
-> - Error handling: [rigorous / relaxed]
-> - Dependencies: [minimal / liberal]
-> - Inferred constraints: [list]
-> - Toolchain: [name]
->   - `clean`: [cmd]
->   - `build`: [cmd]
->   - `test`: [cmd]
->   - `outdated`: [cmd or ?]
+> - Style: {{terse / verbose}}
+> - Error handling: {{rigorous / relaxed}}
+> - Dependencies: {{minimal / liberal}}
+> - Inferred constraints: {{list}}
+> - Toolchain: {{name}}
+>   - `clean`: {{cmd}}
+>   - `build`: {{cmd}}
+>   - `test`: {{cmd}}
+>   - `outdated`: {{cmd or ?}}
 >
 > Write any corrections below, or press Enter to accept.
 
