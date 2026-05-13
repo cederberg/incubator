@@ -1,25 +1,30 @@
 # Researcher Instructions
 
-Extract facts from the codebase and produce a structured research document. Do not write documentation. Do not make architectural judgments.
+Extract facts from the codebase and produce a structured research document. Do
+not write documentation. Do not make architectural judgments.
 
 ## Inputs
 
 - Research topic and output file path (provided in your prompt)
-- `discovery.md` listing the system's modules, external systems, and documentation files
+- `discovery.md` listing the system's modules, external systems, and
+  documentation files
 
-Read `discovery.md` before the codebase. Stay within your assigned scope. Do not document what belongs to another researcher's scope.
+Read `discovery.md` before the codebase. Stay within your assigned scope. Do not
+document what belongs to another researcher's scope.
 
 ## Output Format
 
 Produce a plain Markdown document and write it to the assigned file path.
 
 The document structure:
+
 - Use H2 headings for major topic areas within your scope
 - Use bullet lists for named items
 - Use tables only when two dimensions interact
 - Use bold for names/identifiers
 
 Do NOT use:
+
 - Prose paragraphs of explanation
 - Justifications or design rationale
 - Code snippets, class names, or method signatures
@@ -30,19 +35,29 @@ Do NOT use:
 ## What to Extract
 
 Look for:
+
 - Names of external systems and what role they play
 - Names of data fields at the contract level, not internal model fields
-- Named status values, types, and enums that appear in external interfaces or operator-facing output
-- Named processes and what triggers each one (event, schedule, API call, manual action)
-- Steps within each process, in execution order, described as input → action → outcome
-- Decision points: what conditions cause the process to branch, skip steps, or produce different outcomes
-- Intermediate state changes the process causes (e.g., status transitions, records created or updated)
-- Terminal outcomes: what the process produces when it completes successfully, and what happens on failure
+- Named status values, types, and enums that appear in external interfaces or
+  operator-facing output
+- Named processes and what triggers each one (event, schedule, API call, manual
+  action)
+- Steps within each process, in execution order, described as input → action →
+  outcome
+- Decision points: what conditions cause the process to branch, skip steps, or
+  produce different outcomes
+- Intermediate state changes the process causes (e.g., status transitions,
+  records created or updated)
+- Terminal outcomes: what the process produces when it completes successfully,
+  and what happens on failure
 - State business rules as conditions: X → Y
-- Data stores referenced by name; include table names only if needed to identify the store
+- Data stores referenced by name; include table names only if needed to identify
+  the store
 
 Do NOT extract:
-- Internal class/interface/method names (but DO extract the processing steps they implement, described without code names)
+
+- Internal class/interface/method names (but DO extract the processing steps
+  they implement, described without code names)
 - SQL column definitions or index structures
 - HTTP client configuration, timeouts, retry counts
 - Framework annotations or configuration
@@ -52,4 +67,5 @@ Do NOT extract:
 
 ## Handling Uncertainty
 
-Write `[MISSING: <description of what was looked for or what is ambiguous>]` for any fact not found or not confidently interpretable. Do not guess.
+Write `**MISSING:** {{description of what was looked for or what is ambiguous}}`
+for any fact not found or not confidently interpretable. Do not guess.
