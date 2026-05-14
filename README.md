@@ -49,6 +49,13 @@ A project for experiments, tools and research.
   npx skills@latest add -g cederberg/incubator/skills/investigate
   ```
 
+- **bump-deps** — Update each outdated dependency in a separate, minimal
+  commit.
+
+  ```
+  npx skills@latest add -g cederberg/incubator/skills/bump-deps
+  ```
+
 - **refactor** — Multi-pass convergent refactoring of a specific piece of
   code. Use when code works but feels tangled, over-complicated, or like it
   hasn't found its natural form yet. Not for applying known patterns or fixing
