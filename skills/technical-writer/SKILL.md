@@ -4,11 +4,12 @@ description: >
   Write or review technical documents, including READMEs, system overviews,
   feature docs, and skill files.
 disable-model-invocation: true
-argument-hint: "[readme|system-overview|skill-writer|system-feature] [--accuracy|--feedback|--structure]"
+argument-hint:
+  "[document type|existing document] [--validity|--revision|--clarity]"
 allowed-tools: Agent, Read, Write, Bash, Glob
 ---
 
-## Activation
+## Mode Selection
 
 | Mode                | When to use                                                     |
 | ------------------- | --------------------------------------------------------------- |
@@ -26,29 +27,6 @@ If the user specifies a mode, use it. Otherwise, infer from the request:
 
 If no other mode matches, use `system-feature` as the default.
 
-### Review Variant
-
-When the user provides an existing document to review, ask (or accept as an
-explicit flag) which variant to run:
-
-- **Accuracy** — run phases 1, 2, 4, and 5 seeded with the existing document as
-  the draft input
-- **Feedback** — skip to writing, seeded with the existing document and
-  user-supplied feedback
-- **Structure** — run the reviewer directly on the existing document without
-  consulting the codebase
-
-The review variant changes how the pipeline is entered, not the mode.
-
-| Phase        | Write | Accuracy | Feedback | Structure |
-| ------------ | ----- | -------- | -------- | --------- |
-| 1: Discovery | Run   | Run      | Skip     | Skip      |
-| 2: Research  | Run   | Run      | Skip     | Skip      |
-| 3: Write     | Run   | Run      | Run      | Skip      |
-| 4: Review    | Run   | Run      | Run      | Run       |
-
----
-
 ## Variable Setup
 
 Set these path variables once and use throughout:
@@ -60,6 +38,34 @@ WORK_DIR={{session working directory}}
 ```
 
 Pass `$WORK_DIR` and `$MODE_DIR` to all sub-agents.
+
+Read this skill first, then read `$MODE_DIR/instructions.md` and apply any
+mode-specific overrides before running the workflow.
+
+### Review Variant
+
+When the user provides an existing document to review, ask (or accept as an
+explicit flag) which variant to run.
+
+Use these as default variants:
+
+- **Validity** — run Discovery and Research, then review the existing document
+  directly without a writer pass
+- **Revision** — edit or rewrite an existing document from user feedback, then
+  run review
+- **Clarity** — run reviewer directly on existing document without codebase
+  research
+
+Mode instructions may override variant names and phase entry behavior.
+
+| Phase        | Write | Validity | Revision | Clarity |
+| ------------ | ----- | -------- | -------- | ------- |
+| 1: Discovery | Run   | Run      | Skip     | Skip    |
+| 2: Research  | Run   | Run      | Skip     | Skip    |
+| 3: Write     | Run   | Skip     | Run      | Skip    |
+| 4: Review    | Run   | Run      | Run      | Run     |
+
+---
 
 ## Your Role
 
@@ -79,16 +85,14 @@ Pass all other files — role files, rule files, templates, examples, checklists
 research outputs, and drafts — as file paths to sub-agents. Do not open those
 files.
 
-## Workflow: Five Phases, Multiple Sub-Agents
+## Workflow: Four Phases, Multiple Sub-Agents
 
 Use a separate, isolated **general-purpose** sub-agent for each phase. Do not
 use Explore agents — all phases write output files to `$WORK_DIR` and require
 Write access.
 
-Read `$MODE_DIR/instructions.md` before starting the workflow. If it contains a
-Pre-flight section, execute those steps first. If `instructions.md` provides
-mode-specific overrides for any phase, follow those instead of the defaults
-below.
+If `$MODE_DIR/instructions.md` defines phase behavior (for example, Pre-flight
+steps or mode-specific discovery/research flow), follow it.
 
 ---
 
@@ -167,7 +171,7 @@ the same criteria it used to produce it.
 
 ### Phase 4: Review
 
-Launch a **reviewer sub-agent** labelled **"review document"** with:
+Launch a **reviewer sub-agent** with:
 
 - `references/roles/reviewer.md`
 - `references/rules/style-guide.md`
@@ -178,9 +182,12 @@ Launch a **reviewer sub-agent** labelled **"review document"** with:
 - The document to review: `$WORK_DIR/draft.md` or the provided document path
 - The output file path (`$WORK_DIR/review.md`)
 
-When reviewing instructional content (e.g. a skill file), label the sub-agent
-**"review instructions"** instead. If the skill references role, rule, or mode
-files as sub-agent inputs, pass those files to the reviewer.
+If reviewing instructional content (e.g. a skill file) and the document
+references role, rule, or mode files as sub-agent inputs, pass those files to
+the reviewer.
+
+For a **clarity review variant**, instruct the reviewer to include a
+**"suggested rewrites"** section.
 
 Read `$WORK_DIR/review.md`. If it finds issues, launch a new **writer
 sub-agent** with the draft, `$WORK_DIR/review.md`, and the same file paths as
@@ -223,9 +230,9 @@ Pass these paths to sub-agents as listed below. Do not read them yourself.
 
 ### Mode-specific (under `references/modes/{{mode}}/`)
 
-| File              | Required | Consumer          | Purpose                                                       |
-| ----------------- | -------- | ----------------- | ------------------------------------------------------------- |
-| `instructions.md` | Yes      | Workflow manager  | Pre-flight steps, phase overrides, and researcher assignments |
-| `template.md`     | Yes      | Writer            | Section order and per-section content guidance                |
-| `examples.md`     | No       | Writer + Reviewer | Target voice; annotated correct examples                      |
-| `checklist.md`    | No       | Reviewer          | Structural invariants to verify                               |
+| File              | Required | Consumer          | Purpose                                        |
+| ----------------- | -------- | ----------------- | ---------------------------------------------- |
+| `instructions.md` | Yes      | Workflow manager  | Mode-specific workflow configuration           |
+| `template.md`     | Yes      | Writer            | Section order and per-section content guidance |
+| `examples.md`     | No       | Writer + Reviewer | Target voice; annotated correct examples       |
+| `checklist.md`    | No       | Reviewer          | Review focus items to check                    |

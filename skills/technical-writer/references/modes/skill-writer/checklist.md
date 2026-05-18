@@ -50,6 +50,12 @@
 - [ ] File paths that vary by mode or invocation are named as variables, not
       hardcoded strings
 
+## Instruction Clarity
+
+- [ ] Variables, terms, and concepts are defined before use
+- [ ] Duplicate guidance is removed; precedence is stated once
+- [ ] Headings and section order match execution order
+
 ## Quality
 
 - [ ] SKILL.md body is under 500 lines; simple skills (single-agent, linear
