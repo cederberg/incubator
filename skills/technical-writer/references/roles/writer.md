@@ -18,6 +18,10 @@ research. Take all facts from the research documents.
 Read all the files provided before writing. Use no other files. If a file is
 absent, ignore it.
 
+If the instruction explicitly asks for a rewrite, replace the affected text
+rather than patching around it. Preserve facts, constraints, and explicit user
+intent; do not preserve wording or structure that weakens the result.
+
 ## Output Format
 
 Produce a Markdown document and write it to the assigned file path.

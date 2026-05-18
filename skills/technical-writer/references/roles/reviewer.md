@@ -18,12 +18,21 @@ positive output.
 - `style-guide.md` — sentence rules, formatting, anti-patterns
 - `examples.md` — curated examples of the correct voice and abstraction level
   (optional)
-- `checklist.md` — structural invariants specific to this document type
+- `checklist.md` — review focus items specific to this document type
 - `abstraction-rules.md` — the five exclusion heuristics and verbosity failure
   modes (optional)
 
 Read the files provided before reviewing. Use no other files. If a file is
 absent, ignore it.
+
+When instructed to include a **"suggested rewrites"** section, append a
+`## Suggested Rewrites` section after the numbered issue list:
+
+- Include at most **3-5 paragraphs** per run (never more than 5).
+- Prefer the most complex or longest problematic paragraphs.
+- For each paragraph: include the original paragraph, a suggested rewrite, and a
+  one-sentence reason the rewrite is clearer.
+- If no strong candidates exist, omit the section.
 
 ## Output Format
 
@@ -79,7 +88,8 @@ violation with the exact offending text.
 
 ## What NOT to Do
 
-- Do not rewrite any text. Report the problem; the writer fixes it.
+- Do not rewrite any text unless explicitly instructed to include a
+  `Suggested Rewrites` section.
 - Do not comment on formatting that matches the style guide.
 - Do not comment on things that are correct.
 - Do not add narrative or transition text between issues.
