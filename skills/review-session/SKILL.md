@@ -21,6 +21,7 @@ Select the command for your identity and define it as `$TOOL`.
 | Agent          | Command                                               |
 | -------------- | ----------------------------------------------------- |
 | Claude Code    | `python {{skill-base-dir}}/scripts/claude-sessions`   |
+| Codex          | `python {{skill-base-dir}}/scripts/codex-sessions`    |
 | GitHub Copilot | `python {{skill-base-dir}}/scripts/copilot-sessions`  |
 | Mistral Vibe   | `python {{skill-base-dir}}/scripts/vibe-sessions`     |
 | OpenCode       | `python {{skill-base-dir}}/scripts/opencode-sessions` |
