@@ -2,14 +2,18 @@
 
 A project for experiments, tools and research.
 
-
 ## Tools
 
 `git-uptodate` and `frontmatter` have moved to their own repository:
 **[github.com/baraverkstad/tools](https://github.com/baraverkstad/tools)**
 
-
 ## Agent Skills
+
+Install all skills:
+
+```
+npx skills@latest add -g cederberg/incubator/skills --skill '*'
+```
 
 - **agent-init** — Analyzes a project and produces `AGENTS.md` and `Makefile`.
   Works for new projects and existing ones with a legacy or missing agent
@@ -20,8 +24,8 @@ A project for experiments, tools and research.
   ```
 
 - **brainstorm** — Open-ended idea generation without filtering for validity.
-  Use to explore a design space, when stuck needing fresh angles, or when
-  naming something.
+  Use to explore a design space, when stuck needing fresh angles, or when naming
+  something.
 
   ```
   npx skills@latest add -g cederberg/incubator/skills/brainstorm
@@ -49,17 +53,16 @@ A project for experiments, tools and research.
   npx skills@latest add -g cederberg/incubator/skills/investigate
   ```
 
-- **bump-deps** — Update each outdated dependency in a separate, minimal
-  commit.
+- **bump-deps** — Update each outdated dependency in a separate, minimal commit.
 
   ```
   npx skills@latest add -g cederberg/incubator/skills/bump-deps
   ```
 
-- **refactor** — Multi-pass convergent refactoring of a specific piece of
-  code. Use when code works but feels tangled, over-complicated, or like it
-  hasn't found its natural form yet. Not for applying known patterns or fixing
-  bugs — for discovering what the code wants to become through repeated small
+- **refactor** — Multi-pass convergent refactoring of a specific piece of code.
+  Use when code works but feels tangled, over-complicated, or like it hasn't
+  found its natural form yet. Not for applying known patterns or fixing bugs —
+  for discovering what the code wants to become through repeated small
   transformations.
 
   ```
@@ -80,8 +83,8 @@ A project for experiments, tools and research.
   npx skills@latest add -g cederberg/incubator/skills/technical-writer
   ```
 
-- **review-doc** — Review a document for internal consistency, brevity,
-  clarity, and usefulness.
+- **review-doc** — Review a document for internal consistency, brevity, clarity,
+  and usefulness.
 
   ```
   npx skills@latest add -g cederberg/incubator/skills/review-doc
@@ -90,17 +93,16 @@ A project for experiments, tools and research.
 - **review-instructions** — Review a prompt, skill, or other instructions for
   problems. Checks language (brevity, clarity, terminology, tone, voice),
   structure (consistency, flow, format, redundancy), and precision (ambiguity,
-  assumptions, coverage, omissions). Sub-agent isolates review from
-  conversation context.
+  assumptions, coverage, omissions). Sub-agent isolates review from conversation
+  context.
 
   ```
   npx skills@latest add -g cederberg/incubator/skills/review-instructions
   ```
 
-- **review-session** — Analyze agent session logs for knowledge, guideline,
-  and capability gaps. Produces a findings report with remedies.
+- **review-session** — Analyze agent session logs for knowledge, guideline, and
+  capability gaps. Produces a findings report with remedies.
 
   ```
   npx skills@latest add -g cederberg/incubator/skills/review-session
   ```
-
