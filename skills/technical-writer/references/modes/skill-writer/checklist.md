@@ -1,4 +1,4 @@
-# Structural Checklist: Skill File
+# Review Checklist: Skill File
 
 ## Structure
 

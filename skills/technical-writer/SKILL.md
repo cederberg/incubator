@@ -1,11 +1,9 @@
 ---
 name: technical-writer
 description: >
-  Write or review technical documents, including READMEs, system overviews,
-  feature docs, and skill files.
+  Write or review technical documents, including READMEs, system overviews, and
+  skill files.
 disable-model-invocation: true
-argument-hint:
-  "[document type|existing document] [--validity|--revision|--clarity]"
 allowed-tools: Agent, Read, Write, Bash, Glob
 ---
 
@@ -16,16 +14,15 @@ allowed-tools: Agent, Read, Write, Bash, Glob
 | **readme**          | Write or rewrite a project-level README                         |
 | **system-overview** | Document an internal system for a technically literate audience |
 | **skill-writer**    | Write a new skill file or review and polish an existing one     |
-| **system-feature**  | Document a specific process, subsystem, or feature in detail    |
+| **other**           | Write any other technical document                              |
 
 If the user specifies a mode, use it. Otherwise, infer from the request:
 
 - "write a README" / "document this project" / "generate a README" → `readme`
 - "write a system overview" / "document this system" → `system-overview`
 - "write a skill" / "create a skill" / "new skill" → `skill-writer`
-- "document how X works" / "write up the X feature" → `system-feature`
 
-If no other mode matches, use `system-feature` as the default.
+If no other mode matches, use `other` as the default.
 
 ## Variable Setup
 
@@ -44,10 +41,8 @@ mode-specific overrides before running the workflow.
 
 ### Review Variant
 
-When the user provides an existing document to review, ask (or accept as an
-explicit flag) which variant to run.
-
-Use these as default variants:
+When the user provides an existing document to review, ask which variant to run
+unless context makes the intended variant clear. Use these as default variants:
 
 - **Validity** — run Discovery and Research, then review the existing document
   directly without a writer pass
@@ -155,9 +150,9 @@ Launch a **writer sub-agent** with:
 
 - `references/roles/writer.md`
 - `references/rules/style-guide.md`
-- `references/rules/abstraction-rules.md` (if in `system-overview` or
-  `system-feature` mode)
-- `$MODE_DIR/template.md`
+- `references/rules/abstraction-rules.md` (if in `system-overview` mode, or in
+  `other` mode unless the document needs implementation-level detail)
+- `$MODE_DIR/template.md` (if it exists)
 - `$MODE_DIR/examples.md` (if it exists)
 - All Phase 2 output files from `$WORK_DIR/`
 - The output file path (`$WORK_DIR/draft.md`)
@@ -175,8 +170,8 @@ Launch a **reviewer sub-agent** with:
 
 - `references/roles/reviewer.md`
 - `references/rules/style-guide.md`
-- `references/rules/abstraction-rules.md` (if in `system-overview` or
-  `system-feature` mode)
+- `references/rules/abstraction-rules.md` (if in `system-overview` mode, or in
+  `other` mode unless the document needs implementation-level detail)
 - `$MODE_DIR/checklist.md` (if it exists)
 - `$MODE_DIR/examples.md` (if it exists)
 - The document to review: `$WORK_DIR/draft.md` or the provided document path
@@ -204,7 +199,7 @@ Copy `$WORK_DIR/draft.md` to the appropriate output path:
 - **readme** — `README.md` in the project root
 - **skill-writer** — `SKILL.md` in a new skill directory; ask the user for the
   directory name if not provided
-- **system-feature** — path specified by user; ask if not provided
+- **other** — path specified by user; ask if not provided
 
 Use the path requested by the user if they specified one.
 
@@ -233,6 +228,6 @@ Pass these paths to sub-agents as listed below. Do not read them yourself.
 | File              | Required | Consumer          | Purpose                                        |
 | ----------------- | -------- | ----------------- | ---------------------------------------------- |
 | `instructions.md` | Yes      | Workflow manager  | Mode-specific workflow configuration           |
-| `template.md`     | Yes      | Writer            | Section order and per-section content guidance |
+| `template.md`     | No       | Writer            | Section order and per-section content guidance |
 | `examples.md`     | No       | Writer + Reviewer | Target voice; annotated correct examples       |
 | `checklist.md`    | No       | Reviewer          | Review focus items to check                    |

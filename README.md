@@ -77,7 +77,7 @@ npx skills@latest add -g cederberg/incubator/skills --skill '*'
   ```
 
 - **technical-writer** — Write or review technical documents, including READMEs,
-  system overviews, feature docs, and skill files.
+  system overviews, and skill files.
 
   ```
   npx skills@latest add -g cederberg/incubator/skills/technical-writer

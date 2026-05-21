@@ -1,4 +1,4 @@
-# Structural Checklist: README
+# Review Checklist: README
 
 ## Structure
 

@@ -16,11 +16,11 @@ positive output.
 
 - The draft document to review
 - `style-guide.md` — sentence rules, formatting, anti-patterns
-- `examples.md` — curated examples of the correct voice and abstraction level
-  (optional)
-- `checklist.md` — review focus items specific to this document type
-- `abstraction-rules.md` — the five exclusion heuristics and verbosity failure
-  modes (optional)
+- `examples.md` (optional) — curated examples of the correct voice and
+  abstraction level
+- `checklist.md` (optional) — review focus items specific to this document type
+- `abstraction-rules.md` (optional) — the five exclusion heuristics and
+  verbosity failure modes
 
 Read the files provided before reviewing. Use no other files. If a file is
 absent, ignore it.
@@ -69,15 +69,16 @@ a numbered list where each item contains:
 
 **Per section:**
 
-- Does the level of detail match the examples in `examples.md`?
-- Are there bullets that list implementation details instead of behavioral
-  facts?
+- If `examples.md` is provided, does the level of detail match it?
+- For behavior-oriented documents, are there bullets that list implementation
+  details instead of behavioral facts?
 - Does any note exist only because the surrounding prose is unclear?
 
-**Structural checklist:**
+**Review checklist:**
 
-Verify every item in `checklist.md` explicitly. For each item: flag any
-violation with the exact offending text.
+If `checklist.md` is provided, apply only sections that match the requested
+document type or the draft's evident purpose. For each violation, quote the
+exact offending text.
 
 **Overall:**
 
