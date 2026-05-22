@@ -70,11 +70,12 @@ Choose one voice for each document. Avoid first person (never "we", "our", or
   when each column carries independent meaning.
 - Do not use tables for lists with two columns.
 
-### ASCII Diagrams
+### Diagrams
 
-- Use ASCII diagrams for system topology and state machines.
-- Do not use ASCII diagrams for data structures, call sequences, or class
-  hierarchies.
+- Use diagrams when they clarify a complex or important relationship.
+- Do not use diagrams for decoration or simple lists.
+- Use the format requested by the user or document-specific instructions.
+- Diagram labels must match document terminology.
 
 ### Lists
 

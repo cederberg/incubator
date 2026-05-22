@@ -9,17 +9,17 @@ allowed-tools: Agent, Read, Write, Bash, Glob
 
 ## Mode Selection
 
-| Mode                | When to use                                                     |
-| ------------------- | --------------------------------------------------------------- |
-| **readme**          | Write or rewrite a project-level README                         |
-| **system-overview** | Document an internal system for a technically literate audience |
-| **skill-writer**    | Write a new skill file or review and polish an existing one     |
-| **other**           | Write any other technical document                              |
+| Mode             | When to use                                                 |
+| ---------------- | ----------------------------------------------------------- |
+| **readme**       | Write or rewrite a project-level README                     |
+| **overview**     | Write a technical overview of a system, subsystem, or topic |
+| **skill-writer** | Write a new skill file or review and polish an existing one |
+| **other**        | Write any other technical document                          |
 
 If the user specifies a mode, use it. Otherwise, infer from the request:
 
 - "write a README" / "document this project" / "generate a README" → `readme`
-- "write a system overview" / "document this system" → `system-overview`
+- "write a technical overview" / "document this system" → `overview`
 - "write a skill" / "create a skill" / "new skill" → `skill-writer`
 
 If no other mode matches, use `other` as the default.
@@ -150,8 +150,8 @@ Launch a **writer sub-agent** with:
 
 - `references/roles/writer.md`
 - `references/rules/style-guide.md`
-- `references/rules/abstraction-rules.md` (if in `system-overview` mode, or in
-  `other` mode unless the document needs implementation-level detail)
+- `references/rules/abstraction-rules.md` (if in `overview` mode, or in `other`
+  mode unless the document needs implementation-level detail)
 - `$MODE_DIR/template.md` (if it exists)
 - `$MODE_DIR/examples.md` (if it exists)
 - All Phase 2 output files from `$WORK_DIR/`
@@ -170,8 +170,8 @@ Launch a **reviewer sub-agent** with:
 
 - `references/roles/reviewer.md`
 - `references/rules/style-guide.md`
-- `references/rules/abstraction-rules.md` (if in `system-overview` mode, or in
-  `other` mode unless the document needs implementation-level detail)
+- `references/rules/abstraction-rules.md` (if in `overview` mode, or in `other`
+  mode unless the document needs implementation-level detail)
 - `$MODE_DIR/checklist.md` (if it exists)
 - `$MODE_DIR/examples.md` (if it exists)
 - The document to review: `$WORK_DIR/draft.md` or the provided document path
@@ -195,7 +195,7 @@ elsewhere in the document, and overwrite `$WORK_DIR/draft.md`.
 
 Copy `$WORK_DIR/draft.md` to the appropriate output path:
 
-- **system-overview** — `OVERVIEW.md` in the project root
+- **overview** — `OVERVIEW.md` in the project root
 - **readme** — `README.md` in the project root
 - **skill-writer** — `SKILL.md` in a new skill directory; ask the user for the
   directory name if not provided

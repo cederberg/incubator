@@ -1,8 +1,5 @@
 # Mode Instructions: Other
 
-Use this mode for technical documents that do not match README, system overview,
-or skill-writing workflows.
-
 This mode has no `template.md` or `examples.md`. The writer infers structure
 from the requested document type, research output, and its knowledge of common
 technical-document forms.

@@ -1,48 +1,45 @@
 # Curated Examples
 
-These four excerpts are taken verbatim from a real system overview. Each
-illustrates something that prose rules alone cannot fully convey. Study the
-voice, the sentence rhythm, and — most importantly — what is _absent_.
+These three excerpts come from a real system overview. They illustrate overview
+writing patterns that prose rules alone cannot fully convey. Study the voice,
+the sentence rhythm, and — most importantly — what is _absent_.
 
 ---
 
-## Example 1: A Processing Rule Without Implementation Detail
+## Example 1: A Short, Complete Section With No Over-Explanation
 
-**Source:** "Duplicate Event Filtering" section
+**Source:** "Returning to Home Network" section
 
-> Both Network Attach and Data Traffic events may be filtered out early due to
-> event duplication. Events are ignored if the previous event in the same
-> category fulfills these criteria:
+> When a subscriber returns to their home country (i.e. no longer roaming), the
+> following occurs:
 >
-> - Identical country code (after MCC + MNC mapping)
-> - Processed less than 24 hours ago
-> - Status is COMPLETED (or not FAILED for unverified events)
+> - The subscriber location record is deleted
+> - All per-message-type timestamps are cleared
+> - The next roaming event will trigger a fresh set of messages
 >
-> The typical source of duplicate events are Network Attach events being sent
-> once or twice for 3G nodes (SGSN and VLR) and once for 4G nodes (MME). As 3G
-> attach events are sent without waiting for a response, these are considered
-> unverified (and more likely to be ignored). On a failed attach, the device is
-> also likely to retry later with the same or another operator.
+> Duplicate "return home" events within the same session are ignored.
 
 **What this shows:**
 
-The criteria list states the _conditions_ without explaining how they are
-evaluated. There is no mention of a database query, a timestamp comparison
-method, or an EventStatus enum. The second paragraph gives just enough context
-(why 3G events are special) to make the rule interpretable — without explaining
-the code that implements it.
+Three behavioral facts as bullets. No explanation of how the deletion works,
+which table is affected beyond what's already established, or what
+"per-message-type timestamps" look like in storage. The edge case (duplicate
+return-home events) is handled in a single sentence at the end — not a separate
+section, not a note, just a sentence.
 
 **What an agent typically writes instead:**
 
-> The system queries the `roaming_notification` table for the most recent event
-> with the same MSISDN and country code. If an event is found with
-> `processed_at` within the last 86400 seconds and status `COMPLETED` (or not
-> `FAILED` for unverified events), the new event is marked `IGNORED`. The
-> EventDeduplicationService handles this check before persisting the new event.
+> When the system detects a return-home event (data traffic event with the home
+> MCC), it calls `SubscriberLocationService.clearLocation(msisdn)` which deletes
+> the `subscriber_location` record and resets the `welcome_sent_at`,
+> `data_sent_at`, `info_sent_at`, and `marketing_sent_at` columns to null. The
+> `subscriber_location_history` record is kept for future revisit suppression.
+> If a duplicate return-home event arrives, the system detects that no
+> `subscriber_location` record exists and silently ignores it.
 
-The agent version names the table, the column, the time constant, and the
-service class. None of this helps the reader understand the business rule — it
-only documents the implementation.
+The agent version names the service, the method, four column names, and explains
+implementation details of the history table behavior. The correct version states
+the observable outcome only.
 
 ---
 
@@ -124,43 +121,6 @@ in context.
 The agent version explains the algorithm narrative ("multi-criteria sorting",
 "ranked", "still remain tied") and names an enum class. The list format in the
 correct version is more readable and more precise.
-
----
-
-## Example 4: A Short, Complete Section With No Over-Explanation
-
-**Source:** "Returning to Home Network" section
-
-> When a subscriber returns to their home country (i.e. no longer roaming), the
-> following occurs:
->
-> - The subscriber location record is deleted
-> - All per-message-type timestamps are cleared
-> - The next roaming event will trigger a fresh set of messages
->
-> Duplicate "return home" events within the same session are ignored.
-
-**What this shows:**
-
-Three behavioral facts as bullets. No explanation of how the deletion works,
-which table is affected beyond what's already established, or what
-"per-message-type timestamps" look like in storage. The edge case (duplicate
-return-home events) is handled in a single sentence at the end — not a separate
-section, not a note, just a sentence.
-
-**What an agent typically writes instead:**
-
-> When the system detects a return-home event (data traffic event with the home
-> MCC), it calls `SubscriberLocationService.clearLocation(msisdn)` which deletes
-> the `subscriber_location` record and resets the `welcome_sent_at`,
-> `data_sent_at`, `info_sent_at`, and `marketing_sent_at` columns to null. The
-> `subscriber_location_history` record is kept for future revisit suppression.
-> If a duplicate return-home event arrives, the system detects that no
-> `subscriber_location` record exists and silently ignores it.
-
-The agent version names the service, the method, four column names, and explains
-implementation details of the history table behavior. The correct version states
-the observable outcome only.
 
 ---
 

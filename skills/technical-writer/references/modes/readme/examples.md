@@ -172,6 +172,6 @@ In every example, the correct version:
 3. Trusts the reader to follow links for details
 4. Uses one sentence where an agent uses one paragraph
 
-The README voice is more telegraphic than system-overview. The reader is not
-building mental models — they are deciding whether to install and trying to get
-started. Every sentence that doesn't help them do that should be cut.
+The README voice is more telegraphic than overview. The reader is not building
+mental models — they are deciding whether to install and trying to get started.
+Every sentence that doesn't help them do that should be cut.
