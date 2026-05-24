@@ -2,15 +2,20 @@
 
 from pathlib import Path
 
+from outliner.cli import guess_syntax
+from outliner.parsers import detect
 from outliner.parsers.javascript import parse as _parse, detect as detect_js
+
 
 def parse(text):
     return list(_parse(text))
-from outliner.parsers import detect
-from outliner.cli import guess_syntax
 
-FIXTURES = Path(__file__).parent / "fixtures" / "js"
-FIXTURE = FIXTURES / "sample.ts"
+
+FIXTURES = Path(__file__).parent / "fixtures"
+JS_FIXTURE = FIXTURES / "js" / "sample.js"
+JSX_FIXTURE = FIXTURES / "js" / "component.jsx"
+TS_FIXTURE = FIXTURES / "ts" / "sample.ts"
+TSX_FIXTURE = FIXTURES / "ts" / "component.tsx"
 
 
 # ---------------------------------------------------------------------------
@@ -31,6 +36,14 @@ def test_detect_extension_ts():
 
 def test_detect_extension_tsx():
     assert guess_syntax("file.tsx") == "javascript"
+
+
+def test_detect_extension_mjs():
+    assert guess_syntax("file.mjs") == "javascript"
+
+
+def test_detect_extension_cjs():
+    assert guess_syntax("file.cjs") == "javascript"
 
 
 def test_detect_content_class_and_function():
@@ -96,7 +109,7 @@ def test_detect_content_not_java():
 
 
 def test_detect_registry_ts_content():
-    assert detect(FIXTURE.read_text()) == "javascript"
+    assert detect(TS_FIXTURE.read_text()) == "javascript"
 
 
 # ---------------------------------------------------------------------------
@@ -248,6 +261,11 @@ def test_ts_interface_no_trailing_brace():
     assert not it.signature.endswith("{")
 
 
+def test_ts_interface_includes_methods_and_excludes_value_fields():
+    items = parse("interface Foo {\n    value: string;\n    run(): void;\n}\n")
+    assert [it.signature for it in items] == ["interface Foo", "    run(): void"]
+
+
 def test_ts_type_alias():
     items = parse("export type AnimalFactory = (name: string) => Animal;\n")
     assert any("type AnimalFactory" in it.signature for it in items)
@@ -257,6 +275,11 @@ def test_ts_type_alias_no_trailing_semicolon():
     items = parse("export type Foo = string | number;\n")
     it = next(i for i in items if "type Foo" in i.signature)
     assert not it.signature.endswith(";")
+
+
+def test_object_type_alias_includes_methods_and_excludes_value_fields():
+    items = parse("type Foo = {\n    value: string;\n    run(): void;\n};\n")
+    assert [it.signature for it in items] == ["type Foo", "    run(): void"]
 
 
 def test_ts_enum():
@@ -299,7 +322,8 @@ def test_ts_namespace_range_covers_contents():
 
 def test_const_arrow_function():
     items = parse("export const greet = (name) => {\n    return `Hello ${name}`;\n};\n")
-    assert any("greet" in it.signature for it in items)
+    greet = next(it for it in items if "greet" in it.signature)
+    assert greet.count == 3
 
 
 def test_const_arrow_function_signature():
@@ -310,7 +334,8 @@ def test_const_arrow_function_signature():
 
 def test_const_function_expression():
     items = parse("export let helperFn = function(x: number): number {\n    return x * 2;\n};\n")
-    assert any("helperFn" in it.signature for it in items)
+    helper = next(it for it in items if "helperFn" in it.signature)
+    assert helper.count == 3
 
 
 def test_multiline_arrow_function():
@@ -328,6 +353,61 @@ def test_multiline_arrow_function():
     assert "predicate" in fn.signature
 
 
+def test_multiline_destructured_arrow_range_covers_body():
+    text = (
+        "const render = ({\n"
+        "    value,\n"
+        "}: Props) => {\n"
+        "    return value;\n"
+        "};\n"
+    )
+    items = parse(text)
+    assert [it.signature for it in items] == ["const render = ({ value, }: Props)"]
+    assert items[0].count == 5
+
+
+def test_arrow_returning_multiline_template_has_complete_range():
+    text = (
+        "const animation = (factor: number) => `\n"
+        "0% { transform: scale(${factor}); }\n"
+        "100% { transform: scale(1); }\n"
+        "`;\n"
+    )
+    items = parse(text)
+    assert [it.signature for it in items] == ["const animation = (factor: number)"]
+    assert items[0].count == 4
+
+
+def test_arrow_with_multiline_object_type_annotation():
+    text = (
+        "export const ToastIcon: React.FC<{\n"
+        "    toast: Toast;\n"
+        "}> = ({ toast }) => {\n"
+        "    return toast.icon;\n"
+        "};\n"
+    )
+    items = parse(text)
+    assert [it.signature for it in items] == [
+        "export const ToastIcon: React.FC<{ toast: Toast; }> = ({ toast })"
+    ]
+    assert items[0].count == 5
+
+
+def test_multiline_typed_value_does_not_capture_following_arrow():
+    text = (
+        "const options: {\n"
+        "    enabled: boolean;\n"
+        "} = {\n"
+        "    enabled: true,\n"
+        "};\n"
+        "const later = () => {\n"
+        "    return true;\n"
+        "};\n"
+    )
+    items = parse(text)
+    assert [it.signature for it in items] == ["const later = ()"]
+
+
 def test_plain_const_excluded():
     items = parse("export const MAX_ANIMALS = 100;\nexport const NAME = 'foo';\n")
     assert len(items) == 0
@@ -336,11 +416,13 @@ def test_plain_const_excluded():
 def test_const_class_expression():
     text = (
         "export const AnonymousCat = class extends Animal {\n"
+        "    name = 'cat';\n"
         "    meow() { return 'meow'; }\n"
         "};\n"
     )
     items = parse(text)
-    assert any("AnonymousCat" in it.signature for it in items)
+    cat = next(it for it in items if "AnonymousCat" in it.signature)
+    assert cat.count == 4
 
 
 # ---------------------------------------------------------------------------
@@ -428,97 +510,353 @@ def test_trailing_blank_not_in_range():
 
 
 # ---------------------------------------------------------------------------
-# Fixture tests
+# JavaScript fixture tests
+# ---------------------------------------------------------------------------
+
+def test_js_fixture_core_declarations():
+    items = parse(JS_FIXTURE.read_text())
+    sigs = [it.signature for it in items]
+    assert any("class Animal" in s for s in sigs)
+    assert any("class Dog" in s for s in sigs)
+    assert any("makeAnimal" in s for s in sigs)
+    assert any("createRegistry" in s for s in sigs)
+    assert any("processAnimals" in s for s in sigs)
+    assert any("normalizeName" in s for s in sigs)
+    assert any("helperFn" in s for s in sigs)
+    assert any("AnonymousCat" in s for s in sigs)
+
+
+def test_js_fixture_includes_class_members_and_excludes_constants():
+    items = parse(JS_FIXTURE.read_text())
+    sigs = [it.signature for it in items]
+    assert any("constructor" in s for s in sigs)
+    assert any("speak" in s for s in sigs)
+    assert not any("MAX_ANIMALS" in s for s in sigs)
+
+
+def test_js_fixture_function_value_ranges_cover_body():
+    items = parse(JS_FIXTURE.read_text())
+    registry = next(it for it in items if "createRegistry" in it.signature)
+    helper = next(it for it in items if "helperFn" in it.signature)
+    cat = next(it for it in items if "AnonymousCat" in it.signature)
+    assert registry.count == 6
+    assert helper.count == 5
+    assert cat.count == 6
+
+
+def test_jsx_fixture_component_declarations():
+    items = parse(JSX_FIXTURE.read_text())
+    assert [it.signature for it in items] == [
+        "export function Card({ title, children })",
+        "export const Badge = ({ label })",
+    ]
+    assert [it.count for it in items] == [3, 3]
+
+
+def test_iife_exposes_module_declarations_and_class_members():
+    items = parse(
+        "(function (window) {\n"
+        "    class AdminApp {\n"
+        "        start() {\n"
+        "            function local() {}\n"
+        "        }\n"
+        "    }\n"
+        "    function helper() {}\n"
+        "    window.AdminApp = AdminApp;\n"
+        "})(window);\n"
+    )
+    sigs = [it.signature.strip() for it in items]
+    assert sigs == ["class AdminApp", "start()", "function helper()"]
+    assert not any("local" in sig for sig in sigs)
+
+
+def test_assigned_iife_exposes_direct_declarations_only():
+    items = parse(
+        "var library = (function () {\n"
+        "    function exported() {}\n"
+        "    function outer() {\n"
+        "        function local() {}\n"
+        "    }\n"
+        "})();\n"
+    )
+    sigs = [it.signature.strip() for it in items]
+    assert sigs[0] == "var library = (function ()"
+    assert "function exported()" in sigs
+    assert "function outer()" in sigs
+    assert not any("local" in sig for sig in sigs)
+
+
+def test_unary_iife_exposes_direct_declarations_only():
+    items = parse(
+        "!function () {\n"
+        "    function exported() {}\n"
+        "    function outer() {\n"
+        "        function local() {}\n"
+        "    }\n"
+        "}();\n"
+    )
+    sigs = [it.signature.strip() for it in items]
+    assert sigs == ["function exported()", "function outer()"]
+
+
+def test_semicolon_guarded_iife_exposes_direct_declarations_only():
+    items = parse(
+        ";(function () {\n"
+        "    function exported() {}\n"
+        "    function outer() {\n"
+        "        function local() {}\n"
+        "    }\n"
+        "}());\n"
+    )
+    sigs = [it.signature.strip() for it in items]
+    assert sigs == ["function exported()", "function outer()"]
+
+
+def test_amd_factory_exposes_direct_declarations_only():
+    items = parse(
+        "define(['exports'], (function (exports) { 'use strict';\n"
+        "    function exported() {}\n"
+        "    function outer() {\n"
+        "        function local() {}\n"
+        "    }\n"
+        "}));\n"
+    )
+    sigs = [it.signature.strip() for it in items]
+    assert sigs == ["function exported()", "function outer()"]
+
+
+def test_property_functions_expose_commonjs_api():
+    items = parse(
+        "var file = module.exports = {};\n"
+        "file.exists = function() {\n"
+        "    return true;\n"
+        "};\n"
+        "file.expand = function(...args) {\n"
+        "    return args;\n"
+        "};\n"
+    )
+    assert [it.signature for it in items] == [
+        "file.exists = function()",
+        "file.expand = function(...args)",
+    ]
+    assert [it.count for it in items] == [3, 3]
+
+
+def test_property_arrows_expose_commonjs_api():
+    items = parse(
+        "exports.read = path => path;\n"
+        "module.exports.sync = path => {\n"
+        "    return true;\n"
+        "};\n"
+    )
+    assert [it.signature for it in items] == [
+        "exports.read = path => path",
+        "module.exports.sync = path",
+    ]
+    assert [it.count for it in items] == [1, 3]
+
+
+def test_prototype_object_includes_callable_members_and_excludes_value_fields():
+    items = parse(
+        "Widget.prototype = {\n"
+        "    start: function() {\n"
+        "        return true;\n"
+        "    },\n"
+        "    stop() {},\n"
+        "    poll: () => false,\n"
+        "    enabled: true,\n"
+        "    callback: helper\n"
+        "};\n"
+    )
+    assert [it.signature for it in items] == [
+        "Widget.prototype =",
+        "    start: function()",
+        "    stop()",
+        "    poll: () => false",
+    ]
+    assert [it.count for it in items] == [9, 3, 1, 1]
+
+
+def test_chained_prototype_object_is_a_callable_member_container():
+    items = parse("Dispatch.prototype = dispatch.prototype = {\n    call: function() {}\n};\n")
+    assert [it.signature for it in items] == [
+        "Dispatch.prototype = dispatch.prototype =",
+        "    call: function()",
+    ]
+
+
+def test_plain_object_methods_remain_excluded():
+    items = parse("const options = {\n    start() {},\n    stop: function() {}\n};\n")
+    assert items == []
+
+
+# ---------------------------------------------------------------------------
+# TypeScript fixture tests
 # ---------------------------------------------------------------------------
 
 def test_fixture_item_count():
-    items = parse(FIXTURE.read_text())
-    assert len(items) == 24
+    items = parse(TS_FIXTURE.read_text())
+    assert len(items) == 43
 
 
 def test_fixture_enum():
-    items = parse(FIXTURE.read_text())
+    items = parse(TS_FIXTURE.read_text())
     sigs = [it.signature for it in items]
     assert any("enum Status" in s for s in sigs)
 
 
 def test_fixture_type_alias():
-    items = parse(FIXTURE.read_text())
+    items = parse(TS_FIXTURE.read_text())
     sigs = [it.signature for it in items]
     assert any("type AnimalFactory" in s for s in sigs)
 
 
+def test_fixture_object_type_alias_range_excludes_plain_fields():
+    items = parse(TS_FIXTURE.read_text())
+    alias = next(it for it in items if "type ColorSummary" in it.signature)
+    assert alias.count == 5
+    assert not any("red: number" in it.signature or "green: number" in it.signature for it in items)
+
+
 def test_fixture_interface():
-    items = parse(FIXTURE.read_text())
+    items = parse(TS_FIXTURE.read_text())
     sigs = [it.signature for it in items]
     assert any("interface Speakable" in s for s in sigs)
 
 
 def test_fixture_namespace():
-    items = parse(FIXTURE.read_text())
+    items = parse(TS_FIXTURE.read_text())
     sigs = [it.signature for it in items]
     assert any("namespace Utils" in s for s in sigs)
 
 
 def test_fixture_classes():
-    items = parse(FIXTURE.read_text())
+    items = parse(TS_FIXTURE.read_text())
     sigs = [it.signature for it in items]
     assert any("class Animal" in s for s in sigs)
     assert any("class Dog" in s for s in sigs)
 
 
 def test_fixture_functions():
-    items = parse(FIXTURE.read_text())
+    items = parse(TS_FIXTURE.read_text())
     sigs = [it.signature for it in items]
     assert any("makeAnimal" in s for s in sigs)
     assert any("fetchAnimal" in s for s in sigs)
 
 
 def test_fixture_arrow_functions():
-    items = parse(FIXTURE.read_text())
+    items = parse(TS_FIXTURE.read_text())
     sigs = [it.signature for it in items]
     assert any("createRegistry" in s for s in sigs)
     assert any("processAnimals" in s for s in sigs)
 
 
 def test_fixture_constants_excluded():
-    items = parse(FIXTURE.read_text())
+    items = parse(TS_FIXTURE.read_text())
     sigs = [it.signature for it in items]
     assert not any("MAX_ANIMALS" in s for s in sigs)
     assert not any("DEFAULT_NAME" in s for s in sigs)
 
 
 def test_fixture_imports_excluded():
-    items = parse(FIXTURE.read_text())
+    items = parse(TS_FIXTURE.read_text())
     assert all("import" not in it.signature for it in items)
 
 
 def test_fixture_class_range_covers_methods():
-    items = parse(FIXTURE.read_text())
+    items = parse(TS_FIXTURE.read_text())
     animal = next(it for it in items if "class Animal" in it.signature and "Dog" not in it.signature)
     ctor = next(it for it in items if "constructor" in it.signature and it.start > animal.start)
     assert animal.start + animal.count > ctor.start
 
 
 def test_fixture_decorator_walkback():
-    items = parse(FIXTURE.read_text())
+    text = TS_FIXTURE.read_text()
+    items = parse(text)
     animal = next(it for it in items if "class Animal" in it.signature and "Dog" not in it.signature)
-    # @injectable() and @logged decorators precede the class
-    assert animal.start <= 35  # decorators start around line 33
+    class_line = text.splitlines().index("export class Animal implements Speakable {") + 1
+    leading_lines = text.splitlines()[animal.start - 1:class_line - 1]
+    assert "@injectable()" in leading_lines
+    assert "@logged" in leading_lines
 
 
 def test_fixture_multiline_static_fromObject():
-    items = parse(FIXTURE.read_text())
+    items = parse(TS_FIXTURE.read_text())
     fn = next(it for it in items if "fromObject" in it.signature)
     assert "data" in fn.signature
     assert "validate" in fn.signature
 
 
 def test_fixture_multiline_fetch_sig():
-    items = parse(FIXTURE.read_text())
+    items = parse(TS_FIXTURE.read_text())
     fetch = next(it for it in items if "fetch(" in it.signature and "item" in it.signature)
     assert "item: string" in fetch.signature
     assert "distance: number" in fetch.signature
+
+
+def test_tsx_fixture_component_declarations():
+    items = parse(TSX_FIXTURE.read_text())
+    assert [it.signature for it in items] == [
+        "type Props<T>",
+        "export interface ViewProps",
+        "export function View({ title }: ViewProps): JSX.Element",
+        "export const Box = <T,>({ value, render }: Props<T>): JSX.Element",
+    ]
+    assert [it.count for it in items] == [1, 3, 3, 3]
+
+
+def test_fixture_commented_constructor_signature_excludes_parameter_docs():
+    items = parse(TS_FIXTURE.read_text())
+    constructor = next(it for it in items if "constructor" in it.signature and "breed" in it.signature)
+    assert constructor.signature == "    constructor(name: string, age: number, breed: string)"
+
+
+def test_fixture_exposes_ambient_namespace_declarations_and_members():
+    sigs = [it.signature.strip() for it in parse(TS_FIXTURE.read_text())]
+    expected = [
+        "declare namespace palette",
+        "type Level",
+        "interface Painter",
+        "paint(text: string): string",
+        "(text: string): string",
+        "blend(foreground: string, background: string): string",
+        "namespace nested",
+        "interface Formatter",
+        "format(value: string): string",
+        "declare const palette: palette.Painter &",
+    ]
+    assert all(signature in sigs for signature in expected)
+    excluded = [
+        "readonly level: Level",
+        "readonly primary: string",
+        "readonly secondary: string",
+        "readonly formatter: | string | ((value: string) => string)",
+        "supportsColor: boolean",
+    ]
+    assert all(signature not in sigs for signature in excluded)
+    assert all("fake(value: string)" not in signature for signature in sigs)
+    assert not any(signature.startswith(("foreground: string", "background: string")) for signature in sigs)
+
+
+def test_fixture_exposes_abstract_module_and_global_declarations():
+    sigs = [it.signature.strip() for it in parse(TS_FIXTURE.read_text())]
+    expected = [
+        "export declare abstract class AbstractPainter",
+        "abstract clear(): void",
+        "abstract reset(): void",
+        "abstract draw(): void",
+        'declare module "palette-plugin"',
+        "export function activate(): void",
+        "declare global",
+        "interface Window",
+    ]
+    assert all(signature in sigs for signature in expected)
+    assert "readonly palette: palette.Painter" not in sigs
+
+
+def test_ts_export_assignment():
+    items = parse("export = palette;\n")
+    assert [it.signature for it in items] == ["export = palette"]
 
 
 # ---------------------------------------------------------------------------
@@ -537,16 +875,49 @@ def test_only_imports():
     assert parse('import foo from "bar";\nimport type { X } from "y";\n') == []
 
 
-def test_export_default_function_anonymous_excluded():
-    # Anonymous default export has no name — excluded intentionally
+def test_export_default_function_anonymous_included():
     items = parse("export default function() {\n    return 1;\n}\n")
-    assert len(items) == 0
+    assert [it.signature for it in items] == ["export default function()"]
+    assert items[0].count == 3
+
+
+def test_standalone_anonymous_function_expression_excluded():
+    items = parse("(function() {\n    return 1;\n})();\n")
+    assert items == []
 
 
 def test_const_fn_type_annotation_with_arrow():
     # Const with function-type annotation (contains =>) — must still be detected
     items = parse("export const transform: (x: number) => number = (x) => x * 2;\n")
     assert any("transform" in it.signature for it in items)
+
+
+def test_regex_literal_does_not_extend_arrow_signature():
+    text = (
+        "const slash = (value) => value.replace(/\\//g, \"\\\\\");\n"
+        "const later = () => true;\n"
+    )
+    items = parse(text)
+    assert [it.signature for it in items] == [
+        'const slash = (value) => value.replace(/\\//g, "\\\\")',
+        "const later = () => true",
+    ]
+    assert [it.count for it in items] == [1, 1]
+
+
+def test_nested_template_literal_does_not_extend_arrow_range():
+    text = (
+        "const glob = ({suffix}) => {\n"
+        "    return `${suffix ? `/*${suffix}` : \"\"}`;\n"
+        "};\n"
+        "const later = () => true;\n"
+    )
+    items = parse(text)
+    assert [it.signature for it in items] == [
+        "const glob = ({suffix})",
+        "const later = () => true",
+    ]
+    assert [it.count for it in items] == [3, 1]
 
 
 def test_multiline_type_alias_count():
@@ -563,3 +934,60 @@ def test_nested_type_alias_indented():
     items = parse(text)
     alias = next(it for it in items if "Range" in it.signature)
     assert alias.signature.startswith("    ")
+
+
+def test_class_members_included():
+    text = "class Foo {\n    constructor() {}\n    bar() {}\n}\n"
+    items = parse(text)
+    assert [it.signature for it in items] == ["class Foo", "    constructor()", "    bar()"]
+
+
+def test_class_includes_function_valued_fields_and_excludes_value_fields():
+    text = (
+        "class Foo {\n"
+        "    value = 1;\n"
+        "    handle = () => {\n"
+        "        return;\n"
+        "    };\n"
+        "    parse: (value: string) => string = (value) => value;\n"
+        "}\n"
+    )
+    items = parse(text)
+    assert [it.signature for it in items] == [
+        "class Foo",
+        "    handle = ()",
+        "    parse: (value: string) => string = (value) => value",
+    ]
+
+
+def test_nested_functions_excluded():
+    text = (
+        "export function top() {\n"
+        "    function inner() {}\n"
+        "    const local = () => 1;\n"
+        "}\n"
+    )
+    items = parse(text)
+    assert [it.signature for it in items] == ["export function top()"]
+
+
+def test_nested_namespace_declarations_included():
+    text = (
+        "export namespace A {\n"
+        "    export namespace B {\n"
+        "        export function deep() {}\n"
+        "    }\n"
+        "    export function ok() {}\n"
+        "}\n"
+    )
+    items = parse(text)
+    sigs = [it.signature for it in items]
+    assert any("namespace A" in s for s in sigs)
+    assert any("namespace B" in s for s in sigs)
+    assert any("function ok" in s for s in sigs)
+    assert any("function deep" in s for s in sigs)
+
+
+def test_type_alias_generic_default_kept():
+    items = parse("export type Box<T = string> = { value: T };\n")
+    assert items[0].signature == "export type Box<T = string>"
