@@ -133,6 +133,18 @@ def test_output_columns_aligned():
 
 
 # ---------------------------------------------------------------------------
+# Source expansion
+# ---------------------------------------------------------------------------
+
+def test_expand_sources_includes_javascript_family_extensions():
+    with tempfile.TemporaryDirectory() as d:
+        for name in ["a.js", "b.jsx", "c.ts", "d.tsx", "e.mjs", "f.cjs"]:
+            Path(d, name).write_text("export function ok() {}\n")
+        sources = {Path(src).name for src in _expand_sources([d])}
+        assert {"a.js", "b.jsx", "c.ts", "d.tsx", "e.mjs", "f.cjs"} <= sources
+
+
+# ---------------------------------------------------------------------------
 # .gitignore support
 # ---------------------------------------------------------------------------
 

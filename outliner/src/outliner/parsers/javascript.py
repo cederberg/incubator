@@ -1,312 +1,389 @@
-"""JavaScript/TypeScript outline parser (regex-based)."""
+"""JavaScript/TypeScript outline parser."""
 
 import re
 from collections.abc import Iterator
 
-from outliner.types import OutlineItem
 from outliner.parsers.util import extract_signature, indent_level, seek_comment_start, seek_brace_end
+from outliner.types import OutlineItem
 
 SYNTAX = "javascript"
-EXTENSIONS = (".js", ".jsx", ".ts", ".tsx")
-
-# --- Top-level declaration matchers ---
+EXTENSIONS = (".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx")
 
 _FUNC_RE = re.compile(
-    r"^\s*(?:export\s+(?:default\s+)?)?(?:declare\s+)?(?:async\s+)?function\s*\*?\s*\w+"
+    r"^\s*(?:(?:export\s+(?:default\s+)?)?(?:declare\s+)?(?:async\s+)?function\s*\*?\s*\w+"
+    r"|export\s+default\s+(?:async\s+)?function\s*\*?\s*\()"
 )
-_CLASS_RE = re.compile(
-    r"^\s*(?:export\s+(?:default\s+)?)?(?:abstract\s+)?(?:declare\s+)?class\s+\w+"
-)
+_CLASS_RE = re.compile(r"^\s*(?:export\s+(?:default\s+)?)?(?:declare\s+)?(?:abstract\s+)?class\s+\w+")
 _IFACE_RE = re.compile(r"^\s*(?:export\s+)?(?:declare\s+)?interface\s+\w+")
-# type alias: allow <T = Default> generics by using [^>]* instead of [^=]*
-_TYPE_RE  = re.compile(r"^\s*(?:export\s+)?(?:declare\s+)?type\s+\w+\s*(?:<[^>]*>)?\s*=")
-_ENUM_RE  = re.compile(r"^\s*(?:export\s+)?(?:declare\s+)?(?:const\s+)?enum\s+\w+")
-_NS_RE    = re.compile(r"^\s*(?:export\s+)?(?:declare\s+)?(?:namespace|module)\s+\w+")
-
-# const/let/var with optional type annotation before =, RHS must be fn/arrow/class.
-# The type annotation may itself contain '=>' (function type), so we allow '='
-# only if preceded by '>' (part of '=>') or if it starts the outer assignment.
-# Strategy: match the assignment '=' that is NOT preceded by '>' (arrow) or '!<>='.
+_TYPE_RE = re.compile(r"^\s*(?:export\s+)?(?:declare\s+)?type\s+\w+\s*(?:<[^>]*>)?\s*=")
+_ENUM_RE = re.compile(r"^\s*(?:export\s+)?(?:declare\s+)?(?:const\s+)?enum\s+\w+")
+_NS_RE = re.compile(r"^\s*(?:export\s+)?(?:declare\s+)?namespace\s+\w+")
+_MODULE_RE = re.compile(r"^\s*(?:export\s+)?(?:declare\s+)?module\s+(?:\w+|\s*(?={|$))")
+_GLOBAL_RE = re.compile(r"^\s*declare\s+global\b")
+_AMBIENT_VAR_RE = re.compile(r"^\s*(?:export\s+)?declare\s+(?:const|let|var)\s+\w+")
+_EXPORT_ASSIGN_RE = re.compile(r"^\s*export\s*=\s*[\w$.]+\s*;?\s*$")
 _CONST_FN_RE = re.compile(
     r"^\s*(?:export\s+)?(?:const|let|var)\s+(\w+)"
-    r"(?::[^;{\n]*)?"  # optional TS type annotation (may contain =>, not ; or {)
-    r"(?<![=>!<])\s*=\s*(?!=)"  # assignment = not preceded by =>/!=/<=/>=
-    r"(?:async\s+)?(?:<[^>]*>\s*)?(?:function\b|\(|class\b)"
+    r"(?::[^;{\n]*)?"
+    r"(?<![=>!<])\s*=\s*(?!=)"
+    r"(?:async\s+)?(?:<[^>]*>\s*)?(?:function\b|\(|class\b|[\w$]+\s*=>)"
 )
-
-# --- Class method matcher (indented, no 'function' keyword) ---
-
-_JS_CONTROL = frozenset({
-    "if", "else", "while", "for", "do", "switch", "case",
-    "try", "catch", "finally", "return", "throw", "new",
-    "typeof", "instanceof", "void", "delete", "await", "yield",
-    "break", "continue", "super", "this", "import", "export",
-    "class", "function", "var", "let", "const",
-})
-
+_MULTILINE_TYPED_CONST_RE = re.compile(
+    r"^\s*(?:export\s+)?(?:const|let|var)\s+\w+\s*:\s*[^;=\n]*\{\s*$"
+)
+_PROPERTY_FN_RE = re.compile(
+    r"^\s*(?:[\w$]+\.)+[\w$]+\s*=\s*(?:async\s+)?"
+    r"(?:function\s*\*?\s*(?:[\w$]+\s*)?\(|\(|[\w$]+\s*=>)"
+)
 _METHOD_RE = re.compile(
-    r"^\s+"  # must be indented
+    r"^\s+"
     r"(?:(?:public|private|protected|static|async|abstract|override|readonly|declare)\s+)*"
-    r"(?:get\s+|set\s+)?"
-    r"(#?\w+)\??"    # group 1: method name, optional '?' for TS optional methods
-    r"\s*[(<]"       # followed by ( or <
+    r"(?:get\s+|set\s+)?#?[\w$]+\??\s*[(<]"
 )
-
-_STMT_START_RE = re.compile(
-    r"^\s*(?:return|throw|if|while|for|else|switch|do|try|catch|finally|"
-    r"break|continue|new\s|delete\s|typeof\s|void\s|await\s|yield\s)"
+_CLASS_FIELD_FN_RE = re.compile(
+    r"^\s+"
+    r"(?:(?:public|private|protected|static|readonly|declare|override)\s+)*"
+    r"#?[\w$]+\??(?:\s*:\s*.*?)?\s*=\s*(?:async\s+)?"
+    r"(?:function\s*\*?\s*(?:[\w$]+\s*)?\(|(?:<[^>]*>\s*)?\([^)]*\)\s*(?::[^=;\n]+)?\s*=>|[\w$]+\s*=>)"
 )
+_MEMBER_BOUNDARY_RE = re.compile(
+    r"^\s+"
+    r"(?:(?:readonly|public|private|protected|static|abstract)\s+)*"
+    r"(?:[\w$]+\??\s*(?:[(<:]|\[)|\(|\[[^\]]+\]\s*:)"
+)
+_CALLABLE_MEMBER_RE = re.compile(
+    r"^\s+"
+    r"(?:(?:readonly|public|private|protected|static|abstract)\s+)*"
+    r"(?:(?:get\s+|set\s+)?[\w$]+\??\s*[(<]|\(|new\s*[(<])"
+)
+_PROTOTYPE_OBJECT_RE = re.compile(r"^\s*(?:(?:[\w$]+\.)*prototype\s*=\s*)+\{")
+_PROTOTYPE_MEMBER_RE = re.compile(
+    r"^\s+(?:(?:get|set)\s+[\w$]+\s*\(|[\w$]+\s*\(|[\w$]+\s*:\s*(?:async\s+)?"
+    r"(?:function\s*\*?\s*(?:[\w$]+\s*)?\(|(?:\([^)]*\)|[\w$]+)\s*=>))"
+)
+_MODULE_WRAPPER_RE = re.compile(
+    r"^\s*(?:"
+    r";?\s*\(\s*function\b|"
+    r"(?:const|let|var)\s+\w+\s*=\s*\(\s*function\b|"
+    r"!\s*function\b|"
+    r"define\s*\([^;]*\(?\s*function\b"
+    r").*\{"
+)
+_CLASS_EXPR_RE = re.compile(r"=\s*class\b")
 
-# --- Detection helpers ---
-
-_CLASS_DETECT_RE    = re.compile(r"\bclass\s+\w+")
-_FUNC_DETECT_RE     = re.compile(r"\bfunction\s+\w+|\bconst\s+\w+\s*=\s*(?:async\s+)?\(")
-_TS_MARKER_RE       = re.compile(r"\binterface\s+\w+|\benum\s+\w+|\bnamespace\s+\w+|:\s*\w+\s*[;{=,(]")
-_ARROW_DETECT_RE    = re.compile(r"=>\s*[{(]")
-_EXPORT_DEFAULT_RE  = re.compile(r"\bexport\s+(?:default\s+)?(?:class|function)\b")
-_TS_STRUCT_RE       = re.compile(r"\b(?:interface|enum|namespace)\s+\w+")
-_CONST_ASSIGN_RE    = re.compile(r"\bconst\s+\w+\s*=")
-_CONSTRUCTOR_RE     = re.compile(r"\bconstructor\s*\(")
-_CLASS_FN_BRACE_RE  = re.compile(r"\b(?:class|function)\s+\w+[^:]*\{")
-# Rejection helpers
-_PY_DEF_RE     = re.compile(r"^\s*(?:def|class)\s+\w+[^{]*:\s*$", re.MULTILINE)
-_GO_PKG_RE     = re.compile(r"^package\s+\w+", re.MULTILINE)
-_JAVA_TYPE_RE  = re.compile(r"\bpublic\s+(?:class|interface|enum)\b")
-_RUST_FN_RE    = re.compile(r"^\s*(?:pub\s+)?(?:async\s+)?fn\s+\w+", re.MULTILINE)
-_RUST_IMPL_RE  = re.compile(r"^\s*impl\b", re.MULTILINE)
+_CLASS_DETECT_RE = re.compile(r"\bclass\s+\w+")
+_FUNC_DETECT_RE = re.compile(r"\bfunction\s+\w+|\bconst\s+\w+\s*=\s*(?:async\s+)?\(")
+_TS_MARKER_RE = re.compile(r"\binterface\s+\w+|\benum\s+\w+|\bnamespace\s+\w+|:\s*\w+\s*[;{=,(]")
+_ARROW_DETECT_RE = re.compile(r"=>\s*[{(]")
+_EXPORT_DEFAULT_RE = re.compile(r"\bexport\s+(?:default\s+)?(?:class|function)\b")
+_TS_STRUCT_RE = re.compile(r"\b(?:interface|enum|namespace)\s+\w+")
+_CONST_ASSIGN_RE = re.compile(r"\bconst\s+\w+\s*=")
+_CONSTRUCTOR_RE = re.compile(r"\bconstructor\s*\(")
+_CLASS_FN_BRACE_RE = re.compile(r"\b(?:class|function)\s+\w+[^:]*\{")
+_PY_DEF_RE = re.compile(r"^\s*(?:def|class)\s+\w+[^{]*:\s*$", re.MULTILINE)
+_GO_PKG_RE = re.compile(r"^package\s+\w+", re.MULTILINE)
+_JAVA_TYPE_RE = re.compile(r"\bpublic\s+(?:class|interface|enum)\b")
+_RUST_FN_RE = re.compile(r"^\s*(?:pub\s+)?(?:async\s+)?fn\s+\w+", re.MULTILINE)
+_RUST_IMPL_RE = re.compile(r"^\s*impl\b", re.MULTILINE)
 _RUST_ARROW_RE = re.compile(r"->\s*\w")
 
-
-
 def detect(lines: list[str]) -> bool:
-    """Detect JS/TS using conservative multi-marker approach."""
     text = "\n".join(lines)
-    if _PY_DEF_RE.search(text):
+    if _PY_DEF_RE.search(text) or _GO_PKG_RE.search(text) or _JAVA_TYPE_RE.search(text):
         return False
-    if _GO_PKG_RE.search(text):
+    if _RUST_FN_RE.search(text) and (_RUST_IMPL_RE.search(text) or _RUST_ARROW_RE.search(text)):
         return False
-    if _JAVA_TYPE_RE.search(text):
-        return False
-    if _RUST_FN_RE.search(text) and (
-        _RUST_IMPL_RE.search(text) or _RUST_ARROW_RE.search(text)
-    ):
-        return False
+    has_decl = _CLASS_DETECT_RE.search(text) or _FUNC_DETECT_RE.search(text) or _EXPORT_DEFAULT_RE.search(text) or _TS_STRUCT_RE.search(text)
+    has_js = _ARROW_DETECT_RE.search(text) or _TS_MARKER_RE.search(text) or _CONST_ASSIGN_RE.search(text) or _CONSTRUCTOR_RE.search(text) or _CLASS_FN_BRACE_RE.search(text) or _TS_STRUCT_RE.search(text)
+    return bool(has_decl and has_js)
 
-    has_decl = (
-        _CLASS_DETECT_RE.search(text) or
-        _FUNC_DETECT_RE.search(text) or
-        _EXPORT_DEFAULT_RE.search(text) or
-        _TS_STRUCT_RE.search(text)
-    )
-    has_js_marker = (
-        _ARROW_DETECT_RE.search(text) or
-        _TS_MARKER_RE.search(text) or
-        _CONST_ASSIGN_RE.search(text) or
-        _CONSTRUCTOR_RE.search(text) or
-        _CLASS_FN_BRACE_RE.search(text) or
-        _TS_STRUCT_RE.search(text)
-    )
-    return bool(has_decl and has_js_marker)
-
-
-def _truncate_at_body(raw: str, stripped: str) -> tuple[str | None, bool]:
-    """Try to detect a body-opening '{' on this line and return (truncated_part, has_body).
-
-    Returns (None, False) if no body detected on this line.
-    Uses rindex to find the LAST '{', which is always the body opener
-    (not '{' inside generic type parameters like <{ id: string }>).
-    """
-    if stripped.endswith("{"):
-        # Body-opening brace is last on line; truncate at it
-        brace_pos = raw.rindex("{")
-        return raw[:brace_pos].strip(), True
-    if stripped.endswith("=>"):
-        # Arrow body on next line
-        return raw.strip(), True
-    if stripped.endswith(";"):
-        return raw.strip(), False
-    # Inline body: line ends with } or }, or }; — body starts at first { AFTER )
-    if stripped.endswith("}") or stripped.endswith("},") or stripped.endswith("};"):
-        paren_pos = raw.rfind(")")
-        brace_pos = raw.find("{", paren_pos) if paren_pos != -1 else -1
-        if brace_pos != -1:
-            return raw[:brace_pos].strip(), True
-        return raw.strip(), False
-    return None, False
-
-
-def _collect_sig(lines: list[str], start: int) -> tuple[str, int, bool]:
-    """Collect a possibly multi-line JS/TS signature (tracks paren depth).
-
-    Returns (signature, last_sig_line_0based, has_body).
-    """
-    depth = 0
-    parts: list[str] = []
+def _collect_sig(lines: list[str], start: int, is_member: bool = False, is_wrapper: bool = False) -> tuple[str, int, bool]:
+    depth, parts, has_body, i = 0, [], False, start
     ind = " " * indent_level(lines[start])
-    has_body = False
-    i = start
-
+    in_block_comment = False
     for i in range(start, min(start + 40, len(lines))):
-        raw = lines[i]
-        for ch in raw:
-            if ch == "(":
-                depth += 1
-            elif ch == ")":
-                depth -= 1
+        raw, in_block_comment = _sanitize(lines[i], in_block_comment, preserve_strings=True)
+        if is_member and i > start and depth == 0 and (_MEMBER_BOUNDARY_RE.match(raw) or raw.lstrip().startswith("}")):
+            i -= 1
+            break
+        depth += raw.count("(") - raw.count(")")
         parts.append(raw.strip())
         stripped = raw.rstrip()
-        if depth <= 0:
-            part, has_body = _truncate_at_body(raw, stripped)
-            if part is not None:
-                parts[-1] = part
-                break
-
-    sig = ind + extract_signature(parts, strip="{;")
-    if sig.endswith("=>"):
-        sig = sig[:-2].rstrip()
-    return sig, i, has_body
-
-
-def _collect_const_sig(lines: list[str], start: int) -> tuple[str, int, bool]:
-    """Collect signature for a const/let = fn/arrow/class expression."""
-    depth = 0
-    parts: list[str] = []
-    ind = " " * indent_level(lines[start])
-    has_body = False
-    found_eq = False
-    i = start
-
-    for i in range(start, min(start + 40, len(lines))):
-        raw = lines[i]
-        for ch in raw:
-            if ch == "(":
-                depth += 1
-            elif ch == ")":
-                depth -= 1
-        parts.append(raw.strip())
-        stripped = raw.rstrip()
-        if not found_eq and "=" in raw:
-            found_eq = True
-        if found_eq and depth <= 0:
-            part, has_body = _truncate_at_body(raw, stripped)
-            if part is not None:
-                parts[-1] = part
-                break
-
-    sig = ind + extract_signature(parts, strip="{;")
-    if sig.endswith("=>"):
-        sig = sig[:-2].rstrip()
-    return sig, i, has_body
+        if is_wrapper and i == start and "{" in raw:
+            parts[-1], has_body = raw[:raw.find("{")].strip(), True
+            break
+        if depth > 0:
+            continue
+        if _starts_multiline_template_expression(raw):
+            parts[-1], has_body = raw[:raw.rfind("=>")].strip(), True
+            break
+        if stripped.endswith("{"):
+            parts[-1], has_body = raw[:raw.rindex("{")].strip(), True
+            break
+        if stripped.endswith("=>"):
+            has_body = True
+            break
+        if stripped.endswith(";"):
+            break
+        if stripped.endswith("}") or stripped.endswith("},") or stripped.endswith("};"):
+            pos = raw.find("{", raw.rfind(")"))
+            if pos != -1:
+                parts[-1], has_body = raw[:pos].strip(), True
+            break
+        is_type_continuation = stripped.endswith((":", "|", "&")) or stripped.lstrip().startswith(("|", "&"))
+        if is_member and not is_type_continuation:
+            break
+    sig = ind + extract_signature(parts, strip="{;,")
+    return (sig[:-2].rstrip() if sig.endswith("=>") else sig), i, has_body
 
 
 def _find_type_alias_eq(sig: str) -> int:
-    """Find position of the standalone '=' in a type alias, skipping generics."""
     depth = 0
-    i = 0
-    while i < len(sig):
-        c = sig[i]
-        if c == "<":
+    for i, ch in enumerate(sig):
+        if ch == "<":
             depth += 1
-        elif c == ">":
-            depth -= 1
-        elif c == "=" and depth == 0:
-            prev = sig[i - 1] if i > 0 else ""
-            nxt  = sig[i + 1] if i + 1 < len(sig) else ""
+        elif ch == ">":
+            depth = max(0, depth - 1)
+        elif ch == "=" and depth == 0:
+            prev = sig[i - 1] if i else ""
+            nxt = sig[i + 1] if i + 1 < len(sig) else ""
             if prev not in "!<>=" and nxt != "=":
                 return i
-        i += 1
     return -1
 
-
-def _collect_type_alias_sig(lines: list[str], start: int) -> tuple[str, int]:
-    """Collect a type alias declaration to 'type Name<params>' (no RHS).
-
-    Scans to the closing ';' so the count covers multi-line type aliases.
-    """
-    ind = " " * indent_level(lines[start])
-    parts = []
-    sig_end = start
+def _collect_type_alias_sig(lines: list[str], start: int) -> tuple[str, int, bool]:
+    ind, parts, sig_end = " " * indent_level(lines[start]), [], start
     for i in range(start, min(start + 20, len(lines))):
         parts.append(lines[i].strip())
         if lines[i].rstrip().endswith(";"):
             sig_end = i
             break
-    else:
-        sig_end = min(start + 19, len(lines) - 1)
     sig = ind + extract_signature(parts, strip=";")
     eq = _find_type_alias_eq(sig)
-    if eq != -1:
-        sig = sig[:eq].rstrip()
-    return sig, sig_end
+    is_object = eq != -1 and "{" in sig[eq + 1:]
+    if is_object:
+        sig_end = seek_brace_end(lines, start) - 1
+    return (sig[:eq] if eq != -1 else sig).rstrip(), sig_end, is_object
 
 
-def _is_method_line(raw: str) -> bool:
-    """Return True if line looks like a class/interface method declaration."""
-    if _STMT_START_RE.match(raw):
+def _collect_multiline_typed_arrow_sig(lines: list[str], start: int) -> tuple[str, int, bool] | None:
+    ind, parts = " " * indent_level(lines[start]), []
+    in_block_comment = False
+    for i in range(start, min(start + 40, len(lines))):
+        raw, in_block_comment = _sanitize(lines[i], in_block_comment, preserve_strings=True)
+        parts.append(raw.strip())
+        if not re.search(r"(?<![=>!<])=(?!=)", raw):
+            continue
+        if not re.search(r"=>\s*\{", raw):
+            return None
+        parts[-1] = raw[:raw.rindex("{")].strip()
+        sig = ind + extract_signature(parts, strip="{;,")
+        return sig[:-2].rstrip() if sig.endswith("=>") else sig, i, True
+    return None
+
+
+def _starts_multiline_template_expression(raw: str) -> bool:
+    if "=>" not in raw:
         return False
-    # Object literal single-line methods end with '};' or '},' — skip them
-    stripped = raw.rstrip()
-    if stripped.endswith("},") or stripped.endswith("};"):
-        return False
-    m = _METHOD_RE.match(raw)
-    if not m:
-        return False
-    return m.group(1) not in _JS_CONTROL
+    expression = raw[raw.rfind("=>") + 2:]
+    return bool(re.match(r"\s*`", expression)) and sum(
+        ch == "`" and not _is_escaped(expression, i)
+        for i, ch in enumerate(expression)
+    ) % 2 == 1
 
 
-def _seek_expression_end(lines: list[str], start_index: int) -> int:
-    """Find end of a brace-delimited body or expression-arrow body.
-
-    If the body opens with '{', scan to the matching '}'. Otherwise treat it
-    as an expression body that ends at a top-level ';'.
-    """
-    depth = 0
-    brace_started = False
-    paren_depth = 0
-
+def _seek_template_expression_end(lines: list[str], start_index: int) -> int:
+    in_template = False
     for i in range(start_index, len(lines)):
-        raw = lines[i]
-        # Decide on first non-empty line whether it's a block or expression
-        if not brace_started:
-            stripped = raw.lstrip()
-            if stripped.startswith("{"):
-                brace_started = True
-            else:
-                # Expression arrow: track parens and wait for top-level ;
-                for ch in raw:
-                    if ch == "(":
-                        paren_depth += 1
-                    elif ch == ")":
-                        paren_depth -= 1
-                if paren_depth <= 0 and raw.rstrip().endswith(";"):
-                    return i + 1
-                continue
-
-        for ch in raw:
-            if ch == "{":
-                depth += 1
-            elif ch == "}":
-                depth -= 1
-        if brace_started and depth <= 0:
+        raw = lines[i][lines[i].rfind("=>") + 2:] if i == start_index else lines[i]
+        for j, ch in enumerate(raw):
+            if ch == "`" and not _is_escaped(raw, j):
+                in_template = not in_template
+        if not in_template and raw.rstrip().endswith(";"):
             return i + 1
-
     return len(lines)
 
 
+def _seek_expression_end(lines: list[str], start_index: int) -> int:
+    if _starts_multiline_template_expression(lines[start_index]):
+        return _seek_template_expression_end(lines, start_index)
+    depth, paren_depth, block, in_block_comment = 0, 0, False, False
+    for i in range(start_index, len(lines)):
+        clean, in_block_comment = _sanitize(lines[i], in_block_comment)
+        if i == start_index and "=>" in clean:
+            clean = clean[clean.rfind("=>") + 2:]
+        if "{" in clean:
+            block = True
+        if block:
+            depth += clean.count("{") - clean.count("}")
+            if depth <= 0:
+                return i + 1
+            continue
+        paren_depth += clean.count("(") - clean.count(")")
+        if paren_depth <= 0 and clean.rstrip().endswith(";"):
+            return i + 1
+    return len(lines)
+
+
+def _is_escaped(raw: str, index: int) -> bool:
+    slashes = 0
+    while index > slashes and raw[index - slashes - 1] == "\\":
+        slashes += 1
+    return slashes % 2 == 1
+
+
+def _consume_quoted(raw: str, start: int, quote: str) -> int:
+    i = start + 1
+    while i < len(raw):
+        if raw[i] == "\\":
+            i += 2
+        elif raw[i] == quote:
+            return i + 1
+        else:
+            i += 1
+    return i
+
+
+def _consume_template_expression(raw: str, start: int) -> int:
+    depth, i = 1, start
+    while i < len(raw) and depth:
+        ch, nxt = raw[i], raw[i + 1] if i + 1 < len(raw) else ""
+        if ch in "\"'":
+            i = _consume_quoted(raw, i, ch)
+        elif ch == "`":
+            i = _consume_template(raw, i)
+        elif ch == "{":
+            depth, i = depth + 1, i + 1
+        elif ch == "}":
+            depth, i = depth - 1, i + 1
+        elif ch == "/" and nxt == "/":
+            return len(raw)
+        elif ch == "/" and nxt == "*":
+            end = raw.find("*/", i + 2)
+            i = len(raw) if end == -1 else end + 2
+        else:
+            i += 1
+    return i
+
+
+def _consume_template(raw: str, start: int) -> int:
+    i = start + 1
+    while i < len(raw):
+        ch, nxt = raw[i], raw[i + 1] if i + 1 < len(raw) else ""
+        if ch == "\\":
+            i += 2
+        elif ch == "`":
+            return i + 1
+        elif ch == "$" and nxt == "{":
+            i = _consume_template_expression(raw, i + 2)
+        else:
+            i += 1
+    return i
+
+
+def _sanitize(raw: str, in_block_comment: bool, preserve_strings: bool = False) -> tuple[str, bool]:
+    out, i = [], 0
+    while i < len(raw):
+        ch = raw[i]
+        nxt = raw[i + 1] if i + 1 < len(raw) else ""
+        if in_block_comment:
+            if ch == "*" and nxt == "/":
+                in_block_comment, i = False, i + 2
+            else:
+                i += 1
+            continue
+        if ch in "\"'":
+            end = _consume_quoted(raw, i, ch)
+            if preserve_strings:
+                out.append(raw[i:end])
+            i = end
+            continue
+        if ch == "`":
+            end = _consume_template(raw, i)
+            if preserve_strings:
+                out.append(raw[i:end])
+            i = end
+            continue
+        if ch == "/" and nxt == "*" and not _is_escaped(raw, i):
+            in_block_comment, i = True, i + 2
+            continue
+        if ch == "/" and nxt == "/" and not _is_escaped(raw, i):
+            break
+        out.append(ch)
+        i += 1
+    return "".join(out), in_block_comment
+
+
 def parse(text: str) -> Iterator[OutlineItem]:
-    _is_walkback = lambda _, s: s[:1] in "/*@" or s.startswith("//")
-    for i, line in enumerate(lines := text.splitlines()):
-        if any(r.match(line) for r in [_FUNC_RE, _CLASS_RE, _IFACE_RE, _ENUM_RE, _NS_RE]) or _is_method_line(line):
-            sig, sig_end, has_body = _collect_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_walkback)
-            end = seek_brace_end(lines, sig_end) if has_body else sig_end + 1
-            yield OutlineItem(start=start + 1, count=end - start, signature=sig)
-        elif _TYPE_RE.match(line):
-            sig, sig_end = _collect_type_alias_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_walkback)
+    lines = text.splitlines()
+    is_walkback = lambda _, sig: sig[:1] in "/*@" or sig.startswith("//")
+    depth, in_block_comment, wrapper_depth, signature_end = 0, False, None, -1
+    class_depths: set[int] = set()
+    namespace_depths: set[int] = set()
+    typed_member_depths: set[int] = set()
+    prototype_depths: set[int] = set()
+    for i, line in enumerate(lines):
+        clean, in_block_comment = _sanitize(line, in_block_comment)
+        start_depth = depth
+        class_depths = {body_depth for body_depth in class_depths if start_depth >= body_depth}
+        namespace_depths = {body_depth for body_depth in namespace_depths if start_depth >= body_depth}
+        typed_member_depths = {body_depth for body_depth in typed_member_depths if start_depth >= body_depth}
+        prototype_depths = {body_depth for body_depth in prototype_depths if start_depth >= body_depth}
+        if wrapper_depth is not None and start_depth < wrapper_depth:
+            wrapper_depth = None
+        close_count, open_count = clean.count("}"), clean.count("{")
+        depth = max(0, depth + open_count - close_count)
+        is_wrapper = start_depth == 0 and bool(_MODULE_WRAPPER_RE.match(clean)) and depth > start_depth
+        if is_wrapper:
+            wrapper_depth = depth
+        declaration_depths = {0} | namespace_depths | ({wrapper_depth} if wrapper_depth is not None else set())
+        is_new_signature = i > signature_end
+        is_class_method = is_new_signature and start_depth in class_depths and bool(_METHOD_RE.match(clean))
+        is_class_field_fn = is_new_signature and start_depth in class_depths and bool(_CLASS_FIELD_FN_RE.match(clean))
+        is_typed_member = is_new_signature and start_depth in typed_member_depths and bool(_CALLABLE_MEMBER_RE.match(clean))
+        is_prototype_member = is_new_signature and start_depth in prototype_depths and bool(_PROTOTYPE_MEMBER_RE.match(clean))
+        allow_depth = start_depth in declaration_depths or is_class_method or is_class_field_fn or is_typed_member or is_prototype_member
+        if not allow_depth:
+            continue
+        is_namespace = bool(_NS_RE.match(clean) or _MODULE_RE.match(clean) or _GLOBAL_RE.match(clean))
+        is_named_decl = any(r.match(clean) for r in (_FUNC_RE, _CLASS_RE, _IFACE_RE, _ENUM_RE, _TYPE_RE))
+        is_ambient_var = bool(_AMBIENT_VAR_RE.match(clean))
+        is_export_assign = bool(_EXPORT_ASSIGN_RE.match(clean))
+        is_prototype_object = bool(_PROTOTYPE_OBJECT_RE.match(clean))
+        is_const = bool(_CONST_FN_RE.match(clean))
+        is_multiline_typed_const = bool(_MULTILINE_TYPED_CONST_RE.match(clean))
+        is_property_fn = bool(_PROPERTY_FN_RE.match(clean))
+        is_declaration = is_namespace or is_named_decl or is_ambient_var or is_export_assign or is_prototype_object or is_const or is_multiline_typed_const
+        is_api_member = is_property_fn or is_class_method or is_class_field_fn or is_typed_member or is_prototype_member
+        if not (is_declaration or is_api_member):
+            continue
+        if _TYPE_RE.match(clean):
+            sig, sig_end, is_object = _collect_type_alias_sig(lines, i)
+            start = seek_comment_start(lines, i, is_walkback)
             yield OutlineItem(start=start + 1, count=sig_end - start + 1, signature=sig)
-        elif _CONST_FN_RE.match(line):
-            sig, sig_end, has_body = _collect_const_sig(lines, i)
-            start = seek_comment_start(lines, i, _is_walkback)
-            end = _seek_expression_end(lines, sig_end) if has_body else sig_end + 1
+            if is_object:
+                typed_member_depths.add(start_depth + 1)
+            continue
+        if is_multiline_typed_const:
+            collected = _collect_multiline_typed_arrow_sig(lines, i)
+            if collected is None:
+                continue
+            sig, sig_end, _ = collected
+            signature_end = sig_end
+            start = seek_comment_start(lines, i, is_walkback)
+            end = _seek_expression_end(lines, sig_end)
             yield OutlineItem(start=start + 1, count=end - start, signature=sig)
+            continue
+        sig, sig_end, has_body = _collect_sig(lines, i, is_class_method or is_class_field_fn or is_typed_member or is_prototype_member, is_wrapper)
+        signature_end = sig_end
+        start = seek_comment_start(lines, i, is_walkback)
+        end = _seek_expression_end(lines, sig_end) if is_const and has_body else (seek_brace_end(lines, sig_end) if has_body else sig_end + 1)
+        yield OutlineItem(start=start + 1, count=end - start, signature=sig)
+        if has_body and (_CLASS_RE.match(clean) or (is_const and _CLASS_EXPR_RE.search(clean))):
+            class_depths.add(start_depth + 1)
+        if has_body and is_namespace:
+            namespace_depths.add(start_depth + 1)
+        if has_body and (_IFACE_RE.match(clean) or is_ambient_var):
+            typed_member_depths.add(start_depth + 1)
+        if has_body and is_prototype_object:
+            prototype_depths.add(start_depth + 1)

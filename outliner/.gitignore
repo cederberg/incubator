@@ -1,11 +1,11 @@
 # General
 .DS_Store
 __pycache__/
+*.egg-info/
 *.py[cod]
 
 # Build
 /.pytest_cache/
 /.venv/
-/*.egg-info/
 /build/
 /dist/

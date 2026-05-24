@@ -15,6 +15,12 @@ export enum Status {
 /** Type alias for a factory function. */
 export type AnimalFactory = (name: string, age: number) => Animal;
 
+/** Object-shaped type alias remains a navigational container. */
+export type ColorSummary = {
+    red: number;
+    green: number;
+};
+
 /** Interface describing a speakable entity. */
 export interface Speakable {
     speak(): string;
@@ -28,6 +34,55 @@ export namespace Utils {
     }
 
     export type Range = { min: number; max: number };
+}
+
+/** Ambient package-style API declarations. */
+declare namespace palette {
+    type Level = 0 | 1;
+
+    interface Painter {
+        readonly level: Level;
+        readonly primary: string
+        readonly secondary: string
+        readonly formatter:
+            | string
+            | ((value: string) => string)
+        /**
+         * fake(value: string): void;
+         */
+        paint(text: string): string;
+        (text: string): string;
+        blend(
+            foreground: string,
+            background: string,
+        ): string;
+    }
+
+    namespace nested {
+        interface Formatter {
+            format(value: string): string;
+        }
+    }
+}
+
+declare const palette: palette.Painter & {
+    supportsColor: boolean;
+};
+
+export declare abstract class AbstractPainter {
+    abstract clear(): void
+    abstract reset(): void
+    abstract draw(): void;
+}
+
+declare module "palette-plugin" {
+    export function activate(): void;
+}
+
+declare global {
+    interface Window {
+        readonly palette: palette.Painter;
+    }
 }
 
 /**
@@ -75,7 +130,9 @@ export class Dog extends Animal {
     readonly breed: string;
 
     constructor(
+        /** Name passed to Animal. */
         name: string,
+        /** Age passed to Animal. */
         age: number,
         breed: string,
     ) {
@@ -106,7 +163,7 @@ export async function fetchAnimal<T extends Animal>(
     return null;
 }
 
-// Arrow function assigned to const — included because it's a function value
+// Arrow function assigned to const, included because it is a function value.
 export const createRegistry = (): Map<string, Animal> => {
     return new Map();
 };
@@ -119,16 +176,16 @@ export const processAnimals = (
     return animals.filter(predicate);
 };
 
-// Plain value constant — excluded
+// Plain value constant, excluded.
 export const MAX_ANIMALS = 100;
 export const DEFAULT_NAME = "unknown";
 
-// let function expression — included
+// Let function expression, included.
 export let helperFn = function(x: number): number {
     return x * 2;
 };
 
-// Class expression assigned to const — included
+// Class expression assigned to const, included.
 export const AnonymousCat = class extends Animal {
     meow(): string {
         return "meow";
