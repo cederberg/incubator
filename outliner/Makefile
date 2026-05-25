@@ -8,7 +8,9 @@ all:
 
 # Remove build artifacts
 clean:
-	rm -rf dist build src/*.egg-info
+	rm -rf .pytest_cache .venv build dist
+	find . -type d \( -name __pycache__ -o -name '*.egg-info' \) -prune -exec rm -rf {} +
+	find . -name '*.py[cod]' -delete
 
 # Run tests
 test:
