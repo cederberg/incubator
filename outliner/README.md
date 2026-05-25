@@ -13,6 +13,7 @@ outliner [OPTIONS] [FILE...]
 | ------------------- | --------------------------------------------------------------- |
 | `-g, --grep EXPR`   | Only show items whose signature matches EXPR (case-insensitive) |
 | `-s, --syntax LANG` | Override syntax auto-detection when it is ambiguous             |
+| `-w, --width COLS`  | Truncate output lines to COLS (`0`=unlimited, `auto`=terminal, default=`120`) |
 
 Pass a file, a directory (walked recursively), or omit arguments to read stdin.
 Use `-` to read stdin explicitly. `--syntax` is only needed when content
@@ -32,7 +33,8 @@ Each line: `<start>,<count>  <signature>`
 - `start` — 1-based line number, right-aligned
 - `count` — number of lines covered by the item (including doc-comments above)
 - `signature` — first non-comment line of the declaration; multi-line signatures
-  are merged into one line
+  are merged into one line; lines longer than the output width are truncated
+  with `...`
 
 Nesting is visible in two ways: overlapping ranges (a class range contains its
 methods) and native-format indentation in the signature (indented for code,

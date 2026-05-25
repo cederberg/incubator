@@ -4,6 +4,7 @@ import argparse
 import fnmatch
 import os
 import re
+import shutil
 import sys
 
 from outliner.parsers import NAMES, EXTENSIONS, detect, outline
@@ -65,21 +66,14 @@ def _expand_sources(sources: list[str]) -> list[str]:
     return result
 
 
-def _format_items(items: list[OutlineItem], grep: re.Pattern | None) -> list[str]:
+def _format_items(items: list[OutlineItem], grep: re.Pattern | None, line_width: int) -> list[str]:
     if grep:
         items = [it for it in items if grep.search(it.signature)]
     if not items:
         return []
-
-    max_start_width = max(3, max(len(str(it.start)) for it in items))
-    max_field_width = 2 * max_start_width + 1
-
-    lines = []
-    for it in items:
-        start_str = str(it.start).rjust(max_start_width)
-        combined = f"{start_str},{it.count}"
-        lines.append(f"{combined.ljust(max_field_width)}  {it.signature}")
-    return lines
+    num_width = max(it.num_width for it in items)
+    num_width = max(num_width, 3)
+    return [it.format(num_width, line_width) for it in items]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -93,6 +87,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="Only show items whose signature matches EXPR (case-insensitive)")
     ap.add_argument("-s", "--syntax", metavar="LANG",
                     help=f"Override syntax auto-detection (available: {', '.join(NAMES)})")
+    ap.add_argument("-w", "--width", metavar="COLS", default="120",
+                    help="Truncate output lines to COLS (0=unlimited, auto=terminal width, default=120)")
     args = ap.parse_args(argv)
 
     grep_re: re.Pattern | None = None
@@ -101,6 +97,19 @@ def main(argv: list[str] | None = None) -> int:
             grep_re = re.compile(args.grep, re.IGNORECASE)
         except re.error as exc:
             print(f"outliner: invalid --grep expression: {exc}", file=sys.stderr)
+            return 2
+
+    line_width: int
+    if args.width == "auto":
+        line_width = shutil.get_terminal_size(fallback=(120, 24)).columns
+    else:
+        try:
+            line_width = int(args.width)
+        except ValueError:
+            print(f"outliner: invalid --width value: {args.width}", file=sys.stderr)
+            return 2
+        if line_width < 0:
+            print(f"outliner: --width must be >= 0", file=sys.stderr)
             return 2
 
     sources = args.files or ["-"]
@@ -139,7 +148,7 @@ def main(argv: list[str] | None = None) -> int:
             exit_code = 2
             continue
 
-        output_lines = _format_items(items, grep_re)
+        output_lines = _format_items(items, grep_re, line_width)
 
         if output_lines:
             if multi:
