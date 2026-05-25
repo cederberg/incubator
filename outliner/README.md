@@ -6,13 +6,13 @@ so an LLM agent (or human) can navigate a file without reading it whole.
 ## Usage
 
 ```
-outliner [OPTIONS] [FILE...]
+outliner-cli [OPTIONS] [FILE...]
 ```
 
-| Option              | Description                                                     |
-| ------------------- | --------------------------------------------------------------- |
-| `-g, --grep EXPR`   | Only show items whose signature matches EXPR (case-insensitive) |
-| `-s, --syntax LANG` | Override syntax auto-detection when it is ambiguous             |
+| Option              | Description                                                                   |
+| ------------------- | ----------------------------------------------------------------------------- |
+| `-g, --grep EXPR`   | Only show items whose signature matches EXPR (case-insensitive)               |
+| `-s, --syntax LANG` | Override syntax auto-detection when it is ambiguous                           |
 | `-w, --width COLS`  | Truncate output lines to COLS (`0`=unlimited, `auto`=terminal, default=`120`) |
 
 Pass a file, a directory (walked recursively), or omit arguments to read stdin.
@@ -49,14 +49,11 @@ pip install outliner
 ## Running
 
 ```sh
+# With the package installed (pip or uvx):
+uvx outliner-cli path/to/file.py
+
 # From within the outliner/ directory
-uv run outliner path/to/file.py
-
-# From the repository root
-uv run --project outliner outliner path/to/file.py
-
-# Outline an entire directory
-uv run --project outliner outliner src/
+uv run outliner-cli path/to/file.py
 ```
 
 ## Running Tests
@@ -68,15 +65,17 @@ uv run pytest
 
 ## Supported Languages
 
-Python, Go, Markdown, reStructuredText — with Java, Rust, JavaScript/TypeScript,
-C/C++, C#, and many more in progress.
+AsciiDoc, C/C++, C#, Clojure, Go, HTML, Java, JavaScript/TypeScript, Markdown,
+Org-mode, Perl, PHP, Python, reStructuredText, Ruby, Rust, Scala, Shell, Swift,
+and Zig.
 
 ## Example Use Cases
 
-**Structural overview** — Run on a directory to see all declarations across many files before reading anything:
+**Structural overview** — Run on a directory to see all declarations across many
+files before reading anything:
 
 ```
-$ outliner src/
+$ uvx outliner-cli src/
 ==> src/billing.py <==
  12,8   class Invoice
  22,4   def create(customer_id: str, items: list[Item]) -> Invoice
@@ -87,10 +86,11 @@ $ outliner src/
  14,12  def charge(method: PaymentMethod, amount: Decimal) -> Receipt
 ```
 
-**Find all copies of a pattern** — `--grep serialize` across a source tree locates every implementation of a repeated function in one command:
+**Find all copies of a pattern** — `--grep serialize` across a source tree
+locates every implementation of a repeated function in one command:
 
 ```
-$ outliner --grep serialize src/
+$ uvx outliner-cli --grep serialize src/
 ==> src/invoice.py <==
  44,5   def serialize(self) -> dict
 
@@ -98,18 +98,23 @@ $ outliner --grep serialize src/
  31,3   def serialize(self) -> dict
 ```
 
-**Find functions whose interface mentions a term** — `--grep` searches signatures, not bodies. It finds functions whose interface involves a concept, skipping internal uses, comments, and call sites:
+**Find functions whose interface mentions a term** — `--grep` searches
+signatures, not bodies. It finds functions whose interface involves a concept,
+skipping internal uses, comments, and call sites:
 
 ```
-$ outliner --grep payment src/
+$ uvx outliner-cli --grep payment src/
  14,12  def charge(method: PaymentMethod, amount: Decimal) -> Receipt
  61,4   def refund(payment: Payment) -> bool
 ```
 
-**Find functions accepting a specific type** — `--grep PaymentMethod` locates every function where the type appears in parameters, return types, or generic bounds. Multi-line signatures are merged into a single line before matching, so nothing is missed:
+**Find functions accepting a specific type** — `--grep PaymentMethod` locates
+every function where the type appears in parameters, return types, or generic
+bounds. Multi-line signatures are merged into a single line before matching, so
+nothing is missed:
 
 ```
-$ outliner --grep PaymentMethod src/
+$ uvx outliner-cli --grep PaymentMethod src/
  14,12  def charge(method: PaymentMethod, amount: Decimal) -> Receipt
  88,4   def validate(m: PaymentMethod) -> bool
 ```
