@@ -20,7 +20,10 @@ def run(*args, stdin_text=None):
         sys.stdin = io.StringIO(stdin_text)
     try:
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            rc = main(list(args))
+            try:
+                rc = main(list(args))
+            except SystemExit as e:
+                rc = e.code if e.code is not None else 0
     finally:
         sys.stdin = old_stdin
     return out.getvalue(), err.getvalue(), rc
@@ -110,8 +113,7 @@ def test_bad_grep_regex():
 def test_unsupported_syntax():
     _, stderr, rc = run("--syntax", "cobol", str(FIXTURES / "atx.md"))
     assert rc == 2
-    assert "unsupported syntax" in stderr
-    assert "available:" in stderr
+    assert "unknown syntax" in stderr
 
 
 # ---------------------------------------------------------------------------
@@ -203,3 +205,44 @@ def test_gitignore_does_not_affect_explicit_file():
             f.write("*.py\n")
         sources = _expand_sources([path])
         assert path in sources
+
+
+# ---------------------------------------------------------------------------
+# --type filtering
+# ---------------------------------------------------------------------------
+
+def test_type_filters_by_language_name():
+    with tempfile.TemporaryDirectory() as d:
+        py = os.path.join(d, "test.py")
+        md = os.path.join(d, "readme.md")
+        _make_pyfile(py)
+        Path(md).write_text("# Readme\n")
+        stdout, _, rc = run("-t", "python", d)
+        assert rc == 0
+        assert "foo" in stdout
+        assert "Readme" not in stdout
+
+
+def test_type_accepts_extension():
+    with tempfile.TemporaryDirectory() as d:
+        py = os.path.join(d, "test.py")
+        md = os.path.join(d, "readme.md")
+        _make_pyfile(py)
+        Path(md).write_text("# Readme\n")
+        stdout, _, rc = run("--type", "py", d)
+        assert rc == 0
+        assert "foo" in stdout
+        assert "Readme" not in stdout
+
+
+def test_type_unknown_rejected():
+    _, stderr, rc = run("--type", "cobol", ".")
+    assert rc == 2
+    assert "unknown" in stderr.lower()
+
+
+def test_syntax_accepts_extension():
+    md = "# Hello\n\nworld\n"
+    stdout, _, rc = run("--syntax", "md", "-", stdin_text=md)
+    assert rc == 0
+    assert "Hello" in stdout

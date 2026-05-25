@@ -7,8 +7,13 @@ import re
 import shutil
 import sys
 
-from outliner.parsers import NAMES, EXTENSIONS, detect, outline
+from outliner.parsers import NAMES, EXTENSIONS, detect, outline, syntax
 from outliner.types import OutlineItem
+
+
+def die(msg: str, code: int = 2) -> None:
+    print(f"outliner: {msg}", file=sys.stderr)
+    sys.exit(code)
 
 
 def guess_syntax(src: str) -> str | None:
@@ -39,7 +44,16 @@ def _gitignore_match(name: str, relpath: str, patterns: list[str], is_dir: bool)
     return result
 
 
-def _expand_sources(sources: list[str]) -> list[str]:
+def _is_ignored(name: str, root: str, gi: dict[str, list[str]], is_dir: bool) -> bool:
+    for gi_dir, pats in gi.items():
+        if gi_dir == root or root.startswith(gi_dir + os.sep):
+            rel = os.path.relpath(os.path.join(root, name), gi_dir)
+            if _gitignore_match(name, rel, pats, is_dir):
+                return True
+    return False
+
+
+def _expand_sources(sources: list[str], types: set[str] | None = None) -> list[str]:
     result = []
     for src in sources:
         if src == "-" or not os.path.isdir(src):
@@ -50,18 +64,11 @@ def _expand_sources(sources: list[str]) -> list[str]:
             pats = _load_gitignore(root)
             if pats:
                 gi[root] = pats
-            active = [(d, gi[d]) for d in gi if d == root or root.startswith(d + os.sep)]
-
-            def ignored(name: str, is_dir: bool, _root: str = root, _active=active) -> bool:
-                for gi_dir, pats in _active:
-                    rel = os.path.relpath(os.path.join(_root, name), gi_dir)
-                    if _gitignore_match(name, rel, pats, is_dir):
-                        return True
-                return False
-
-            dirs[:] = sorted(d for d in dirs if not ignored(d, True))
+            dirs[:] = sorted(d for d in dirs if not _is_ignored(d, root, gi, True))
             for name in sorted(files):
-                if os.path.splitext(name.lower())[1] in EXTENSIONS and not ignored(name, False):
+                match = guess_syntax(name)
+                supported = match and (not types or match in types)
+                if supported and not _is_ignored(name, root, gi, False):
                     result.append(os.path.join(root, name))
     return result
 
@@ -87,6 +94,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="Only show items whose signature matches EXPR (case-insensitive)")
     ap.add_argument("-s", "--syntax", metavar="LANG",
                     help=f"Override syntax auto-detection (available: {', '.join(NAMES)})")
+    ap.add_argument("-t", "--type", action="append", metavar="LANG",
+                    help="Only include files of this language or extension (repeatable)")
     ap.add_argument("-w", "--width", metavar="COLS", default="120",
                     help="Truncate output lines to COLS (0=unlimited, auto=terminal width, default=120)")
     args = ap.parse_args(argv)
@@ -96,8 +105,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             grep_re = re.compile(args.grep, re.IGNORECASE)
         except re.error as exc:
-            print(f"outliner: invalid --grep expression: {exc}", file=sys.stderr)
-            return 2
+            die(f"invalid --grep expression: {exc}")
 
     line_width: int
     if args.width == "auto":
@@ -106,17 +114,30 @@ def main(argv: list[str] | None = None) -> int:
         try:
             line_width = int(args.width)
         except ValueError:
-            print(f"outliner: invalid --width value: {args.width}", file=sys.stderr)
-            return 2
+            die(f"invalid --width value: {args.width}")
         if line_width < 0:
-            print(f"outliner: --width must be >= 0", file=sys.stderr)
-            return 2
+            die(f"--width must be >= 0")
+
+    if args.syntax:
+        original_syntax = args.syntax
+        args.syntax = syntax(args.syntax)
+        if args.syntax is None:
+            die(f"unknown syntax '{original_syntax}' (try a language name like 'python' or extension like '.py')")
+
+    types = None
+    if args.type:
+        types = set()
+        for name in args.type:
+            r = syntax(name)
+            if r is None:
+                die(f"unknown --type '{name}' (try a language name like 'python' or extension like '.py')")
+            types.add(r)
 
     sources = args.files or ["-"]
     if sources == ["-"] and sys.stdin.isatty():
         ap.print_help()
         return 0
-    sources = _expand_sources(sources)
+    sources = _expand_sources(sources, types)
     multi = len(sources) > 1
 
     exit_code = 0
@@ -132,18 +153,18 @@ def main(argv: list[str] | None = None) -> int:
             exit_code = 1
             continue
 
-        syntax = args.syntax or guess_syntax(src) or detect(text)
+        match = args.syntax or guess_syntax(src) or detect(text)
 
-        if syntax is None:
+        if match is None:
             print(f"outliner: cannot auto-detect syntax for '{src}'; use --syntax",
                   file=sys.stderr)
             exit_code = 2
             continue
 
-        items = outline(syntax, text)
+        items = outline(match, text)
         if items is None:
             available = ", ".join(NAMES)
-            print(f"outliner: unsupported syntax '{syntax}'; available: {available}",
+            print(f"outliner: unsupported syntax '{match}'; available: {available}",
                   file=sys.stderr)
             exit_code = 2
             continue

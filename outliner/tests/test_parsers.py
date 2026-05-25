@@ -94,3 +94,21 @@ def test_frontmatter_rst_directive_not_false_positive():
     # A .. directive inside front-matter must not trigger RST detection.
     text = "---\nnote: .. looks like a directive\n---\n# Heading\n\nBody.\n"
     assert parsers.detect(text) == "markdown"
+
+
+# ---------------------------------------------------------------------------
+# syntax — name and extension resolution
+# ---------------------------------------------------------------------------
+
+def test_syntax_by_name():
+    assert parsers.syntax("python") == "python"
+
+
+def test_syntax_by_extension():
+    assert parsers.syntax("py") == "python"
+    assert parsers.syntax(".py") == "python"
+
+
+def test_syntax_unknown():
+    assert parsers.syntax("cobol") is None
+    assert parsers.syntax(".xyz") is None

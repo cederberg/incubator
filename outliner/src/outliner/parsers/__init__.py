@@ -16,6 +16,13 @@ def _strip_frontmatter(content: str) -> str:
     return content[m.end():] if m else content
 
 
+def syntax(name: str) -> str | None:
+    if name in _PARSERS:
+        return name
+    ext = name if name.startswith(".") else "." + name
+    return EXTENSIONS.get(ext)
+
+
 def detect(content: str) -> str | None:
     lines = _strip_frontmatter(content).splitlines()[:100]
     for mod in _MODULES:
