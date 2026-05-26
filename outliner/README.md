@@ -1,7 +1,8 @@
 # outliner
 
-Print the structural outline of source files — declarations with line ranges —
-so an LLM agent (or human) can navigate a file without reading it whole.
+Print the structural outline of source files — useful declarations and callable
+landmarks with line ranges — so an LLM agent (or human) can navigate a file
+without reading it whole.
 
 ## Usage
 
