@@ -1,3 +1,9 @@
+---
+drafted: 2026-04-19
+updated: 2026-05-31
+status: active
+---
+
 # Outliner Tool — Implementation Plan
 
 A fast CLI tool (`outline <file>`) that prints the structural outline of a
@@ -35,9 +41,9 @@ Some items naturally span large ranges that contain other items:
 These overlapping ranges are intentional and useful: the agent can read the
 whole section/class in one call, or navigate to a specific method within it. The
 output is sorted by start line. Nesting is expressed in two complementary ways:
-overlapping ranges (a class range contains its methods' ranges) and native-format
-indentation in the signature — indentation for code files, ATX heading levels
-(`#`, `##`, …) for Markdown.
+overlapping ranges (a class range contains its methods' ranges) and
+native-format indentation in the signature — indentation for code files, ATX
+heading levels (`#`, `##`, …) for Markdown.
 
 ### Multi-file output
 
@@ -85,15 +91,14 @@ extensionless scripts, or `.h` files that could be C or C++).
 - **Class members**: Always included — the tool outlines the whole file.
 - **Plain text**: Treat as Markdown (heading lines only).
 - **Content auto-detection**: Each parser implements `detect(lines)` that
-  returns True/False based on file content. Detection must be
-  **conservative**: use language-specific co-occurring markers, never a single
-  generic keyword. `class`, `def`, `function`, `module`, etc. appear in many
-  languages and must never be used as sole detection signals. Good markers:
-  Go requires both `package` and `func`/`type`; Python checks that
-  `def`/`class` lines end with `:` (not `{`). When uncertain, prefer false
-  negative (fall through to next detector) over false positive (misidentify
-  the file). Markdown's `detect()` always returns True and is registered last
-  as a catch-all fallback.
+  returns True/False based on file content. Detection must be **conservative**:
+  use language-specific co-occurring markers, never a single generic keyword.
+  `class`, `def`, `function`, `module`, etc. appear in many languages and must
+  never be used as sole detection signals. Good markers: Go requires both
+  `package` and `func`/`type`; Python checks that `def`/`class` lines end with
+  `:` (not `{`). When uncertain, prefer false negative (fall through to next
+  detector) over false positive (misidentify the file). Markdown's `detect()`
+  always returns True and is registered last as a catch-all fallback.
 
 ## Project Layout
 
@@ -126,8 +131,8 @@ XML use structural path-based output instead of line ranges.
 - [x] **Markdown** (`parsers/markdown.py`) — ATX/Setext headings with nesting;
       simplest parser, good baseline for understanding the output format
 - [x] **reStructuredText** (`parsers/rst.py`) — underline/overline headings with
-      any decoration character (`= - ~ ^ * + # < >`); level determined by
-      order of first appearance; `.rst`/`.rest` extensions + content detection
+      any decoration character (`= - ~ ^ * + # < >`); level determined by order
+      of first appearance; `.rst`/`.rest` extensions + content detection
 - [x] **Python** (`parsers/python.py`) — regex-based; functions, classes,
       methods
 - [x] **Go** (`parsers/go.py`) — func, method, type, const/var blocks;
@@ -137,8 +142,8 @@ XML use structural path-based output instead of line ranges.
 - [x] **Rust** — fn, impl, struct, enum, trait, mod, type alias;
       lifetime/generic handling
 - [x] **JavaScript/TypeScript** — function declaration, class; top-level
-      function-valued `const`/`let` (arrow functions, class expressions) but
-      not plain value assignments; TypeScript: interface, type alias, enum,
+      function-valued `const`/`let` (arrow functions, class expressions) but not
+      plain value assignments; TypeScript: interface, type alias, enum,
       namespace, decorators; `.js`/`.jsx`/`.ts`/`.tsx` extensions
 - [x] **C/C++** — function definitions, struct/class/enum, namespace (C++),
       `#define` macros, template declarations
@@ -157,42 +162,39 @@ XML use structural path-based output instead of line ranges.
       defmulti, def; S-expression structure
 - [x] **AsciiDoc** — `=`-prefixed headings (like ATX but with `=` and `==`),
       section titles; `.adoc`/`.asciidoc` extensions
-- [x] **Org-mode** — `*`-prefixed headings (`*`, `**`, …); widely used in
-      Emacs / literate-programming workflows; `.org` extension
-- [x] **HTML** — document format like Markdown; headings (`h1`-`h6`),
-      semantic landmarks (`<nav>`, `<main>`, `<article>`, `<section>`);
-      line-based output with ranges
-- [ ] **JSON** — structural (path-based) output; no line tracking; show
-      array lengths, object shape, data types per field, an example value,
-      and optional vs always‑present fields; first-line summary: char
-      count, format type (single‑doc vs NDJSON/JSONL), top‑level type
-- [ ] **YAML** — structural output (JSON‑like); parse whole file, show key
-      paths with types; simpler subset of the JSON approach; low priority
-      — large YAML files are rare
-- [ ] **XML** — structural output; XPath‑based location keys; element
-      paths with attributes, text content types, nesting depth
+- [x] **Org-mode** — `*`-prefixed headings (`*`, `**`, …); widely used in Emacs
+      / literate-programming workflows; `.org` extension
+- [x] **HTML** — document format like Markdown; headings (`h1`-`h6`), semantic
+      landmarks (`<nav>`, `<main>`, `<article>`, `<section>`); line-based output
+      with ranges
+- [ ] **JSON** — structural (path-based) output; no line tracking; show array
+      lengths, object shape, data types per field, an example value, and
+      optional vs always‑present fields; first-line summary: char count, format
+      type (single‑doc vs NDJSON/JSONL), top‑level type
+- [ ] **XML** — structural output; XPath‑based location keys; element paths with
+      attributes, text content types, nesting depth
 
 ### JavaScript/TypeScript fixes
 
-The JS/TS regex parser works for well-formed code but has issues with
-real-world npm packages. Each fix needs new test cases and possibly fixture
-files drawn from actual node_modules.
+The JS/TS regex parser works for well-formed code but has issues with real-world
+npm packages. Each fix needs new test cases and possibly fixture files drawn
+from actual node_modules.
 
-- [ ] **Missing extensions**: Register `.mjs`, `.cjs`, `.mts`, `.cts` in the
-  parser's `EXTENSIONS` tuple and add corresponding
-  `test_detect_extension_*` tests.
-- [ ] **False positives in function bodies**: `const keys = (a || b)[c]` inside
-  a function body looks like a `const` arrow assignment to the regex.
-  Narrow detection to top-level scope only (not inside brace-delimited
-  bodies).
-- [ ] **Method-like calls mistaken for declarations**: `traverse(child, node,
-  visitor)` matches the indented method pattern. Limit method detection to
-  lines inside class/interface/enum/namespace ranges.
-- [ ] **Inline brace in const assignment body**: `const x = fn({a:1})` is
-  currently treated as a body-opening brace. Improve `_seek_expression_end`
-  to handle inline object literals.
-- [ ] **Example real-world files exposing various issues** (each should inform
-  a dedicated test case):
+- [x] **Missing extensions**: Register `.mjs`, `.cjs`, `.mts`, `.cts` in the
+      parser's `EXTENSIONS` tuple and add corresponding
+      `test_detect_extension_*` tests.
+- [x] **False positives in function bodies**: `const keys = (a || b)[c]` inside
+      a function body looks like a `const` arrow assignment to the regex. Narrow
+      detection to top-level scope only (not inside brace-delimited bodies).
+- [x] **Method-like calls mistaken for declarations**:
+      `traverse(child, node, visitor)` matches the indented method pattern.
+      Limit method detection to lines inside class/interface/enum/namespace
+      ranges.
+- [x] **Inline brace in const assignment body**: `const x = fn({a:1})` is
+      currently treated as a body-opening brace. Improve `_seek_expression_end`
+      to handle inline object literals.
+- [x] **Example real-world files exposing various issues** (each should inform a
+      dedicated test case):
   - `node_modules/zip-stream/index.js`
   - `node_modules/yaml-eslint-parser/lib/convert.js`
   - `node_modules/yaml/dist/stringify/stringifyCollection.js`
@@ -202,7 +204,14 @@ files drawn from actual node_modules.
 
 - [x] `README.md` for the `outliner/` package
 - [x] Auto-exclude `.gitignore` files/dirs from directory walk
-- [ ] Add `--exclude` option to exclude file patterns from directory walk
-- [ ] JSON output mode for programmatic consumption by agents and other tools
-- [ ] End-line display option — show `start-end` instead of (or alongside)
+
+## Open Questions
+
+- [ ] Add YAML structural output? Parse whole file and show key paths with
+      types. This would be a simpler subset of the JSON approach; large YAML
+      files are rare.
+- [ ] Add `--exclude` option to exclude file patterns from directory walk?
+- [ ] Add JSON output mode for programmatic consumption by agents and other
+      tools?
+- [ ] Add end-line display option — show `start-end` instead of (or alongside)
       `start,count` for easier navigation

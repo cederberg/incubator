@@ -1,16 +1,21 @@
 # AGENTS.md
 
 ## File Reference
+
 - [README.md] — tools, skills, usage examples
-- [skills/technical-writer/references/rules/style-guide.md] - writing style guide
+- [notes/index.md] — structured notes method
+- [skills/technical-writer/references/rules/style-guide.md] - writing style
+  guide
 
 ## Command Reference
+
 ```bash
 frontmatter <file(s)>...               # extract front-matter (skills)
 prettier -w --prose-wrap always <file> # format markdown file (post-edit)
 ```
 
 ## General
+
 - Radical brevity — in code, rules, and responses
 - Read related reference documents before starting a task
 - Update `README.md` when tool or skill usage changes.
@@ -19,6 +24,7 @@ prettier -w --prose-wrap always <file> # format markdown file (post-edit)
 - Verify any code examples against source or command output
 
 ## Skill Instructions
+
 - Edit at `skills/{{name}}/` (project root), ignore global location for edits
 - Set `disable-model-invocation: true` to prevent automatic triggering
 - Only add instructions where agents will err without them
@@ -29,12 +35,14 @@ prettier -w --prose-wrap always <file> # format markdown file (post-edit)
 - Use `<arg> [<optional>]` for CLI command templates
 
 ## Python Code
+
 - Name what a variable is; e.g. `line` not `raw`
 - Prioritize fewer lines; e.g. named lambda vars to allow single-line below
 - Prefer returning iterators over lists
 - Use positive guards, not `if not COND: continue`
 
 ## Shell Scripts
+
 - Use kebab-case function names with single-line comment above
 - Color constants: `COLOR_X=$(tput ... 2>/dev/null || echo '')`
 - Binary safety: `grep -a`, `head -n 1 ... 2>/dev/null`

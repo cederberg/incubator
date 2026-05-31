@@ -1,3 +1,8 @@
+---
+drafted: 2026-04-29
+status: archived
+---
+
 # Outliner — Code Review Notes
 
 From code review session, April 2026. Source is 2213 lines across 14 files;
@@ -53,25 +58,25 @@ migrate to it too.
 
 c.py, csharp.py, java.py, javascript.py each define `_STMT_START_RE` with
 overlapping keywords (`return`, `throw`, `break`, `continue` in all four).
-`_CONTROL_FLOW` frozensets in java and csharp share most content. Could share
-a base set with per-language additions, but low priority.
+`_CONTROL_FLOW` frozensets in java and csharp share most content. Could share a
+base set with per-language additions, but low priority.
 
 ### `javascript.py`: `_collect_const_sig` duplicates `_collect_sig`
 
-`_collect_const_sig` (lines 171–200) is `_collect_sig` with an extra
-`found_eq` gate. ~20 identical lines. Could be unified with a `require_eq`
-parameter, saving ~30 lines in the largest and most complex parser.
+`_collect_const_sig` (lines 171–200) is `_collect_sig` with an extra `found_eq`
+gate. ~20 identical lines. Could be unified with a `require_eq` parameter,
+saving ~30 lines in the largest and most complex parser.
 
 ## Parser Complexity Assessment
 
-| File            | Lines | Notes                                              |
-| --------------- | ----- | -------------------------------------------------- |
-| javascript.py   | 358   | Justified: 7 declaration forms + TS negation logic |
-| c.py            | 304   | Justified: `_is_func_line` heuristics unavoidable  |
-| csharp.py       | 287   | Property detection (`_is_property_line`) adds real bulk |
-| swift.py        | 150   | Reasonable; similar structure to C# at half lines  |
-| rust.py         | 89    | Very clean; `_ALL_DECLS` list pattern is good      |
-| go.py           | 83    | Exemplary — minimal and clear                      |
+| File          | Lines | Notes                                                   |
+| ------------- | ----- | ------------------------------------------------------- |
+| javascript.py | 358   | Justified: 7 declaration forms + TS negation logic      |
+| c.py          | 304   | Justified: `_is_func_line` heuristics unavoidable       |
+| csharp.py     | 287   | Property detection (`_is_property_line`) adds real bulk |
+| swift.py      | 150   | Reasonable; similar structure to C# at half lines       |
+| rust.py       | 89    | Very clean; `_ALL_DECLS` list pattern is good           |
+| go.py         | 83    | Exemplary — minimal and clear                           |
 
 C#'s `_is_property_line` (lines 148–171) is 24 lines for a feature that exists
 to handle a handful of false-positive cases. Worth revisiting if it causes
@@ -82,6 +87,7 @@ ongoing maintenance.
 ### Fixture re-reads — 13–22 disk reads per test run per file
 
 Every fixture test calls `parse(FIXTURE.read_text())` independently:
+
 - test_rust.py: 22 calls
 - test_java.py: 22 calls
 - test_csharp.py: 13 calls
@@ -109,8 +115,8 @@ approach is also fine — they're short and confirm the contract locally.
 
 1. Extract `make_item` utility — collapse 25 call sites of the 4-line append
    pattern. Highest leverage, lowest risk.
-2. Merge `_collect_const_sig` into `_collect_sig` in javascript.py — saves
-   ~30 lines in the largest file.
+2. Merge `_collect_const_sig` into `_collect_sig` in javascript.py — saves ~30
+   lines in the largest file.
 3. Merge java + rust `_collect_sig` into a shared utility in `util.py`.
 4. Merge csharp + swift `_collect_sig` — nearly identical except body-strip
    regex.

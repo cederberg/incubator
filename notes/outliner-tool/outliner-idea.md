@@ -1,3 +1,8 @@
+---
+drafted: 2026-04-19
+status: archived
+---
+
 # Outliner Tool
 
 A fast CLI tool that prints the structural outline of a source file —

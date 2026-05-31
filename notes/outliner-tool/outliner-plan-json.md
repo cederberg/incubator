@@ -1,3 +1,8 @@
+---
+drafted: 2026-05-08
+status: active
+---
+
 # JSON / Data Format Support — Notes
 
 ## Structural (path-based) output instead of line ranges
