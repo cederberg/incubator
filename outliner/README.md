@@ -14,6 +14,7 @@ outliner-cli [OPTIONS] [FILE...]
 | ------------------- | ----------------------------------------------------------------------------- |
 | `-g, --grep EXPR`   | Only show items whose signature matches EXPR (case-insensitive)               |
 | `-s, --syntax LANG` | Override syntax auto-detection when it is ambiguous                           |
+| `-t, --type LANG`   | Only include files of this language (repeatable, accepts name or extension)   |
 | `-w, --width COLS`  | Truncate output lines to COLS (`0`=unlimited, `auto`=terminal, default=`120`) |
 
 Pass a file, a directory (walked recursively), or omit arguments to read stdin.
@@ -44,7 +45,7 @@ methods) and native-format indentation in the signature (indented for code,
 ## Installation
 
 ```sh
-pip install outliner
+pip install outliner-cli
 ```
 
 ## Running
