@@ -12,7 +12,7 @@ _Organizes ideas, notes, and plans into a file structure._
 - Each topic lives in `notes/<topic>/`.
 - Topic names are specific; generic names are avoided.
 - Filenames are understandable without directory context.
-- `frontmatter notes/<topic>` is the topic inventory.
+- `frontmatter --summary --titles notes/<topic>` shows the topic inventory.
 
 ## Front Matter
 
