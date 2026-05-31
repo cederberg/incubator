@@ -69,9 +69,8 @@ npx skills@latest add -g cederberg/incubator/skills --skill '*'
   npx skills@latest add -g cederberg/incubator/skills/refactor
   ```
 
-- **what-we-forgot** — Reviews project instructions and the current conversation
-  for missed requirements or unresolved work items, then presents them to the
-  user.
+- **what-we-forgot** — Scans the current conversation from the beginning for
+  missed instructions, unresolved work items, and forgotten ideas.
 
   ```
   npx skills@latest add -g cederberg/incubator/skills/what-we-forgot
