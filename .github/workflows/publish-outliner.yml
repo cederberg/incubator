@@ -10,10 +10,17 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      # Check out the repository
+      - uses: actions/checkout@v6
+
+      # Install uv
+      - uses: astral-sh/setup-uv@v8
+
+      # Build source distribution and wheel
       - run: uv build
         working-directory: outliner
+
+      # Publish to PyPI using trusted publishing
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: outliner/dist
