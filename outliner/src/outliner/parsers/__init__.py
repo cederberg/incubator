@@ -1,13 +1,23 @@
 import re
+import types
 
-from . import python, scala, go, java, rust, swift, c, ruby, php, shell, javascript, csharp, perl, zig, clojure, html, asciidoc, orgmode, rst, markdown
-from outliner.types import OutlineItem
+from ..types import OutlineItem
+from . import (
+    python, scala, go, java, rust, swift, c, ruby, php, shell, javascript,
+    csharp, perl, zig, clojure, html, asciidoc, orgmode, rst, markdown,
+)
 
-_MODULES = [python, scala, go, java, rust, swift, c, ruby, php, shell, javascript, csharp, perl, zig, clojure, html, asciidoc, orgmode, rst, markdown]
-_PARSERS = {mod.SYNTAX: mod.parse for mod in _MODULES}
-NAMES = sorted(_PARSERS)
-EXTENSIONS = {ext: mod.SYNTAX for mod in _MODULES for ext in mod.EXTENSIONS}
-
+_MODULES = {
+    mod.SYNTAX: mod
+    for mod in globals().values() if (
+        isinstance(mod, types.ModuleType)
+        and mod.__name__.startswith(f"{__name__}.")
+        and hasattr(mod, "SYNTAX")
+        and hasattr(mod, "EXTENSIONS")
+    )
+}
+NAMES = sorted(_MODULES)
+EXTENSIONS = {ext: syntax for syntax, mod in _MODULES.items() for ext in mod.EXTENSIONS}
 _FRONTMATTER_RE = re.compile(r'\A(?:---\n(?:.*\n){0,98}?---\n|\+\+\+\n(?:.*\n){0,98}?\+\+\+\n)')
 
 
@@ -17,7 +27,7 @@ def _strip_frontmatter(content: str) -> str:
 
 
 def syntax(name: str) -> str | None:
-    if name in _PARSERS:
+    if name in _MODULES:
         return name
     ext = name if name.startswith(".") else "." + name
     return EXTENSIONS.get(ext)
@@ -25,19 +35,19 @@ def syntax(name: str) -> str | None:
 
 def detect(content: str) -> str | None:
     lines = _strip_frontmatter(content).splitlines()[:100]
-    for mod in _MODULES:
+    for mod in _MODULES.values():
         if mod.detect(lines):
             return mod.SYNTAX
     return None
 
 
 def outline(syntax: str, content: str) -> list[OutlineItem] | None:
-    parse = _PARSERS.get(syntax)
-    if not parse:
+    mod = _MODULES.get(syntax)
+    if not mod:
         return None
     m = _FRONTMATTER_RE.match(content)
     if not m:
-        return list(parse(content))
+        return list(mod.parse(content))
     offset = m.group(0).count('\n')
     return [OutlineItem(start=it.start + offset, count=it.count, signature=it.signature)
-            for it in parse(content[m.end():])]
+            for it in mod.parse(content[m.end():])]
