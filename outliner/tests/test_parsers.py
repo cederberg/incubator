@@ -1,6 +1,10 @@
 """Tests for parsers/__init__.py — front-matter stripping and dispatch."""
 
+import io
+import types
+
 import outliner.parsers as parsers
+from outliner.types import OutlineItem
 
 
 # ---------------------------------------------------------------------------
@@ -10,6 +14,15 @@ import outliner.parsers as parsers
 def test_frontmatter_line_numbers_offset():
     # Front-matter is 3 lines; heading must appear at line 4, not line 1.
     text = "---\nname: test\n---\n# Heading\n\nBody.\n"
+    items = parsers.outline("markdown", text)
+    assert len(items) == 1
+    assert items[0].signature == "# Heading"
+    assert items[0].start == 4
+
+
+def test_frontmatter_line_numbers_offset_from_text_stream():
+    # Text parsers keep the old parse(str) API even when outline() receives a handle.
+    text = io.StringIO("---\nname: test\n---\n# Heading\n\nBody.\n")
     items = parsers.outline("markdown", text)
     assert len(items) == 1
     assert items[0].signature == "# Heading"
@@ -112,3 +125,31 @@ def test_syntax_by_extension():
 def test_syntax_unknown():
     assert parsers.syntax("cobol") is None
     assert parsers.syntax(".xyz") is None
+
+
+# ---------------------------------------------------------------------------
+# dispatch — stream parser support
+# ---------------------------------------------------------------------------
+
+def test_outline_prefers_read_when_parser_defines_it(monkeypatch):
+    def parse(_content):
+        raise AssertionError("parse() should not be called for stream parsers")
+
+    def read(fh):
+        return [OutlineItem(1, 1, fh.read())]
+
+    mod = types.SimpleNamespace(parse=parse, read=read)
+    monkeypatch.setitem(parsers._MODULES, "stream-test", mod)
+    items = parsers.outline("stream-test", io.StringIO("streamed"))
+    assert items[0].signature == "streamed"
+
+
+def test_outline_wraps_strings_for_read_parsers(monkeypatch):
+    def read(fh):
+        assert hasattr(fh, "read")
+        return [OutlineItem(1, 1, fh.read())]
+
+    mod = types.SimpleNamespace(read=read)
+    monkeypatch.setitem(parsers._MODULES, "string-stream-test", mod)
+    items = parsers.outline("string-stream-test", "from string")
+    assert items[0].signature == "from string"

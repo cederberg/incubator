@@ -5,9 +5,13 @@ import io
 import os
 import sys
 import tempfile
+import types
 from pathlib import Path
 
+import outliner.cli as cli
+import outliner.parsers as parsers
 from outliner.cli import main, _expand_sources
+from outliner.types import OutlineItem
 
 FIXTURES = Path(__file__).parent / "fixtures" / "md"
 
@@ -63,6 +67,26 @@ def test_grep_no_match_empty_output():
     assert stdout.strip() == ""
 
 
+def test_file_sources_are_passed_to_outline_as_rewound_handles(monkeypatch):
+    def fake_outline(match, content):
+        assert match == "markdown"
+        assert hasattr(content, "read")
+        assert content.tell() == 0
+        assert content.read(1) == "#"
+        return [OutlineItem(1, 1, "# Title")]
+
+    with tempfile.NamedTemporaryFile(suffix=".md", mode="w", delete=False) as f:
+        f.write("# Title\n\nBody.\n")
+        fname = f.name
+    try:
+        monkeypatch.setattr(cli, "outline", fake_outline)
+        stdout, _, rc = run(fname)
+        assert rc == 0
+        assert "Title" in stdout
+    finally:
+        os.unlink(fname)
+
+
 # ---------------------------------------------------------------------------
 # Stdin
 # ---------------------------------------------------------------------------
@@ -79,6 +103,17 @@ def test_stdin_with_syntax():
     stdout, _, rc = run("--syntax", "markdown", "-", stdin_text=md)
     assert rc == 0
     assert "Hello" in stdout
+
+
+def test_stdin_with_read_parser(monkeypatch):
+    def read(fh):
+        assert hasattr(fh, "read")
+        return [OutlineItem(1, 1, fh.read())]
+
+    monkeypatch.setitem(parsers._MODULES, "stdin-stream-test", types.SimpleNamespace(read=read))
+    stdout, _, rc = run("--syntax", "stdin-stream-test", "-", stdin_text="stream stdin")
+    assert rc == 0
+    assert "stream stdin" in stdout
 
 
 # ---------------------------------------------------------------------------

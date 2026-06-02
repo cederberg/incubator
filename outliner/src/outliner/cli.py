@@ -83,6 +83,19 @@ def _format_items(items: list[OutlineItem], grep: re.Pattern | None, line_width:
     return [it.format(num_width, line_width) for it in items]
 
 
+def _outline_source(src: str, selected: str | None) -> tuple[list[OutlineItem] | None, str | None]:
+    if src == "-":
+        text = sys.stdin.read()
+        match = selected or detect(text)
+        return (outline(match, text) if match else None), match
+
+    with open(src, encoding="utf-8", errors="replace") as fh:
+        head = fh.read(4096)
+        match = selected or guess_syntax(src) or detect(head)
+        fh.seek(0)
+        return (outline(match, fh) if match else None), match
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         prog="outliner",
@@ -143,17 +156,11 @@ def main(argv: list[str] | None = None) -> int:
     exit_code = 0
     for src in sources:
         try:
-            if src == "-":
-                text = sys.stdin.read()
-            else:
-                with open(src, encoding="utf-8", errors="replace") as fh:
-                    text = fh.read()
+            items, match = _outline_source(src, args.syntax)
         except OSError as exc:
             print(f"outliner: {exc}", file=sys.stderr)
             exit_code = 1
             continue
-
-        match = args.syntax or guess_syntax(src) or detect(text)
 
         if match is None:
             print(f"outliner: cannot auto-detect syntax for '{src}'; use --syntax",
@@ -161,7 +168,6 @@ def main(argv: list[str] | None = None) -> int:
             exit_code = 2
             continue
 
-        items = outline(match, text)
         if items is None:
             available = ", ".join(NAMES)
             print(f"outliner: unsupported syntax '{match}'; available: {available}",

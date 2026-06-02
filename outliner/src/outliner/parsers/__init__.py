@@ -1,5 +1,7 @@
+import io
 import re
 import types
+from typing import TextIO
 
 from ..types import OutlineItem
 from . import (
@@ -41,10 +43,19 @@ def detect(content: str) -> str | None:
     return None
 
 
-def outline(syntax: str, content: str) -> list[OutlineItem] | None:
+def outline(syntax: str, content: str | TextIO) -> list[OutlineItem] | None:
     mod = _MODULES.get(syntax)
     if not mod:
         return None
+    elif hasattr(mod, "read"):
+        fh = io.StringIO(content) if isinstance(content, str) else content
+        return list(mod.read(fh))
+    else:
+        text = content.read() if hasattr(content, "read") else content
+        return _outline_text(mod, text)
+
+
+def _outline_text(mod, content: str) -> list[OutlineItem]:
     m = _FRONTMATTER_RE.match(content)
     if not m:
         return list(mod.parse(content))
