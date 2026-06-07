@@ -78,9 +78,9 @@ def _format_items(items: list[OutlineItem], grep: re.Pattern | None, line_width:
         items = [it for it in items if grep.search(it.signature)]
     if not items:
         return []
-    num_width = max(it.num_width for it in items)
-    num_width = max(num_width, 3)
-    return [it.format(num_width, line_width) for it in items]
+    fmt_width = max(it.fmt_width for it in items)
+    fmt_width = max(fmt_width, 3)
+    return [it.format(fmt_width, line_width) for it in items]
 
 
 def _outline_source(src: str, selected: str | None) -> tuple[list[OutlineItem] | None, str | None]:

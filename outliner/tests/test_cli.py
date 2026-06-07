@@ -73,7 +73,7 @@ def test_file_sources_are_passed_to_outline_as_rewound_handles(monkeypatch):
         assert hasattr(content, "read")
         assert content.tell() == 0
         assert content.read(1) == "#"
-        return [OutlineItem(1, 1, "# Title")]
+        return [OutlineItem(start=1, count=1, signature="# Title")]
 
     with tempfile.NamedTemporaryFile(suffix=".md", mode="w", delete=False) as f:
         f.write("# Title\n\nBody.\n")
@@ -108,7 +108,7 @@ def test_stdin_with_syntax():
 def test_stdin_with_read_parser(monkeypatch):
     def read(fh):
         assert hasattr(fh, "read")
-        return [OutlineItem(1, 1, fh.read())]
+        return [OutlineItem(start=1, count=1, signature=fh.read())]
 
     monkeypatch.setitem(parsers._MODULES, "stdin-stream-test", types.SimpleNamespace(read=read))
     stdout, _, rc = run("--syntax", "stdin-stream-test", "-", stdin_text="stream stdin")

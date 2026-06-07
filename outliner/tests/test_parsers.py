@@ -136,7 +136,7 @@ def test_outline_prefers_read_when_parser_defines_it(monkeypatch):
         raise AssertionError("parse() should not be called for stream parsers")
 
     def read(fh):
-        return [OutlineItem(1, 1, fh.read())]
+        return [OutlineItem(start=1, count=1, signature=fh.read())]
 
     mod = types.SimpleNamespace(parse=parse, read=read)
     monkeypatch.setitem(parsers._MODULES, "stream-test", mod)
@@ -147,7 +147,7 @@ def test_outline_prefers_read_when_parser_defines_it(monkeypatch):
 def test_outline_wraps_strings_for_read_parsers(monkeypatch):
     def read(fh):
         assert hasattr(fh, "read")
-        return [OutlineItem(1, 1, fh.read())]
+        return [OutlineItem(start=1, count=1, signature=fh.read())]
 
     mod = types.SimpleNamespace(read=read)
     monkeypatch.setitem(parsers._MODULES, "string-stream-test", mod)
