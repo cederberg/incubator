@@ -1,142 +1,334 @@
-"""HTML outline parser.
+"""HTML outline parser using Python's tokenizing HTMLParser."""
 
-Recognises <head> and <body> as depth-0 structural elements; h1–h6
-headings with depth equal to the heading level (2 spaces per level);
-and semantic landmark elements (<nav>, <main>, <article>, <section>) at
-depth 1 (2 spaces, inside body).
-
-Signature format:
-  <head>                    depth 0
-  <body>                    depth 0
-    <h1>Title</h1>          depth 1  (2 spaces)
-      <h2>Sub</h2>          depth 2  (4 spaces)
-  <nav>                     depth 1
-  <section#id>              depth 1
-
-Heading ranges extend to the next same-or-higher-level heading;
-landmark and structural ranges extend to the matching closing tag.
-
-Regex-based, covering ~90-95% of real-world HTML.  Known limitations:
-tags whose attributes contain '>', and multiple headings on the same
-minified line.
-"""
-
+import html
 import re
 from collections.abc import Iterator
+from dataclasses import dataclass, field
+from html.parser import HTMLParser
 
 from outliner.types import OutlineItem
 
 SYNTAX = "html"
 EXTENSIONS = (".html", ".htm", ".xhtml")
 
-# Match start of heading tag — '>' may be on a later line
-_HEADING_START_RE  = re.compile(r'<h([1-6])\b', re.IGNORECASE)
-_HEADING_CLOSE_RE  = re.compile(r'</h[1-6]\s*>', re.IGNORECASE)
-_TAG_RE            = re.compile(r'<[^>]+>')
-_WS_RE             = re.compile(r'\s+')
-_ENTITY_RE         = re.compile(r'&(?:([a-zA-Z]\w+)|#x([0-9a-fA-F]+)|#(\d+));')
-_DOCTYPE_RE        = re.compile(r'^\s*<!DOCTYPE\s+html', re.IGNORECASE)
-_HTML_TAG_RE       = re.compile(r'^\s*<html[\s>]', re.IGNORECASE)
-_LANDMARK_START_RE = re.compile(r'<(section|article|main|nav)\b', re.IGNORECASE)
-_STRUCTURAL_START_RE = re.compile(r'<(head|body)\b', re.IGNORECASE)
-_ATTR_ID_RE        = re.compile(r'\bid=["\']([^"\']+)["\']')
-# \b lets us match <script or <script\n... (tag name at end of line)
-_SKIP_OPEN_RE      = re.compile(r'<(script|style)\b', re.IGNORECASE)
-_SKIP_CLOSE_RE     = re.compile(r'</(script|style)\s*>', re.IGNORECASE)
-
-# Pre-compiled open/close patterns for nesting-aware close search
-_BLOCK_RES: dict[str, tuple[re.Pattern, re.Pattern]] = {
-    tag: (re.compile(rf'<{tag}\b', re.IGNORECASE),
-          re.compile(rf'</{tag}\s*>', re.IGNORECASE))
-    for tag in ('head', 'body', 'section', 'article', 'main', 'nav')
+_DOCTYPE_RE = re.compile(r'^\s*<!DOCTYPE\s+html', re.IGNORECASE)
+_HTML_TAG_RE = re.compile(r'^\s*<html[\s>]', re.IGNORECASE)
+_WS_RE = re.compile(r'\s+')
+_SENTENCE_RE = re.compile(r'(?<=[.!?])\s+')
+_STRUCTURAL = {"head", "body"}
+_LANDMARKS = {"nav", "main", "article", "section", "header"}
+_OUTLINE_TAGS = _STRUCTURAL | _LANDMARKS
+_CONTENT_TAGS = {"body"} | _LANDMARKS
+_TEXT_SKIP_TAGS = {"script", "style", "svg", "noscript", "template"}
+_EXCERPT_LIMIT = 80
+_BORING_EXCERPTS = {
+    "advertisement", "close", "menu", "navigation", "open menu",
+    "search", "skip advertisement", "skip to content",
 }
-
-_NAMED_ENTITIES: dict[str, str] = {
-    'amp': '&', 'lt': '<', 'gt': '>', 'quot': '"', 'apos': "'",
-    'nbsp': ' ', 'copy': '©', 'reg': '®', 'trade': '™',
-    'mdash': '—', 'ndash': '–',
-    'ldquo': '“', 'rdquo': '”', 'lsquo': '‘', 'rsquo': '’',
-    'hellip': '…', 'bull': '•', 'euro': '€', 'pound': '£', 'yen': '¥',
-    'times': '×', 'divide': '÷', 'plusmn': '±', 'frac12': '½',
+_VOID_TAGS = {
+    "area", "base", "br", "col", "embed", "hr", "img", "input",
+    "link", "meta", "param", "source", "track", "wbr",
 }
 
 
-def _decode_entity(m: re.Match) -> str:
-    if m.group(1):
-        return _NAMED_ENTITIES.get(m.group(1), m.group(0))
-    try:
-        return chr(int(m.group(2), 16) if m.group(2) else int(m.group(3)))
-    except (ValueError, OverflowError):
-        return m.group(0)
+@dataclass
+class _Node:
+    tag: str
+    start: int
+    start_col: int
+    attrs: dict[str, str]
+    depth: int
+    text_parts: list[str] = field(default_factory=list)
+    heading_text: str = ""
+    end: int | None = None
+
+    @property
+    def signature(self) -> str:
+        return _block_sig(
+            self.tag,
+            self.attrs,
+            self.heading_text or "".join(self.text_parts),
+            self.depth,
+        )
+
+    @property
+    def has_identity(self) -> bool:
+        return (
+            self.tag in _STRUCTURAL
+            or self.tag == "main"
+            or bool(self.attrs.get("id"))
+            or bool(_clean(self.attrs.get("aria-label", "")))
+            or bool(_excerpt(self.heading_text or "".join(self.text_parts)))
+        )
+
+
+@dataclass
+class _Heading:
+    tag: str
+    level: int
+    start: int
+    start_col: int
+    base_depth: int
+    context_key: int
+    text_parts: list[str] = field(default_factory=list)
+
+
+class _Parser(HTMLParser):
+    def __init__(self, line_count: int):
+        super().__init__(convert_charrefs=False)
+        self.line_count = line_count
+        self.nodes: list[_Node] = []
+        self.headings: list[tuple[int, int, int, str]] = []
+        self.titles: list[tuple[int, int, OutlineItem]] = []
+        self._stack: list[_Node] = []
+        self._heading: _Heading | None = None
+        self._title: _Heading | None = None
+        self._text_skip: list[str] = []
+        self._heading_stacks: dict[int, list[tuple[int, int]]] = {}
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        tag = tag.lower()
+        if self._text_skip:
+            if tag in _TEXT_SKIP_TAGS:
+                self._text_skip.append(tag)
+            return
+        if tag in _TEXT_SKIP_TAGS:
+            self._text_skip.append(tag)
+            return
+
+        line, column = self.getpos()
+        attrs_by_name = {name.lower(): value or "" for name, value in attrs}
+        if tag in _OUTLINE_TAGS:
+            if tag in _STRUCTURAL and self._inside_content():
+                return
+            node = _Node(
+                tag=tag,
+                start=line,
+                start_col=column,
+                attrs=attrs_by_name,
+                depth=self._tag_depth(tag),
+            )
+            self.nodes.append(node)
+            if tag not in _VOID_TAGS:
+                self._stack.append(node)
+        elif tag in _VOID_TAGS:
+            return
+
+        if _is_heading(tag):
+            self._heading = _Heading(
+                tag=tag,
+                level=int(tag[1]),
+                start=line,
+                start_col=column,
+                base_depth=self._heading_base_depth(),
+                context_key=self._heading_context_key(),
+            )
+        elif tag == "title" and self._inside_document_head():
+            self._title = _Heading(
+                tag=tag,
+                level=0,
+                start=line,
+                start_col=column,
+                base_depth=self._tag_depth(tag),
+                context_key=0,
+            )
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        tag = tag.lower()
+        if self._text_skip:
+            return
+        if tag in _OUTLINE_TAGS:
+            if tag in _STRUCTURAL and self._inside_content():
+                return
+            attrs_by_name = {name.lower(): value or "" for name, value in attrs}
+            line, column = self.getpos()
+            self.nodes.append(_Node(
+                tag=tag,
+                start=line,
+                start_col=column,
+                end=line,
+                attrs=attrs_by_name,
+                depth=self._tag_depth(tag),
+            ))
+
+    def handle_endtag(self, tag: str) -> None:
+        tag = tag.lower()
+        if self._text_skip:
+            if tag == self._text_skip[-1]:
+                self._text_skip.pop()
+            return
+
+        line = self.getpos()[0]
+        if self._heading and tag == self._heading.tag:
+            heading = self._heading
+            text = _clean("".join(heading.text_parts))
+            depth = self._heading_depth(heading)
+            self.headings.append((
+                heading.start,
+                heading.start_col,
+                heading.level,
+                f"{'  ' * depth}<{heading.tag}>{text}</{heading.tag}>",
+            ))
+            for node in reversed(self._stack):
+                if node.tag in _LANDMARKS and not node.heading_text:
+                    node.heading_text = text
+                    break
+            self._heading = None
+        elif self._title and tag == "title":
+            title = self._title
+            text = _clean("".join(title.text_parts))
+            if text:
+                self.titles.append((title.start, title.start_col, OutlineItem(
+                    start=title.start,
+                    count=max(1, line - title.start + 1),
+                    signature=f"{'  ' * title.base_depth}<title>{text}</title>",
+                )))
+            self._title = None
+
+        if tag in _OUTLINE_TAGS:
+            for idx in range(len(self._stack) - 1, -1, -1):
+                node = self._stack[idx]
+                if node.tag == tag:
+                    node.end = line
+                    del self._stack[idx:]
+                    break
+
+    def handle_data(self, data: str) -> None:
+        if self._heading:
+            self._heading.text_parts.append(data)
+        elif self._title:
+            self._title.text_parts.append(data)
+        elif not self._text_skip:
+            self._add_text(data)
+
+    def handle_entityref(self, name: str) -> None:
+        if self._heading:
+            self._heading.text_parts.append(f"&{name};")
+        elif self._title:
+            self._title.text_parts.append(f"&{name};")
+        elif not self._text_skip:
+            self._add_text(f"&{name};", glue=True)
+
+    def handle_charref(self, name: str) -> None:
+        if self._heading:
+            self._heading.text_parts.append(f"&#{name};")
+        elif self._title:
+            self._title.text_parts.append(f"&#{name};")
+        elif not self._text_skip:
+            self._add_text(f"&#{name};", glue=True)
+
+    def close(self) -> None:
+        super().close()
+        if self._heading:
+            heading = self._heading
+            text = _clean("".join(heading.text_parts))
+            depth = self._heading_depth(heading)
+            self.headings.append((
+                heading.start,
+                heading.start_col,
+                heading.level,
+                f"{'  ' * depth}<{heading.tag}>{text}</{heading.tag}>",
+            ))
+            self._heading = None
+        if self._title:
+            title = self._title
+            text = _clean("".join(title.text_parts))
+            if text:
+                self.titles.append((title.start, title.start_col, OutlineItem(
+                    start=title.start,
+                    count=max(1, self.line_count - title.start + 1),
+                    signature=f"{'  ' * title.base_depth}<title>{text}</title>",
+                )))
+            self._title = None
+        for node in self._stack:
+            node.end = self.line_count
+
+    def _inside_content(self) -> bool:
+        return any(node.tag in _CONTENT_TAGS for node in self._stack)
+
+    def _inside_document_head(self) -> bool:
+        return any(node.tag == "head" for node in self._stack) and not self._inside_content()
+
+    def _outline_depth(self) -> int:
+        return len([
+            node for node in self._stack
+            if node.has_identity and node.tag not in _STRUCTURAL
+        ])
+
+    def _tag_depth(self, tag: str) -> int:
+        return 0 if tag in _STRUCTURAL else self._outline_depth() + 1
+
+    def _heading_context_node(self) -> _Node | None:
+        for node in reversed(self._stack):
+            if node.tag not in _STRUCTURAL and node.tag in _OUTLINE_TAGS:
+                return node
+        return None
+
+    def _heading_base_depth(self) -> int:
+        node = self._heading_context_node()
+        return node.depth + 1 if node else 1
+
+    def _heading_context_key(self) -> int:
+        node = self._heading_context_node()
+        return id(node) if node else 0
+
+    def _heading_depth(self, heading: _Heading) -> int:
+        stack = self._heading_stacks.setdefault(heading.context_key, [])
+        while stack and stack[-1][0] >= heading.level:
+            stack.pop()
+        depth = stack[-1][1] + 1 if stack else heading.base_depth
+        stack.append((heading.level, depth))
+        return depth
+
+    def _add_text(self, text: str, glue: bool = False) -> None:
+        if not text.strip():
+            return
+        for node in reversed(self._stack):
+            if node.tag in _LANDMARKS:
+                if node.text_parts and not (glue or node.text_parts[-1].endswith(";")):
+                    node.text_parts.append(" ")
+                node.text_parts.append(text)
+                break
+
+
+def _is_heading(tag: str) -> bool:
+    return len(tag) == 2 and tag[0] == "h" and tag[1] in "123456"
 
 
 def _clean(text: str) -> str:
-    """Strip HTML tags, decode entities, normalise whitespace.
-
-    Tags are replaced with a space so adjacent words don't merge
-    (e.g. <h1>Foo<small>bar</small></h1> → 'Foo bar', not 'Foobar').
-    """
-    return _WS_RE.sub(' ', _ENTITY_RE.sub(_decode_entity, _TAG_RE.sub(' ', text))).strip()
+    return _WS_RE.sub(" ", html.unescape(text)).strip()
 
 
-def _parse_tag_open(lines: list[str], i: int, col: int) -> tuple[str, bool, int, int]:
-    """Scan forward from (line i, col) until '>' is found.
-
-    Returns (attrs_text, is_self_closing, end_line, col_after_gt).
-    Looks at most 20 lines ahead (enough for any real-world tag).
-    """
-    parts: list[str] = []
-    for j in range(i, min(i + 20, len(lines))):
-        seg = lines[j][col if j == i else 0:]
-        gt = seg.find('>')
-        if gt >= 0:
-            parts.append(seg[:gt])
-            attrs = ' '.join(parts)
-            col_gt = (col if j == i else 0) + gt
-            return attrs, attrs.rstrip().endswith('/'), j, col_gt + 1
-        parts.append(seg)
-    return '', False, i, len(lines[i])
+def _block_sig(tag: str, attrs: dict[str, str], fallback_text: str = "", depth: int = 0) -> str:
+    ident = f"#{attrs['id']}" if attrs.get("id") else ""
+    label = _clean(attrs.get("aria-label", ""))
+    label_attr = f' aria-label="{label}"' if label else ""
+    excerpt = _excerpt(fallback_text) if tag in _LANDMARKS else ""
+    text = excerpt if excerpt and not label else ""
+    return f"{'  ' * depth}<{tag}{ident}{label_attr}>{text}"
 
 
-def _block_sig(tag: str, attrs: str) -> str:
-    """Return bare signature token (no indentation) for a block element."""
-    tag = tag.lower()
-    m = _ATTR_ID_RE.search(attrs)
-    if m:
-        return f'<{tag}#{m.group(1)}>'
-    return f'<{tag}>'
+def _excerpt(text: str) -> str:
+    text = _clean(text)
+    if not text:
+        return ""
+    first = _SENTENCE_RE.split(text, maxsplit=1)[0]
+    if first.lower() in _BORING_EXCERPTS:
+        return ""
+    return first if len(first) <= _EXCERPT_LIMIT else first[:_EXCERPT_LIMIT - 3].rstrip() + "..."
 
 
-def _find_close(lines: list[str], i: int, open_re: re.Pattern, close_re: re.Pattern) -> int:
-    """Return exclusive-end line index j for the block element opening at line i."""
-    depth, j = 1, i + 1
-    while j < len(lines) and depth > 0:
-        if open_re.search(lines[j]):
-            depth += 1
-        if close_re.search(lines[j]):
-            depth -= 1
-        j += 1
-    return j
-
-
-def _collect_blocks(lines: list[str], start_re: re.Pattern, indent: str,
-                    result: list[OutlineItem]) -> None:
-    """Scan lines for block elements matching start_re; append OutlineItems to result."""
-    n = len(lines)
-    i = 0
-    while i < n:
-        m = start_re.search(lines[i])
-        if m:
-            tag = m.group(1).lower()
-            attrs, is_self_closing, _, _ = _parse_tag_open(lines, i, m.end())
-            sig = indent + _block_sig(tag, attrs)
-            if is_self_closing:
-                result.append(OutlineItem(start=i + 1, count=1, signature=sig))
-            else:
-                open_pat, close_pat = _BLOCK_RES[tag]
-                j = _find_close(lines, i, open_pat, close_pat)
-                result.append(OutlineItem(start=i + 1, count=j - i, signature=sig))
-        i += 1
+def _items_from_headings(
+    headings: list[tuple[int, int, int, str]],
+    line_count: int,
+) -> Iterator[tuple[int, int, OutlineItem]]:
+    for idx, (line, column, level, signature) in enumerate(headings):
+        end = line_count + 1
+        for future_line, _, future_level, _ in headings[idx + 1:]:
+            if future_level <= level:
+                end = future_line
+                break
+        yield (line, column, OutlineItem(start=line, count=max(1, end - line), signature=signature))
 
 
 def detect(lines: list[str]) -> bool:
@@ -147,71 +339,19 @@ def detect(lines: list[str]) -> bool:
 
 
 def parse(text: str) -> Iterator[OutlineItem]:
-    lines = text.splitlines()
-    n = len(lines)
-    result: list[OutlineItem] = []
+    line_count = len(text.splitlines())
+    parser = _Parser(line_count)
+    parser.feed(text)
+    parser.close()
 
-    # --- collect headings, skipping <script> and <style> blocks ---
-    headings: list[tuple[int, int, str]] = []  # (0-based start, level, sig)
-    in_skip = False
-    i = 0
-    while i < n:
-        line = lines[i]
-        if in_skip:
-            if _SKIP_CLOSE_RE.search(line):
-                in_skip = False
-            i += 1
-            continue
-        skip_m = _SKIP_OPEN_RE.search(line)
-        if skip_m:
-            if not _SKIP_CLOSE_RE.search(line):
-                in_skip = True
-            i += 1
-            continue
-
-        m = _HEADING_START_RE.search(line)
-        if m:
-            level = int(m.group(1))
-            # Scan forward to find '>' — handles multi-line opening tags
-            attrs, _, j_open, content_col = _parse_tag_open(lines, i, m.end())
-            tail = lines[j_open][content_col:]
-            close_m = _HEADING_CLOSE_RE.search(tail)
-            if close_m:
-                # Content and closing tag are on j_open
-                sig_text = _clean(tail[:close_m.start()])
-                j = j_open
-            else:
-                # Accumulate lines after j_open until </hN>
-                parts = [tail]
-                j = j_open + 1
-                while j < n and not _HEADING_CLOSE_RE.search(lines[j]):
-                    parts.append(lines[j])
-                    j += 1
-                if j < n:
-                    before = re.split(r'</h[1-6]\s*>', lines[j], flags=re.IGNORECASE)[0]
-                    parts.append(before)
-                sig_text = _clean(' '.join(parts))
-            indent = '  ' * level
-            sig = f'{indent}<h{level}>{sig_text}</h{level}>'
-            headings.append((i, level, sig))
-            i = j + 1
-            continue
-        i += 1
-
-    # Heading ranges: extend to next same-or-higher-level heading
-    for idx, (line_idx, level, sig) in enumerate(headings):
-        end_line = n
-        for future_idx, future_level, _ in headings[idx + 1:]:
-            if future_level <= level:
-                end_line = future_idx
-                break
-        result.append(OutlineItem(start=line_idx + 1, count=end_line - line_idx, signature=sig))
-
-    # --- structural elements: <head> and <body> at depth 0 ---
-    _collect_blocks(lines, _STRUCTURAL_START_RE, '', result)
-
-    # --- body-level landmarks: <nav>, <main>, <article>, <section> at depth 1 ---
-    _collect_blocks(lines, _LANDMARK_START_RE, '  ', result)
-
-    result.sort(key=lambda it: it.start)
-    yield from result
+    block_items = (
+        (node.start, node.start_col, OutlineItem(
+            start=node.start,
+            count=max(1, (node.end or line_count) - node.start + 1),
+            signature=node.signature,
+        ))
+        for node in parser.nodes if node.has_identity
+    )
+    events = [*parser.titles, *_items_from_headings(parser.headings, line_count), *block_items]
+    for _, _, item in sorted(events, key=lambda event: (event[0], event[1])):
+        yield item

@@ -9,7 +9,7 @@ class OutlineItem:
 
     @property
     def num_width(self) -> int:
-        return len(str(self.start))
+        return len(str(self.start + self.count))
 
     def format(self, num_width, line_width):
         field = f"{str(self.start).rjust(num_width)},{self.count}"
