@@ -76,28 +76,27 @@ def _preamble_sig(lines: list[str], end: int) -> str:
     return next((l.strip() for l in lines[:end] if l.strip()), "")
 
 
-def _items_from_headings(headings: list[tuple[int, str]], n: int) -> list[OutlineItem]:
+def _first_non_empty(lines: list[str]) -> str:
+    return next((line.strip() for line in lines if line.strip()), "")
+
+
+def _items_from_headings(headings: list[tuple[int, str]], n: int) -> Iterator[OutlineItem]:
     """Convert (0-based idx, signature) pairs into OutlineItems with ranges."""
-    items = []
     for k, (line_idx, sig) in enumerate(headings):
         end_line = headings[k + 1][0] if k + 1 < len(headings) else n
-        items.append(OutlineItem(
-            start=line_idx + 1,
-            count=end_line - line_idx,
-            signature=sig,
-        ))
-    return items
+        yield OutlineItem(start=line_idx + 1, count=end_line - line_idx, signature=sig)
 
 
-def _sandwich_fallback(lines: list[str]) -> list[OutlineItem]:
+def _sandwich_fallback(lines: list[str]) -> Iterator[OutlineItem]:
     """Blank-sandwich heuristic for files with no Markdown headings."""
-    n = len(lines)
-    candidates = _heading_candidates(lines, 0, n)
+    candidates = _heading_candidates(lines, 0, len(lines))
     filtered = _whitespace_filter(candidates)
 
     if not filtered:
-        first = extract_summary(next((l.strip() for l in lines if l.strip()), ""))
-        return [OutlineItem(start=1, count=n, signature=first)] if n else []
+        first = extract_summary(_first_non_empty(lines))
+        if first:
+            yield OutlineItem(start=1, count=len(lines), signature=first)
+        return
 
     # Build (idx, sig) list, prepending a preamble item if content precedes first heading.
     headings: list[tuple[int, str]] = [(i, extract_summary(s.strip())) for i, s in filtered]
@@ -106,7 +105,7 @@ def _sandwich_fallback(lines: list[str]) -> list[OutlineItem]:
         sig = extract_summary(_preamble_sig(lines, first_idx))
         headings = [(0, sig)] + headings
 
-    return _items_from_headings(headings, n)
+    yield from _items_from_headings(headings, len(lines))
 
 
 def parse(text: str) -> Iterator[OutlineItem]:

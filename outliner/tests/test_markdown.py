@@ -129,6 +129,10 @@ def test_empty_file():
     assert parse("") == []
 
 
+def test_blank_file():
+    assert parse("\n \n\t\n") == []
+
+
 def test_no_headings_returns_first_line():
     # No blank-sandwich candidates → first-line fallback
     items = parse("just a paragraph\nno headings here\n")
