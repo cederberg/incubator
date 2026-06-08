@@ -6,7 +6,7 @@ from typing import TextIO
 from ..types import OutlineItem
 from . import (
     python, scala, go, java, rust, swift, c, ruby, php, shell, javascript,
-    csharp, perl, zig, clojure, html, asciidoc, orgmode, rst, markdown,
+    csharp, perl, zig, clojure, html, asciidoc, orgmode, rst, json, markdown,
 )
 
 _MODULES = {

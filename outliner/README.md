@@ -67,9 +67,9 @@ uv run pytest
 
 ## Supported Languages
 
-AsciiDoc, C/C++, C#, Clojure, Go, HTML, Java, JavaScript/TypeScript, Markdown,
-Org-mode, Perl, PHP, Python, reStructuredText, Ruby, Rust, Scala, Shell, Swift,
-and Zig.
+AsciiDoc, C/C++, C#, Clojure, Go, HTML, Java, JavaScript/TypeScript,
+JSON/NDJSON, Markdown, Org-mode, Perl, PHP, Python, reStructuredText, Ruby,
+Rust, Scala, Shell, Swift, and Zig.
 
 ## Example Use Cases
 
@@ -119,4 +119,19 @@ nothing is missed:
 $ uvx outliner-cli --grep PaymentMethod src/
  14,12  def charge(method: PaymentMethod, amount: Decimal) -> Receipt
  88,4   def validate(m: PaymentMethod) -> bool
+```
+
+**Inspect a dataset without opening it** — JSON/NDJSON files show a schema
+overview with file size, record count, data types, optionality, and truncated
+sample values:
+
+```
+$ uvx outliner-cli titanic.json
+$             163.9 KB · json · array[891]
+.Age          float|int? -- 22
+.Cabin        str? -- "C85"
+.Embarked     str? -- "S"
+.Fare         float|int -- 7.25
+.Name         str -- "Braund, Mr. Owen Harris"
+.Survived     int -- 0
 ```

@@ -167,7 +167,7 @@ XML use structural path-based output instead of line ranges.
 - [x] **HTML** — document format like Markdown; headings (`h1`-`h6`), semantic
       landmarks (`<nav>`, `<main>`, `<article>`, `<section>`); line-based output
       with ranges
-- [ ] **JSON** — structural (path-based) output; no line tracking; show array
+- [x] **JSON** — structural (path-based) output; no line tracking; show array
       lengths, object shape, data types per field, an example value, and
       optional vs always‑present fields; first-line summary: char count, format
       type (single‑doc vs NDJSON/JSONL), top‑level type

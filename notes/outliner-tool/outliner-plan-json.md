@@ -1,6 +1,7 @@
 ---
 drafted: 2026-05-08
-status: active
+updated: 2026-06-07
+status: archived
 ---
 
 # JSON / Data Format Support — Notes
@@ -55,6 +56,33 @@ A JSON file should show a one-line summary at the top: character count, format
 type (single-doc vs NDJSON/JSONL), top-level type (object/array), array length
 if applicable. This tells the reader what kind of JSON they're dealing with and
 which tools to use.
+
+## Output format
+
+Locator column uses jq-style paths; signature column shows type, optionality,
+and a truncated sample for scalars.
+
+```
+$                5.2 KB · json · object
+.name            str -- "Widget"
+.age             int? -- 42
+.tags[]          array[str] -- ["red", "green"]
+.items[]         array?
+.items[].id      int -- 5678
+.items[].label   str? -- "Label"
+```
+
+- `$` locator — file-level summary line (size · json · type). Type is one of
+  `ndjson`, `object`, `array`, `array[object]`.
+- `?` suffix — key sometimes absent in sampled records. `null` is treated as
+  omission; no distinction from missing keys.
+- Multi-type fields: `int|str` (mandatory), `int|str?` (optional). No parens.
+- `--` samples only for scalar fields and `array[scalar]`; truncated at ~40
+  chars with `…`. No samples for `object`, `array`, or `array[object]`.
+- Traversal: depth-first, scalars before containers at each level, full depth.
+- Flat output — nesting is in the locator path itself.
+- NDJSON: `json.loads()` on first few lines for detection and sampling.
+  Single-doc: `json.load()` the whole file for schema extraction.
 
 ## Current architecture doesn't support large files
 
