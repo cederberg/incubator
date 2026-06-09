@@ -158,9 +158,18 @@ def test_single_scalar_null():
 def test_ndjson_basic():
     items = _read('{"a": 1}\n{"a": 2, "b": "x"}\n')
     sigs = {it.locator: it.signature for it in items}
-    assert "ndjson" in sigs["$"]
+    assert sigs["$"] == "0 B · ndjson · sampled 2 of 2 records"
     assert sigs[".a"] == "int -- 1"
     assert sigs[".b"] == 'str? -- "x"'
+
+
+def test_ndjson_header_estimates_when_sample_limit_hit(monkeypatch):
+    import outliner.parsers.json as json_parser
+
+    monkeypatch.setattr(json_parser, "NDJSON_SAMPLE", 2)
+    items = _read('{"a": 1}\n{"a": 2}\n{"a": 3}\n')
+    sigs = {it.locator: it.signature for it in items}
+    assert sigs["$"] == "0 B · ndjson · sampled 2 of ~0 records"
 
 
 def test_ndjson_single_line():

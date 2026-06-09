@@ -99,6 +99,7 @@ def _is_single_doc(head: str) -> bool:
 def _outline_ndjson(fh) -> Iterator[OutlineItem]:
     records: list[dict] = []
     sample_bytes = 0
+    completed = True
     for line in fh:
         stripped = line.strip()
         if not stripped:
@@ -107,6 +108,7 @@ def _outline_ndjson(fh) -> Iterator[OutlineItem]:
             records.append(json.loads(stripped))
             sample_bytes += len(line)
         elif sample_bytes:
+            completed = False
             break
 
     if not records:
@@ -115,10 +117,14 @@ def _outline_ndjson(fh) -> Iterator[OutlineItem]:
     fsize = _file_size(fh)
     avg_line = sample_bytes / len(records)
     est_total = int(fsize / avg_line) if avg_line else 0
+    total = _format_count(len(records)) if completed else f"~{_format_count(est_total)}"
     size_str = _format_size(fsize)
     yield OutlineItem(
         locator="$",
-        signature=f"{size_str} · json · ndjson · ~{_format_count(est_total)} records",
+        signature=(
+            f"{size_str} · ndjson · sampled {_format_count(len(records))} "
+            f"of {total} records"
+        ),
     )
 
     yield from _emit_schema(records)
