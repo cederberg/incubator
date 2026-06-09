@@ -10,6 +10,9 @@ import sys
 from outliner.parsers import NAMES, EXTENSIONS, detect, outline, syntax
 from outliner.types import OutlineItem
 
+_TEXT_CONTROLS = "\n\r\t\f\b"
+_BINARY_THRESHOLD = 0.05
+
 
 def die(msg: str, code: int = 2) -> None:
     print(f"outliner: {msg}", file=sys.stderr)
@@ -83,6 +86,26 @@ def _format_items(items: list[OutlineItem], grep: re.Pattern | None, line_width:
     return [it.format(fmt_width, line_width) for it in items]
 
 
+def _looks_binary(head: str) -> bool:
+    if "\0" in head:
+        return True
+    if head:
+        controls = sum(1 for ch in head if ord(ch) < 32 and ch not in _TEXT_CONTROLS)
+        replaced = head.count("\ufffd")
+        return (controls + replaced) / len(head) > _BINARY_THRESHOLD
+    return False
+
+
+def _format_size(size_bytes: int) -> str:
+    if size_bytes >= 1_000_000_000:
+        return f"{size_bytes / 1_000_000_000:.1f} GB"
+    if size_bytes >= 1_000_000:
+        return f"{size_bytes / 1_000_000:.1f} MB"
+    if size_bytes >= 1_000:
+        return f"{size_bytes / 1_000:.1f} KB"
+    return f"{size_bytes} B"
+
+
 def _outline_source(src: str, selected: str | None) -> tuple[list[OutlineItem] | None, str | None]:
     if src == "-":
         if selected:
@@ -93,6 +116,9 @@ def _outline_source(src: str, selected: str | None) -> tuple[list[OutlineItem] |
 
     with open(src, encoding="utf-8", errors="replace") as fh:
         head = fh.read(4096)
+        if _looks_binary(head):
+            size = _format_size(os.path.getsize(src))
+            return [OutlineItem(locator="binary file", signature=size)], "binary"
         match = selected or guess_syntax(src) or detect(head)
         fh.seek(0)
         return (outline(match, fh) if match else None), match

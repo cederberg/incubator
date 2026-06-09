@@ -1,7 +1,7 @@
 ---
 drafted: 2026-06-08
 updated: 2026-06-09
-status: active
+status: archived
 ---
 
 # XML Support - Notes

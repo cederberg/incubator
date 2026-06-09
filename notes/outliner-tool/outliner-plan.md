@@ -1,6 +1,6 @@
 ---
 drafted: 2026-04-19
-updated: 2026-05-31
+updated: 2026-06-09
 status: active
 ---
 
@@ -207,9 +207,9 @@ from actual node_modules.
 
 ## Open Questions
 
-- [ ] Add YAML structural output? Parse whole file and show key paths with
-      types. This would be a simpler subset of the JSON approach; large YAML
-      files are rare.
+- [x] Do not add YAML structural output. It adds little beyond JSON and XML.
+- [x] Avoid outlining binary files passed explicitly, such as `.gz` or `.bz2`
+      files hidden among source files.
 - [ ] Add `--exclude` option to exclude file patterns from directory walk?
 - [ ] Add JSON output mode for programmatic consumption by agents and other
       tools?

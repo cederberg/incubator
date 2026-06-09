@@ -140,6 +140,36 @@ def test_unknown_extension_falls_back_to_markdown():
         os.unlink(fname)
 
 
+def test_binary_file_reports_summary_instead_of_markdown_garbage():
+    with tempfile.NamedTemporaryFile(suffix=".unknown", delete=False) as f:
+        f.write(b"\x1f\x8b\x08\x00# random compressed-ish bytes\x00\x00\xff")
+        fname = f.name
+    try:
+        stdout, stderr, rc = run(fname)
+        assert rc == 0
+        assert stderr == ""
+        assert "binary file" in stdout
+        assert "B" in stdout
+        assert stdout.strip().startswith("binary file")
+        assert "#" not in stdout
+    finally:
+        os.unlink(fname)
+
+
+def test_binary_file_guard_overrides_explicit_syntax():
+    with tempfile.NamedTemporaryFile(suffix=".md", delete=False) as f:
+        f.write(b"\x00# Not a heading\n")
+        fname = f.name
+    try:
+        stdout, _, rc = run("--syntax", "markdown", fname)
+        assert rc == 0
+        assert "binary file" in stdout
+        assert stdout.strip().startswith("binary file")
+        assert "Not a heading" not in stdout
+    finally:
+        os.unlink(fname)
+
+
 def test_bad_grep_regex():
     _, stderr, rc = run("-g", "[invalid", str(FIXTURES / "atx.md"))
     assert rc == 2
