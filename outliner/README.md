@@ -69,7 +69,7 @@ uv run pytest
 
 AsciiDoc, C/C++, C#, Clojure, Go, HTML, Java, JavaScript/TypeScript,
 JSON/NDJSON, Markdown, Org-mode, Perl, PHP, Python, reStructuredText, Ruby,
-Rust, Scala, Shell, Swift, and Zig.
+Rust, Scala, Shell, Swift, XML, and Zig.
 
 ## Example Use Cases
 
@@ -134,4 +134,18 @@ $             163.9 KB · json · array[891]
 .Fare         float|int -- 7.25
 .Name         str -- "Braund, Mr. Owen Harris"
 .Survived     int -- 0
+```
+
+XML files show an indented structural outline with XML-native node kinds:
+
+```
+$ uvx outliner-cli pubmed26n0001.xml
+/                                195.5 MB · xml · sampled 204K elems
+<PubmedArticleSet>               elem
+  <PubmedArticle>                elem+
+    <MedlineCitation>            elem
+      @Status                    attr -- "MEDLINE"
+      <Article>                  elem
+        <ArticleTitle>           text -- "Formate assay in body fluids: applica..."
+        <Abstract>               elem?
 ```

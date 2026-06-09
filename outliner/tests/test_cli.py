@@ -107,6 +107,7 @@ def test_stdin_with_syntax():
 
 def test_stdin_with_read_parser(monkeypatch):
     def read(fh):
+        assert fh is sys.stdin
         assert hasattr(fh, "read")
         return [OutlineItem(start=1, count=1, signature=fh.read())]
 

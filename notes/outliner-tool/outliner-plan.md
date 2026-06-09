@@ -171,7 +171,7 @@ XML use structural path-based output instead of line ranges.
       lengths, object shape, data types per field, an example value, and
       optional vs always‑present fields; first-line summary: char count, format
       type (single‑doc vs NDJSON/JSONL), top‑level type
-- [ ] **XML** — structural output; XPath‑based location keys; element paths with
+- [x] **XML** — structural output; XPath‑based location keys; element paths with
       attributes, text content types, nesting depth
 
 ### JavaScript/TypeScript fixes

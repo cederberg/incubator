@@ -85,6 +85,8 @@ def _format_items(items: list[OutlineItem], grep: re.Pattern | None, line_width:
 
 def _outline_source(src: str, selected: str | None) -> tuple[list[OutlineItem] | None, str | None]:
     if src == "-":
+        if selected:
+            return outline(selected, sys.stdin), selected
         text = sys.stdin.read()
         match = selected or detect(text)
         return (outline(match, text) if match else None), match
