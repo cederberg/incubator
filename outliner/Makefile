@@ -22,7 +22,7 @@ outdated:
 	@uv run python --version
 	@echo
 	@echo --== dependencies ==--
-	@uv run pip list --outdated
+	@uv pip list --outdated
 
 # Build and publish to PyPI
 publish: clean test
