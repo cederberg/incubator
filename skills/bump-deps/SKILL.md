@@ -10,49 +10,52 @@ allowed-tools: Read, Write, Edit, Glob, Bash
 Update each outdated dependency in a separate commit. Enables clean rollback of
 individual updates when issues surface later.
 
-## Step 1: Outdated Packages
+## Step 1: Clean Worktree
 
-Run `make outdated`. If missing:
+Verify that the worktree has no unstaged, staged, or untracked changes. If it is
+not clean, stop and ask the user how to proceed.
 
-1. Read Makefile `all` or `help` target
-2. Read `AGENTS.md`, `CLAUDE.md`, or project README
-3. Ask the user
+## Step 2: Identify Package Manager
 
-Stop if no documented `outdated` target found.
+Run `make outdated` to find all outdated packages. If missing, determine the
+package manager and use its native outdated command directly.
 
-Do all minor/patch bumps first, then majors. When a major appears, flag it to
-the user and defer it. Return to majors only after all minors are done.
+Determine which package manager to use by an exhaustive search for common
+dependency manifests, such as: `package.json`, `pom.xml`, `Cargo.toml`,
+`requirements.txt`, `Gemfile`.
 
-## Step 2: Identify Dependency File
+Note that a project may contain sub-projects, multiple languages, or several
+package managers.
 
-Inspect `make outdated` output or the Makefile. Common names: `pom.xml`,
-`package.json`, `Cargo.toml`, `requirements.txt`, `Gemfile`.
+Stop if no package manager or dependency manifest can be identified.
 
-## Step 3: Edit
+## Step 3: Determine Version
 
-Update the version string in the dependency file. Use the version resolved by
-`make outdated` (npm "Wanted" column, Maven right-hand version). Do not bump to
-"Latest" on major versions without user approval.
+Inspect the outdated output and choose the next dependency to update. Determine
+the proper latest version, sometimes labelled `Wanted`, frequently the rightmost
+version.
 
-## Step 4: Build, Lint & Test
+Update only patch and minor versions by default. Defer major updates until the
+user explicitly approves each one.
+
+## Step 4: Update
+
+Use the package manager tool to update the dependency and regenerate its
+lockfile. If not possible, resort to editing the dependency manifest directly.
+Never edit lockfiles manually, as those are automatically updated.
+
+## Step 5: Build, Lint & Test
 
 Run the project's build, lint, and test commands. Check in order:
 
 1. `make build test` or equivalent Makefile targets
-2. Instructions in `AGENTS.md` or `CLAUDE.md`
+2. Instructions in `AGENTS.md`, `CLAUDE.md` or `README.md`
 3. Ask the user
 
-## Step 5: Find Commit Message Convention
+## Step 6: Find Commit Message Convention
 
 ```bash
-git log <file> | grep -i <dependency-name>
-```
-
-If empty, widen the search:
-
-```bash
-git log --all --diff-filter=M -- <file> | head -20
-git log --all -p -- <file> | grep -B5 -i <dependency-name> | grep "^commit"
+git --no-pager log --oneline -- <file>
 ```
 
 Commit messages follow project convention. Common patterns:
@@ -62,15 +65,11 @@ Commit messages follow project convention. Common patterns:
 
 If no precedent found, stop and suggest a pattern to the user.
 
-## Step 6: Commit
+## Step 7: Commit
 
-```bash
-git add <file>
-git commit -m "<pattern>"
-```
+Stage only the dependency file and related lockfile if one exists. Skip build
+artefacts.
 
-Stage only the dependency file. Skip build artefacts.
-
-## Step 7: Repeat
+## Step 8: Repeat
 
 If more outdated deps remain, go back to Step 1.
