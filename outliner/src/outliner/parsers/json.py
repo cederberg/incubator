@@ -39,6 +39,8 @@ def detect(lines: list[str]) -> bool:
 # -- entry point ---------------------------------------------------------
 
 def read(fh) -> Iterator[OutlineItem]:
+    if not fh.seekable():
+        fh = io.StringIO(fh.read())
     head = fh.read(HEAD_LIMIT)
     complete = len(head) < HEAD_LIMIT
     head = head.removeprefix("\ufeff")

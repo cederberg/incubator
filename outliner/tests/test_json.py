@@ -350,6 +350,23 @@ def test_utf8_bom():
     assert sigs[".a"] == "int -- 1"
 
 
+def test_non_seekable_stream():
+    class _Pipe(io.StringIO):
+        def seekable(self):
+            return False
+
+        def seek(self, *args):
+            raise io.UnsupportedOperation("underlying stream is not seekable")
+
+        def tell(self):
+            raise io.UnsupportedOperation("underlying stream is not seekable")
+
+    items = list(json_read(_Pipe('{"a": 1}\n{"b": 2}\n')))
+    sigs = {it.locator: it.signature for it in items}
+    assert "ndjson" in sigs["$"]
+    assert sigs[".a"] == "int? -- 1"
+
+
 def test_ndjson_blank_line_between_records():
     items = _read('{"a": 1}\n\n{"b": 2}\n')
     sigs = {it.locator: it.signature for it in items}

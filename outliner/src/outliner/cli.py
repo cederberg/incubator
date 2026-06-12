@@ -110,11 +110,11 @@ def _outline_source(src: str, selected: str | None) -> tuple[list[OutlineItem] |
     if src == "-":
         if selected:
             return outline(selected, sys.stdin), selected
-        text = sys.stdin.read()
+        text = sys.stdin.read().removeprefix("\ufeff")
         match = selected or detect(text)
         return (outline(match, text) if match else None), match
 
-    with open(src, encoding="utf-8", errors="replace") as fh:
+    with open(src, encoding="utf-8-sig", errors="replace") as fh:
         head = fh.read(4096)
         if _looks_binary(head):
             size = _format_size(os.path.getsize(src))

@@ -117,6 +117,31 @@ def test_stdin_with_read_parser(monkeypatch):
     assert "stream stdin" in stdout
 
 
+def test_stdin_with_json_syntax():
+    stdout, _, rc = run("--syntax", "json", "-", stdin_text='{"a": 1}\n{"b": 2}\n')
+    assert rc == 0
+    assert "ndjson" in stdout
+
+
+def test_stdin_bom_stripped_before_detect():
+    html = "\ufeff<!DOCTYPE html>\n<html>\n<body><h1>Hi</h1></body>\n</html>\n"
+    stdout, _, rc = run("-", stdin_text=html)
+    assert rc == 0
+    assert "<h1>Hi</h1>" in stdout
+
+
+def test_bom_file():
+    with tempfile.NamedTemporaryFile(suffix=".json", mode="wb", delete=False) as f:
+        f.write(b'\xef\xbb\xbf{"a": 1}\n')
+        fname = f.name
+    try:
+        stdout, _, rc = run(fname)
+        assert rc == 0
+        assert ".a" in stdout
+    finally:
+        os.unlink(fname)
+
+
 # ---------------------------------------------------------------------------
 # Error cases
 # ---------------------------------------------------------------------------
