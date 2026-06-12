@@ -91,11 +91,23 @@ def test_file_sources_are_passed_to_outline_as_rewound_handles(monkeypatch):
 # Stdin
 # ---------------------------------------------------------------------------
 
-def test_stdin_no_syntax_uses_markdown_fallback():
-    # No --syntax and no extension → markdown catch-all → empty outline, rc=0
+def test_stdin_empty_produces_no_output():
     stdout, _, rc = run(stdin_text="")
     assert rc == 0
     assert stdout.strip() == ""
+
+
+def test_stdin_unknown_content_reports_unsupported():
+    stdout, _, rc = run(stdin_text="key: value\nother: 2\n")
+    assert rc == 0
+    assert "unsupported file" in stdout
+    assert "2 lines" in stdout
+
+
+def test_stdin_markdown_content_detected():
+    stdout, _, rc = run(stdin_text="# Title\n\nBody text.\n")
+    assert rc == 0
+    assert "# Title" in stdout
 
 
 def test_stdin_with_syntax():
@@ -152,8 +164,7 @@ def test_missing_file():
     assert "outliner:" in stderr
 
 
-def test_unknown_extension_falls_back_to_markdown():
-    # Unknown extension → content detection → markdown catch-all
+def test_unknown_extension_with_heading_detects_markdown():
     with tempfile.NamedTemporaryFile(suffix=".unknown_ext_xyz", mode="w", delete=False) as f:
         f.write("# Hello\n\nworld\n")
         fname = f.name
@@ -161,6 +172,19 @@ def test_unknown_extension_falls_back_to_markdown():
         stdout, _, rc = run(fname)
         assert rc == 0
         assert "Hello" in stdout
+    finally:
+        os.unlink(fname)
+
+
+def test_unknown_extension_reports_unsupported():
+    with tempfile.NamedTemporaryFile(suffix=".unknown_ext_xyz", mode="w", delete=False) as f:
+        f.write("key: value\nlist:\n  - a\n  - b\n")
+        fname = f.name
+    try:
+        stdout, _, rc = run(fname)
+        assert rc == 0
+        assert "unsupported file" in stdout
+        assert "4 lines" in stdout
     finally:
         os.unlink(fname)
 
@@ -233,6 +257,31 @@ def test_expand_sources_includes_javascript_family_extensions():
             Path(d, name).write_text("export function ok() {}\n")
         sources = {Path(src).name for src in _expand_sources([d])}
         assert {"a.js", "b.jsx", "c.ts", "d.tsx", "e.mjs", "f.cjs"} <= sources
+
+
+def test_expand_sources_includes_unknown_extensions():
+    with tempfile.TemporaryDirectory() as d:
+        Path(d, "data.yaml").write_text("key: value\n")
+        Path(d, "LICENSE").write_text("MIT License\n")
+        sources = {Path(src).name for src in _expand_sources([d])}
+        assert {"data.yaml", "LICENSE"} <= sources
+
+
+def test_expand_sources_skips_hidden_dirs():
+    with tempfile.TemporaryDirectory() as d:
+        _make_pyfile(os.path.join(d, "main.py"))
+        _make_pyfile(os.path.join(d, ".git", "hook.py"))
+        sources = {Path(src).name for src in _expand_sources([d])}
+        assert "main.py" in sources
+        assert "hook.py" not in sources
+
+
+def test_expand_sources_type_filter_excludes_unknown():
+    with tempfile.TemporaryDirectory() as d:
+        _make_pyfile(os.path.join(d, "main.py"))
+        Path(d, "data.yaml").write_text("key: value\n")
+        sources = {Path(src).name for src in _expand_sources([d], {"python"})}
+        assert sources == {"main.py"}
 
 
 # ---------------------------------------------------------------------------

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from outliner.parsers.markdown import parse as _parse, _whitespace_filter
+from outliner.parsers.markdown import parse as _parse, detect as detect_md, _whitespace_filter
 
 def parse(text):
     return list(_parse(text))
@@ -264,3 +264,28 @@ def test_heading_range_spans_fence():
     items = parse(text)
     assert items[0].signature == "# Top"
     assert items[0].count == 6
+
+
+# ---------------------------------------------------------------------------
+# Content detection
+# ---------------------------------------------------------------------------
+
+def test_detect_atx_heading():
+    assert detect_md(["# Title", "", "Body."])
+
+
+def test_detect_setext_equals_underline():
+    assert detect_md(["Title", "====", "", "Body."])
+
+
+def test_detect_rejects_plain_text():
+    assert not detect_md(["Just some prose.", "", "More prose."])
+
+
+def test_detect_rejects_yaml_like():
+    assert not detect_md(["key: value", "---", "other: 2"])
+
+
+def test_guess_syntax_mdx_mdc():
+    for ext in (".mdx", ".mdc"):
+        assert guess_syntax(f"file{ext}") == "markdown"

@@ -8,7 +8,7 @@ import shutil
 import sys
 
 from outliner.parsers import NAMES, EXTENSIONS, detect, outline, syntax
-from outliner.parsers.util import format_size
+from outliner.parsers.util import format_count, format_size
 from outliner.types import OutlineItem
 
 _TEXT_CONTROLS = "\n\r\t\f\b"
@@ -68,11 +68,11 @@ def _expand_sources(sources: list[str], types: set[str] | None = None) -> list[s
             pats = _load_gitignore(root)
             if pats:
                 gi[root] = pats
-            dirs[:] = sorted(d for d in dirs if not _is_ignored(d, root, gi, True))
+            dirs[:] = sorted(d for d in dirs
+                             if not d.startswith(".") and not _is_ignored(d, root, gi, True))
             for name in sorted(files):
-                match = guess_syntax(name)
-                supported = match and (not types or match in types)
-                if supported and not _is_ignored(name, root, gi, False):
+                wanted = not types or guess_syntax(name) in types
+                if wanted and not _is_ignored(name, root, gi, False):
                     result.append(os.path.join(root, name))
     return result
 
@@ -97,13 +97,23 @@ def _looks_binary(head: str) -> bool:
     return False
 
 
-def _outline_source(src: str, selected: str | None) -> tuple[list[OutlineItem] | None, str | None]:
+def _unsupported_items(size: int, line_count: int) -> list[OutlineItem]:
+    plural = "s" if line_count != 1 else ""
+    sig = f"{format_size(size)} \u00b7 {format_count(line_count)} line{plural}"
+    return [OutlineItem(locator="unsupported file", signature=sig)]
+
+
+def _outline_source(src: str, selected: str | None) -> tuple[list[OutlineItem] | None, str]:
     if src == "-":
         if selected:
             return outline(selected, sys.stdin), selected
         text = sys.stdin.read().removeprefix("\ufeff")
-        match = selected or detect(text)
-        return (outline(match, text) if match else None), match
+        match = detect(text)
+        if match:
+            return outline(match, text), match
+        if not text.strip():
+            return [], "unsupported"
+        return _unsupported_items(len(text), len(text.splitlines())), "unsupported"
 
     with open(src, encoding="utf-8-sig", errors="replace") as fh:
         head = fh.read(4096)
@@ -111,8 +121,16 @@ def _outline_source(src: str, selected: str | None) -> tuple[list[OutlineItem] |
             size = format_size(os.path.getsize(src))
             return [OutlineItem(locator="binary file", signature=size)], "binary"
         match = selected or guess_syntax(src) or detect(head)
-        fh.seek(0)
-        return (outline(match, fh) if match else None), match
+        if match:
+            fh.seek(0)
+            return outline(match, fh), match
+        line_count, tail = head.count("\n"), head
+        while chunk := fh.read(1 << 20):
+            line_count += chunk.count("\n")
+            tail = chunk
+        if tail and not tail.endswith("\n"):
+            line_count += 1
+        return _unsupported_items(os.path.getsize(src), line_count), "unsupported"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -175,23 +193,10 @@ def main(argv: list[str] | None = None) -> int:
     exit_code = 0
     for src in sources:
         try:
-            items, match = _outline_source(src, args.syntax)
+            items, _ = _outline_source(src, args.syntax)
         except OSError as exc:
             print(f"outliner: {exc}", file=sys.stderr)
             exit_code = 1
-            continue
-
-        if match is None:
-            print(f"outliner: cannot auto-detect syntax for '{src}'; use --syntax",
-                  file=sys.stderr)
-            exit_code = 2
-            continue
-
-        if items is None:
-            available = ", ".join(NAMES)
-            print(f"outliner: unsupported syntax '{match}'; available: {available}",
-                  file=sys.stderr)
-            exit_code = 2
             continue
 
         output_lines = _format_items(items, grep_re, line_width)

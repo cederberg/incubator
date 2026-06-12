@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Added Svelte, Vue, and Astro component outlines (and more file extensions)
+- Added all files to directory walks, with `unsupported file` summaries
+- Added sampling estimates to XML outlines ("sampled 1.0K of ~100K elems")
+- Fixed crashes, empty outlines, and memory use in JSON, XML, and JavaScript
+- Fixed Markdown headings inside fenced code blocks
+- [Commit list](https://github.com/cederberg/incubator/compare/outliner-v0.3...HEAD)
+
 ## v0.3.0 - 2026-06-10
 
 - Added JSON and NDJSON schema outlines
@@ -7,7 +16,7 @@
 - Fixed HTML outlines for headings, landmarks, metadata, and nested content
 - Fixed whitespace-only Markdown files to produce empty outlines
 - Fixed binary files being outlined as unreadable content
-- [Commit list](https://github.com/cederberg/incubator/compare/outliner-v0.2.0...outliner-v0.3.0)
+- [Commit list](https://github.com/cederberg/incubator/compare/outliner-v0.2.0...outliner-v0.3)
 
 ## v0.2 - 2026-05-31
 
@@ -16,7 +25,7 @@
 - Added `--width` / `-w` option for output line truncation
 - Added `.gitignore` support in directory walk
 - Fixed JavaScript and TypeScript parsers (major overhaul with many fixes)
-- [Commit list](https://github.com/cederberg/incubator/compare/outliner-v0.1...v0.2)
+- [Commit list](https://github.com/cederberg/incubator/compare/outliner-v0.1...outliner-v0.2.0)
 
 ## v0.1 - 2026-04-30
 

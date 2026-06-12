@@ -19,16 +19,23 @@ from outliner.types import OutlineItem
 from outliner.parsers.util import extract_summary
 
 SYNTAX = "markdown"
-EXTENSIONS = (".md", ".markdown", ".mdown", ".mkd", ".txt", ".text")
+EXTENSIONS = (".md", ".markdown", ".mdown", ".mkd", ".mdx", ".mdc", ".txt", ".text")
 
 _ATX_RE = re.compile(r"^(#{1,6})(?:\s+(.*?))?\s*#*\s*$")
 _SETEXT_RE = re.compile(r"^(=+|-+)\s*$")
+_SETEXT_EQ_RE = re.compile(r"^=+\s*$")
 _FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 _THRESHOLD = 0.75
 
 
 def detect(lines: list[str]) -> bool:
-    return True
+    """Markdown content: an ATX heading or a ===-underlined title."""
+    for prev, line in zip(["", *lines], lines):
+        if _ATX_RE.match(line):
+            return True
+        if prev.strip() and not prev.lstrip().startswith("#") and _SETEXT_EQ_RE.match(line):
+            return True
+    return False
 
 
 def _is_setext_underline(line: str) -> tuple[bool, int]:

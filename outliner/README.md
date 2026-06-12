@@ -18,9 +18,11 @@ outliner-cli [OPTIONS] [FILE...]
 | `-w, --width COLS`  | Truncate output lines to COLS (`0`=unlimited, `auto`=terminal, default=`120`) |
 
 Pass a file, a directory (walked recursively), or omit arguments to read stdin.
-Use `-` to read stdin explicitly. `--syntax` is only needed when content
-auto-detection cannot identify the language (e.g. an ambiguous extensionless
-script piped on stdin).
+Use `-` to read stdin explicitly. Directory walks honor `.gitignore` and skip
+hidden directories; all other files are listed, with binary and unrecognized
+files shown as one-line `binary file` / `unsupported file` summaries. `--syntax`
+is only needed when content auto-detection cannot identify the language (e.g. an
+ambiguous extensionless script piped on stdin).
 
 ## Output
 
