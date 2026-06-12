@@ -15,6 +15,8 @@ SYNTAX = "json"
 EXTENSIONS = (".json", ".jsonl", ".ndjson")
 
 NDJSON_SAMPLE = 200
+HEAD_LIMIT = 65536
+LOAD_LIMIT = 10_000_000
 
 
 # -- detection -----------------------------------------------------------
@@ -37,83 +39,87 @@ def detect(lines: list[str]) -> bool:
 # -- entry point ---------------------------------------------------------
 
 def read(fh) -> Iterator[OutlineItem]:
-    first_line = fh.readline()
-    if not first_line.strip():
+    head = fh.read(HEAD_LIMIT)
+    complete = len(head) < HEAD_LIMIT
+    head = head.removeprefix("\ufeff")
+    if not head.strip():
         return
 
-    stripped = first_line.strip()
-
-    # Single-doc array — first char is '['
-    if stripped.startswith("["):
-        fh.seek(0)
-        yield from _outline_single(fh)
-        return
-
-    # Try NDJSON — first line is a valid JSON dict
-    try:
-        val = json.loads(stripped)
-    except json.JSONDecodeError:
-        pass
-    else:
-        if isinstance(val, dict):
-            # Check second line for NDJSON confirmation
-            second_line = fh.readline()
-            if second_line.strip():
-                try:
-                    json.loads(second_line.strip())
-                except json.JSONDecodeError:
-                    pass
-                else:
-                    fh.seek(0)
-                    yield from _outline_ndjson(fh)
-                    return
-            # Second line empty or not valid JSON → single-doc object
-            fh.seek(0)
-            yield from _outline_single(fh)
+    if complete:
+        try:
+            data = json.loads(head)
+        except (json.JSONDecodeError, RecursionError):
+            if _detect_ndjson(head):
+                yield from _outline_ndjson(fh)
             return
+        yield from _outline_doc(data, _file_size(fh))
+        return
 
-    # Fall back to single-doc check with larger read
-    fh.seek(0)
-    head = fh.read(65536)
-    fh.seek(0)
+    if _detect_ndjson(head, partial=True):
+        yield from _outline_ndjson(fh)
+        return
 
-    if _is_single_doc(head):
-        yield from _outline_single(fh)
+    fsize = _file_size(fh)
+    if fsize > LOAD_LIMIT:
+        yield _oversize_item(head, fsize)
+        return
+    fh.seek(0)
+    try:
+        data = json.load(fh)
+    except (json.JSONDecodeError, RecursionError):
+        return
+    yield from _outline_doc(data, fsize)
 
 
 # -- format detection ----------------------------------------------------
 
-def _is_single_doc(head: str) -> bool:
-    stripped = head.strip()
-    if not stripped:
+def _detect_ndjson(head: str, partial: bool = False) -> bool:
+    """A leading pair of lines that each parse as JSON, first a container."""
+    lines = [line for line in head.splitlines() if line.strip()]
+    if partial:
+        lines = lines[:-1]  # last line may be cut mid-record
+    if len(lines) < 2:
         return False
     try:
-        json.loads(stripped)
-    except json.JSONDecodeError:
+        first = json.loads(lines[0])
+        json.loads(lines[1])
+    except (json.JSONDecodeError, RecursionError):
         return False
-    return True
+    return isinstance(first, (dict, list))
+
+
+def _oversize_item(head: str, fsize: int) -> OutlineItem:
+    lead = head.lstrip()[:1]
+    kind = "array" if lead == "[" else "object" if lead == "{" else "?"
+    return OutlineItem(
+        locator="$",
+        signature=f"{_format_size(fsize)} · json · {kind} · not parsed (>{_format_size(LOAD_LIMIT)})",
+    )
 
 
 # -- NDJSON --------------------------------------------------------------
 
 def _outline_ndjson(fh) -> Iterator[OutlineItem]:
-    records: list[dict] = []
+    fh.seek(0)
+    records: list = []
     sample_bytes = 0
-    completed = True
-    for line in fh:
-        stripped = line.strip()
-        if not stripped:
-            continue
-        if len(records) < NDJSON_SAMPLE:
-            records.append(json.loads(stripped))
-            sample_bytes += len(line)
-        elif sample_bytes:
-            completed = False
+    overlong = False
+    while len(records) < NDJSON_SAMPLE and (line := fh.readline(HEAD_LIMIT)):
+        if len(line) == HEAD_LIMIT and not line.endswith("\n"):
+            overlong = True
             break
+        stripped = line.strip()
+        if stripped:
+            try:
+                records.append(json.loads(stripped))
+                sample_bytes += len(line)
+            except (json.JSONDecodeError, RecursionError):
+                pass  # skip malformed lines
 
     if not records:
         return
 
+    completed = not overlong and not fh.readline(HEAD_LIMIT).strip()
     fsize = _file_size(fh)
     avg_line = sample_bytes / len(records)
     est_total = int(fsize / avg_line) if avg_line else 0
@@ -127,20 +133,15 @@ def _outline_ndjson(fh) -> Iterator[OutlineItem]:
         ),
     )
 
-    yield from _emit_schema(records)
+    try:
+        yield from _emit_schema(records)
+    except RecursionError:
+        return
 
 
 # -- single-doc JSON -----------------------------------------------------
 
-def _outline_single(fh) -> Iterator[OutlineItem]:
-    try:
-        data = json.load(fh)
-    except json.JSONDecodeError:
-        return
-
-    fsize = _file_size(fh)
-    size_str = _format_size(fsize)
-
+def _outline_doc(data, fsize: int) -> Iterator[OutlineItem]:
     if isinstance(data, list):
         kind = f"array[{len(data)}]"
     elif isinstance(data, dict):
@@ -152,16 +153,14 @@ def _outline_single(fh) -> Iterator[OutlineItem]:
 
     yield OutlineItem(
         locator="$",
-        signature=f"{size_str} · json · {kind}",
+        signature=f"{_format_size(fsize)} · json · {kind}",
     )
 
-    if isinstance(data, dict):
-        samples = [data]
-    elif isinstance(data, list):
-        samples = data[:NDJSON_SAMPLE]
-    else:
-        samples = [data]
-    yield from _emit_schema(samples)
+    samples = data[:NDJSON_SAMPLE] if isinstance(data, list) else [data]
+    try:
+        yield from _emit_schema(samples)
+    except RecursionError:
+        return
 
 
 # -- schema emission -----------------------------------------------------
@@ -308,8 +307,11 @@ def _type_name(val) -> str:
 def _file_size(fh) -> int:
     try:
         return os.fstat(fh.fileno()).st_size
-    except (io.UnsupportedOperation, OSError):
-        return 0
+    except (io.UnsupportedOperation, OSError, AttributeError):
+        pos = fh.tell()
+        size = fh.seek(0, 2)
+        fh.seek(pos)
+        return size
 
 def _format_size(size_bytes: int) -> str:
     if size_bytes >= 1_000_000_000:

@@ -64,7 +64,7 @@ def test_detect_ndjson_empty():
 def test_single_object_basic():
     items = _read('{"name": "Widget", "count": 42, "active": true}')
     sigs = {it.locator: it.signature for it in items}
-    assert sigs["$"].startswith("0 B · json · object")
+    assert sigs["$"].startswith("47 B · json · object")
     assert sigs[".active"] == "bool -- true"
     assert sigs[".count"] == "int -- 42"
     assert sigs[".name"] == 'str -- "Widget"'
@@ -158,7 +158,7 @@ def test_single_scalar_null():
 def test_ndjson_basic():
     items = _read('{"a": 1}\n{"a": 2, "b": "x"}\n')
     sigs = {it.locator: it.signature for it in items}
-    assert sigs["$"] == "0 B · ndjson · sampled 2 of 2 records"
+    assert sigs["$"] == "28 B · ndjson · sampled 2 of 2 records"
     assert sigs[".a"] == "int -- 1"
     assert sigs[".b"] == 'str? -- "x"'
 
@@ -169,7 +169,7 @@ def test_ndjson_header_estimates_when_sample_limit_hit(monkeypatch):
     monkeypatch.setattr(json_parser, "NDJSON_SAMPLE", 2)
     items = _read('{"a": 1}\n{"a": 2}\n{"a": 3}\n')
     sigs = {it.locator: it.signature for it in items}
-    assert sigs["$"] == "0 B · ndjson · sampled 2 of ~0 records"
+    assert sigs["$"] == "27 B · ndjson · sampled 2 of ~3 records"
 
 
 def test_ndjson_single_line():
@@ -336,6 +336,76 @@ def test_empty_input():
 
 def test_invalid_json():
     assert _read("not json") == []
+
+
+def test_leading_blank_line():
+    items = _read('\n{"a": 1}\n')
+    sigs = {it.locator: it.signature for it in items}
+    assert sigs[".a"] == "int -- 1"
+
+
+def test_utf8_bom():
+    items = _read('\ufeff{"a": 1}')
+    sigs = {it.locator: it.signature for it in items}
+    assert sigs[".a"] == "int -- 1"
+
+
+def test_ndjson_blank_line_between_records():
+    items = _read('{"a": 1}\n\n{"b": 2}\n')
+    sigs = {it.locator: it.signature for it in items}
+    assert "ndjson" in sigs["$"]
+    assert sigs[".a"] == "int? -- 1"
+    assert sigs[".b"] == "int? -- 2"
+
+
+def test_ndjson_of_arrays():
+    items = _read('[1, 2]\n[3, 4]\n')
+    sigs = {it.locator: it.signature for it in items}
+    assert "ndjson" in sigs["$"]
+    assert sigs["[]"] == "array[int] -- [1, 2]"
+
+
+def test_ndjson_malformed_line_skipped():
+    items = _read('{"a": 1}\n{"a": 2}\nnot json\n{"a": 3}\n')
+    sigs = {it.locator: it.signature for it in items}
+    assert "sampled 3 of 3 records" in sigs["$"]
+    assert sigs[".a"] == "int -- 1"
+
+
+def test_deeply_nested_no_crash():
+    # Schema recursion aborts gracefully; only the $ summary remains.
+    items = _read("[" * 3000 + "]" * 3000)
+    assert [it.locator for it in items] == ["$"]
+
+
+def test_doc_larger_than_head_parsed(monkeypatch):
+    import outliner.parsers.json as json_parser
+
+    monkeypatch.setattr(json_parser, "HEAD_LIMIT", 64)
+    items = _read(json.dumps({"alpha": 1, "beta": [1, 2], "gamma": {"x": "y"}}, indent=2))
+    sigs = {it.locator: it.signature for it in items}
+    assert "json · object" in sigs["$"]
+    assert sigs[".alpha"] == "int -- 1"
+    assert sigs[".gamma.x"] == 'str -- "y"'
+
+
+def test_large_pretty_printed_object():
+    data = {f"key{i:04d}": "x" * 10 for i in range(3000)}
+    items = _read(json.dumps(data, indent=2))
+    sigs = {it.locator: it.signature for it in items}
+    assert "json · object" in sigs["$"]
+    assert sigs[".key0000"] == 'str -- "xxxxxxxxxx"'
+
+
+def test_oversize_doc_not_parsed(monkeypatch):
+    import outliner.parsers.json as json_parser
+
+    monkeypatch.setattr(json_parser, "HEAD_LIMIT", 64)
+    monkeypatch.setattr(json_parser, "LOAD_LIMIT", 100)
+    items = _read(json.dumps({f"k{i}": i for i in range(50)}, indent=2))
+    assert len(items) == 1
+    assert items[0].locator == "$"
+    assert "json · object · not parsed" in items[0].signature
 
 
 def test_deeply_nested():
