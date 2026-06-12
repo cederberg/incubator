@@ -7,6 +7,23 @@ _RE_OPEN  = re.compile(r"\(\s+")
 _RE_CLOSE = re.compile(r"[,\s]*\)")
 
 
+# Format a count with K/M suffix, one decimal below 10 units
+def format_count(n: int) -> str:
+    for div, unit in ((1_000_000, "M"), (1_000, "K")):
+        if n >= div:
+            digits = 1 if n < 10 * div else 0
+            return f"{n / div:.{digits}f}{unit}"
+    return str(n)
+
+
+# Format a byte size in human-readable units
+def format_size(size_bytes: int) -> str:
+    for div, unit in ((1_000_000_000, "GB"), (1_000_000, "MB"), (1_000, "KB")):
+        if size_bytes >= div:
+            return f"{size_bytes / div:.1f} {unit}"
+    return f"{size_bytes} B"
+
+
 # Returns number of indentation chars
 def indent_level(line: str) -> int:
     raw = line.rstrip("\r\n")

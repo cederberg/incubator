@@ -41,3 +41,21 @@ def test_seek_brace_end():
     assert util.seek_brace_end(["void foo() {", "    return;", "}"], 0) == 3
     assert util.seek_brace_end(["void foo() {", "    if (x) {", "    }", "}"], 0) == 4
     assert util.seek_brace_end(["function noop() {}"], 0) == 1
+
+
+def test_format_count():
+    assert util.format_count(0) == "0"
+    assert util.format_count(999) == "999"
+    assert util.format_count(1_900) == "1.9K"
+    assert util.format_count(1_999) == "2.0K"
+    assert util.format_count(25_400) == "25K"
+    assert util.format_count(1_900_000) == "1.9M"
+    assert util.format_count(12_345_678) == "12M"
+
+
+def test_format_size():
+    assert util.format_size(0) == "0 B"
+    assert util.format_size(999) == "999 B"
+    assert util.format_size(1_500) == "1.5 KB"
+    assert util.format_size(15_400_000) == "15.4 MB"
+    assert util.format_size(2_000_000_000) == "2.0 GB"

@@ -8,6 +8,7 @@ import shutil
 import sys
 
 from outliner.parsers import NAMES, EXTENSIONS, detect, outline, syntax
+from outliner.parsers.util import format_size
 from outliner.types import OutlineItem
 
 _TEXT_CONTROLS = "\n\r\t\f\b"
@@ -96,16 +97,6 @@ def _looks_binary(head: str) -> bool:
     return False
 
 
-def _format_size(size_bytes: int) -> str:
-    if size_bytes >= 1_000_000_000:
-        return f"{size_bytes / 1_000_000_000:.1f} GB"
-    if size_bytes >= 1_000_000:
-        return f"{size_bytes / 1_000_000:.1f} MB"
-    if size_bytes >= 1_000:
-        return f"{size_bytes / 1_000:.1f} KB"
-    return f"{size_bytes} B"
-
-
 def _outline_source(src: str, selected: str | None) -> tuple[list[OutlineItem] | None, str | None]:
     if src == "-":
         if selected:
@@ -117,7 +108,7 @@ def _outline_source(src: str, selected: str | None) -> tuple[list[OutlineItem] |
     with open(src, encoding="utf-8-sig", errors="replace") as fh:
         head = fh.read(4096)
         if _looks_binary(head):
-            size = _format_size(os.path.getsize(src))
+            size = format_size(os.path.getsize(src))
             return [OutlineItem(locator="binary file", signature=size)], "binary"
         match = selected or guess_syntax(src) or detect(head)
         fh.seek(0)

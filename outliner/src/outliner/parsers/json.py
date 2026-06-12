@@ -9,6 +9,7 @@ import json
 import os
 from collections.abc import Iterator, Sequence
 
+from outliner.parsers.util import format_count, format_size
 from outliner.types import OutlineItem
 
 SYNTAX = "json"
@@ -95,7 +96,7 @@ def _oversize_item(head: str, fsize: int) -> OutlineItem:
     kind = "array" if lead == "[" else "object" if lead == "{" else "?"
     return OutlineItem(
         locator="$",
-        signature=f"{_format_size(fsize)} · json · {kind} · not parsed (>{_format_size(LOAD_LIMIT)})",
+        signature=f"{format_size(fsize)} · json · {kind} · not parsed (>{format_size(LOAD_LIMIT)})",
     )
 
 
@@ -125,12 +126,12 @@ def _outline_ndjson(fh) -> Iterator[OutlineItem]:
     fsize = _file_size(fh)
     avg_line = sample_bytes / len(records)
     est_total = int(fsize / avg_line) if avg_line else 0
-    total = _format_count(len(records)) if completed else f"~{_format_count(est_total)}"
-    size_str = _format_size(fsize)
+    total = format_count(len(records)) if completed else f"~{format_count(est_total)}"
+    size_str = format_size(fsize)
     yield OutlineItem(
         locator="$",
         signature=(
-            f"{size_str} · ndjson · sampled {_format_count(len(records))} "
+            f"{size_str} · ndjson · sampled {format_count(len(records))} "
             f"of {total} records"
         ),
     )
@@ -155,7 +156,7 @@ def _outline_doc(data, fsize: int) -> Iterator[OutlineItem]:
 
     yield OutlineItem(
         locator="$",
-        signature=f"{_format_size(fsize)} · json · {kind}",
+        signature=f"{format_size(fsize)} · json · {kind}",
     )
 
     samples = data[:NDJSON_SAMPLE] if isinstance(data, list) else [data]
@@ -315,19 +316,3 @@ def _file_size(fh) -> int:
         fh.seek(pos)
         return size
 
-def _format_size(size_bytes: int) -> str:
-    if size_bytes >= 1_000_000_000:
-        return f"{size_bytes / 1_000_000_000:.1f} GB"
-    if size_bytes >= 1_000_000:
-        return f"{size_bytes / 1_000_000:.1f} MB"
-    if size_bytes >= 1_000:
-        return f"{size_bytes / 1_000:.1f} KB"
-    return f"{size_bytes} B"
-
-
-def _format_count(n: int) -> str:
-    if n >= 1_000_000:
-        return f"{n // 1_000_000}M"
-    if n >= 1_000:
-        return f"{n // 1_000}K"
-    return str(n)

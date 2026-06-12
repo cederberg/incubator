@@ -13,6 +13,7 @@ from collections import Counter, defaultdict
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 
+from outliner.parsers.util import format_count, format_size
 from outliner.types import OutlineItem
 
 SYNTAX = "xml"
@@ -150,8 +151,8 @@ def read(fh) -> Iterator[OutlineItem]:
 
     sampled = sum(stats.count for stats in collector.stats.values())
     size = _file_size(fh)
-    prefix = f"{_format_size(size)} · " if size is not None else ""
-    signature = f"{prefix}xml · sampled {_format_count(sampled)} elems"
+    prefix = f"{format_size(size)} · " if size is not None else ""
+    signature = f"{prefix}xml · sampled {format_count(sampled)} elems"
     yield OutlineItem(locator="/", signature=signature)
     yield from _emit_schema(collector)
 
@@ -253,19 +254,3 @@ def _file_size(fh) -> int | None:
         return None
 
 
-def _format_size(size_bytes: int) -> str:
-    if size_bytes >= 1_000_000_000:
-        return f"{size_bytes / 1_000_000_000:.1f} GB"
-    if size_bytes >= 1_000_000:
-        return f"{size_bytes / 1_000_000:.1f} MB"
-    if size_bytes >= 1_000:
-        return f"{size_bytes / 1_000:.1f} KB"
-    return f"{size_bytes} B"
-
-
-def _format_count(n: int) -> str:
-    if n >= 1_000_000:
-        return f"{n // 1_000_000}M"
-    if n >= 1_000:
-        return f"{n // 1_000}K"
-    return str(n)
