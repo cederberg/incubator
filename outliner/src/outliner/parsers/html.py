@@ -25,10 +25,6 @@ _BORING_EXCERPTS = {
     "advertisement", "close", "menu", "navigation", "open menu",
     "search", "skip advertisement", "skip to content",
 }
-_VOID_TAGS = {
-    "area", "base", "br", "col", "embed", "hr", "img", "input",
-    "link", "meta", "param", "source", "track", "wbr",
-}
 
 
 @dataclass
@@ -109,12 +105,10 @@ class _Parser(HTMLParser):
                 depth=self._tag_depth(tag),
             )
             self.nodes.append(node)
-            if tag not in _VOID_TAGS:
-                self._stack.append(node)
-        elif tag in _VOID_TAGS:
-            return
+            self._stack.append(node)
 
         if _is_heading(tag):
+            self._flush_heading()
             self._heading = _Heading(
                 tag=tag,
                 level=int(tag[1]),
@@ -123,7 +117,7 @@ class _Parser(HTMLParser):
                 base_depth=self._heading_base_depth(),
                 context_key=self._heading_context_key(),
             )
-        elif tag == "title" and self._inside_document_head():
+        elif tag == "title" and not self._inside_content():
             self._title = _Heading(
                 tag=tag,
                 level=0,
@@ -160,94 +154,88 @@ class _Parser(HTMLParser):
 
         line = self.getpos()[0]
         if self._heading and tag == self._heading.tag:
-            heading = self._heading
-            text = _clean("".join(heading.text_parts))
-            depth = self._heading_depth(heading)
-            self.headings.append((
-                heading.start,
-                heading.start_col,
-                heading.level,
-                f"{'  ' * depth}<{heading.tag}>{text}</{heading.tag}>",
-            ))
-            for node in reversed(self._stack):
-                if node.tag in _LANDMARKS and not node.heading_text:
-                    node.heading_text = text
-                    break
-            self._heading = None
+            self._flush_heading()
         elif self._title and tag == "title":
-            title = self._title
-            text = _clean("".join(title.text_parts))
-            if text:
-                self.titles.append((title.start, title.start_col, OutlineItem(
-                    start=title.start,
-                    count=max(1, line - title.start + 1),
-                    signature=f"{'  ' * title.base_depth}<title>{text}</title>",
-                )))
-            self._title = None
+            self._flush_title(line)
 
         if tag in _OUTLINE_TAGS:
             for idx in range(len(self._stack) - 1, -1, -1):
-                node = self._stack[idx]
-                if node.tag == tag:
-                    node.end = line
+                if self._stack[idx].tag == tag:
+                    for node in self._stack[idx:]:
+                        node.end = line
                     del self._stack[idx:]
                     break
 
     def handle_data(self, data: str) -> None:
+        if self._text_skip:
+            return
         if self._heading:
             self._heading.text_parts.append(data)
         elif self._title:
             self._title.text_parts.append(data)
-        elif not self._text_skip:
+        else:
             self._add_text(data)
 
     def handle_entityref(self, name: str) -> None:
+        if self._text_skip:
+            return
         if self._heading:
             self._heading.text_parts.append(f"&{name};")
         elif self._title:
             self._title.text_parts.append(f"&{name};")
-        elif not self._text_skip:
+        else:
             self._add_text(f"&{name};", glue=True)
 
     def handle_charref(self, name: str) -> None:
+        if self._text_skip:
+            return
         if self._heading:
             self._heading.text_parts.append(f"&#{name};")
         elif self._title:
             self._title.text_parts.append(f"&#{name};")
-        elif not self._text_skip:
+        else:
             self._add_text(f"&#{name};", glue=True)
 
     def close(self) -> None:
         super().close()
-        if self._heading:
-            heading = self._heading
-            text = _clean("".join(heading.text_parts))
-            depth = self._heading_depth(heading)
-            self.headings.append((
-                heading.start,
-                heading.start_col,
-                heading.level,
-                f"{'  ' * depth}<{heading.tag}>{text}</{heading.tag}>",
-            ))
-            self._heading = None
-        if self._title:
-            title = self._title
-            text = _clean("".join(title.text_parts))
-            if text:
-                self.titles.append((title.start, title.start_col, OutlineItem(
-                    start=title.start,
-                    count=max(1, self.line_count - title.start + 1),
-                    signature=f"{'  ' * title.base_depth}<title>{text}</title>",
-                )))
-            self._title = None
+        self._flush_heading()
+        self._flush_title(self.line_count)
         for node in self._stack:
             node.end = self.line_count
 
+    def _flush_heading(self) -> None:
+        heading = self._heading
+        if not heading:
+            return
+        text = _clean("".join(heading.text_parts))
+        depth = self._heading_depth(heading)
+        self.headings.append((
+            heading.start,
+            heading.start_col,
+            heading.level,
+            f"{'  ' * depth}<{heading.tag}>{text}</{heading.tag}>",
+        ))
+        for node in reversed(self._stack):
+            if node.tag in _LANDMARKS and not node.heading_text:
+                node.heading_text = text
+                break
+        self._heading = None
+
+    def _flush_title(self, end_line: int) -> None:
+        title = self._title
+        if not title:
+            return
+        text = _clean("".join(title.text_parts))
+        if text:
+            self.titles.append((title.start, title.start_col, OutlineItem(
+                start=title.start,
+                count=max(1, end_line - title.start + 1),
+                signature=f"{'  ' * title.base_depth}<title>{text}</title>",
+            )))
+        self._title = None
+
     def _inside_content(self) -> bool:
         return any(node.tag in _CONTENT_TAGS for node in self._stack)
-
-    def _inside_document_head(self) -> bool:
-        return any(node.tag == "head" for node in self._stack) and not self._inside_content()
 
     def _outline_depth(self) -> int:
         return len([

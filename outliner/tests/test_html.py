@@ -402,6 +402,41 @@ def test_inline_script_does_not_suppress_adjacent_heading():
     assert "  <h2>Still here</h2>" in sigs
 
 
+def test_script_inside_heading_excluded():
+    items = parse("<body><main><h1>Hello<script>var x=1;</script> World</h1></main></body>")
+    sigs = [it.signature for it in items]
+    assert "    <h1>Hello World</h1>" in sigs
+    assert not any("var x" in s for s in sigs)
+
+
+def test_title_without_head():
+    items = parse("<html><title>My Page</title><body><h1>Hi</h1></body></html>")
+    sigs = [it.signature for it in items]
+    assert "  <title>My Page</title>" in sigs
+
+
+def test_nested_heading_keeps_outer_text():
+    items = parse("<body><h2>One<h3>Two</h3></h2></body>")
+    sigs = [it.signature for it in items]
+    assert "  <h2>One</h2>" in sigs
+    assert "    <h3>Two</h3>" in sigs
+
+
+def test_unclosed_heading_flushed_at_next_heading():
+    items = parse("<body>\n<h2>First\n<h2>Second</h2>\n</body>")
+    sigs = [it.signature for it in items]
+    assert any("<h2>First" in s for s in sigs)
+    assert "  <h2>Second</h2>" in sigs
+
+
+def test_interleaved_close_bounds_inner_landmark():
+    text = '<section id="s">\n<nav id="n">\n</section>\n<p>tail</p>\n<p>tail</p>\n'
+    items = parse(text)
+    nav = next(it for it in items if "#n" in it.signature)
+    assert nav.start == 2
+    assert nav.count == 2  # closed by </section>, not extended to EOF
+
+
 def test_landmark_unclosed_extends_to_eof():
     text = "<section>\n<p>text</p>\n<p>more</p>\n"
     items = parse(text)
