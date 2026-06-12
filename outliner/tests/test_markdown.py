@@ -235,3 +235,32 @@ def test_guess_syntax_unknown_returns_none():
     assert guess_syntax("file.xyz") is None
     assert guess_syntax("-") is None
     assert guess_syntax("README") is None
+
+
+# ---------------------------------------------------------------------------
+# Fenced code blocks
+# ---------------------------------------------------------------------------
+
+def test_atx_inside_fence_ignored():
+    text = "# Real\n\n```bash\n# just a comment\necho hi\n```\n\n## After\n"
+    sigs = [it.signature for it in parse(text)]
+    assert sigs == ["# Real", "## After"]
+
+
+def test_setext_inside_fence_ignored():
+    text = "# Real\n\n```\nTitle-ish\n---\n```\n"
+    sigs = [it.signature for it in parse(text)]
+    assert sigs == ["# Real"]
+
+
+def test_tilde_fence_and_nested_backticks():
+    text = "~~~markdown\n# fenced\n```\n# still fenced\n```\n~~~\n# Real\n"
+    sigs = [it.signature for it in parse(text)]
+    assert sigs == ["# Real"]
+
+
+def test_heading_range_spans_fence():
+    text = "# Top\n\n```\ncode\n```\n\n# Next\n"
+    items = parse(text)
+    assert items[0].signature == "# Top"
+    assert items[0].count == 6

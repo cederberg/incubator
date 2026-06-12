@@ -23,6 +23,7 @@ EXTENSIONS = (".md", ".markdown", ".mdown", ".mkd", ".txt", ".text")
 
 _ATX_RE = re.compile(r"^(#{1,6})(?:\s+(.*?))?\s*#*\s*$")
 _SETEXT_RE = re.compile(r"^(=+|-+)\s*$")
+_FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 _THRESHOLD = 0.75
 
 
@@ -114,9 +115,21 @@ def parse(text: str) -> Iterator[OutlineItem]:
 
     # --- collect Markdown headings ---
     md_headings: list[tuple[int, int, str]] = []  # (0-based idx, level, sig)
-    i = 0
+    i, fence = 0, ""
     while i < n:
         line = lines[i].rstrip('\r\n')
+
+        if m := _FENCE_RE.match(line):
+            marker = m.group(1)
+            if not fence:
+                fence = marker
+            elif marker[0] == fence[0] and len(marker) >= len(fence):
+                fence = ""
+            i += 1
+            continue
+        if fence:
+            i += 1
+            continue
 
         m = _ATX_RE.match(line)
         if m:
