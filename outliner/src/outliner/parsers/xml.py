@@ -20,8 +20,10 @@ SYNTAX = "xml"
 EXTENSIONS = (".xml",)
 
 MAX_START_ELEMENTS = 1_000_000
+MAX_DEPTH = 64
 MAX_SECONDS = 0.5
 TIME_CHECK_INTERVAL = 8192
+SAMPLE_LIMIT = 200
 
 
 @dataclass
@@ -54,6 +56,7 @@ class Collector:
         self.children: dict[tuple[str, ...], list[tuple[str, ...]]] = defaultdict(list)
         self.seen_children: set[tuple[tuple[str, ...], tuple[str, ...]]] = set()
         self.stack: list[OpenElem] = []
+        self.skip_depth = 0
         self.started = 0
         self.start_time = time.perf_counter()
 
@@ -61,6 +64,9 @@ class Collector:
         self.started += 1
         if self.started > MAX_START_ELEMENTS or self._timed_out():
             raise StopParsing
+        if self.skip_depth or len(self.stack) >= MAX_DEPTH:
+            self.skip_depth += 1
+            return
 
         path = (*self.stack[-1].path, name) if self.stack else (name,)
         stats = self.stats.setdefault(path, PathStats())
@@ -80,21 +86,22 @@ class Collector:
                 continue
             stats.attrs[attr_name] = stats.attrs.get(attr_name, 0) + 1
             if attr_name not in stats.attr_samples:
-                stats.attr_samples[attr_name] = _clean_text(value)
+                stats.attr_samples[attr_name] = _clean_text(value[:SAMPLE_LIMIT])
 
         self.stack.append(OpenElem(path=path))
 
     def text(self, data: str) -> None:
-        text = _clean_text(data)
-        if not text or not self.stack:
+        if self.skip_depth or not self.stack or not data or data.isspace():
             return
         elem = self.stack[-1]
         elem.has_text = True
         if sum(len(part) for part in elem.text) < 120:
-            elem.text.append(text)
+            elem.text.append(_clean_text(data[:SAMPLE_LIMIT]))
 
     def end(self, _name: str) -> None:
-        if self.stack:
+        if self.skip_depth:
+            self.skip_depth -= 1
+        elif self.stack:
             self._finish(self.stack.pop())
 
     def finish_open(self) -> None:
@@ -137,14 +144,14 @@ def read(fh) -> Iterator[OutlineItem]:
     parser.EndElementHandler = collector.end
     parser.CharacterDataHandler = collector.text
 
+    partial = False
     try:
         while chunk := fh.read(1024 * 1024):
             parser.Parse(chunk, False)
         parser.Parse("", True)
-    except StopParsing:
+    except (StopParsing, xml.parsers.expat.ExpatError):
+        partial = True  # emit what was sampled
         collector.finish_open()
-    except xml.parsers.expat.ExpatError:
-        return
 
     if not collector.stats:
         return
@@ -152,17 +159,24 @@ def read(fh) -> Iterator[OutlineItem]:
     sampled = sum(stats.count for stats in collector.stats.values())
     size = _file_size(fh)
     prefix = f"{format_size(size)} · " if size is not None else ""
-    signature = f"{prefix}xml · sampled {format_count(sampled)} elems"
-    yield OutlineItem(locator="/", signature=signature)
+    counts = f"sampled {format_count(sampled)}"
+    if partial and size and parser.CurrentByteIndex:
+        est_total = int(sampled * size / parser.CurrentByteIndex)
+        counts = f"{counts} of ~{format_count(est_total)}"
+    elif partial:
+        counts = f"{counts}+"
+    yield OutlineItem(locator="/", signature=f"{prefix}xml · {counts} elems")
     yield from _emit_schema(collector)
 
 
 # -- schema emission -----------------------------------------------------
 
 def _emit_schema(collector: Collector) -> Iterator[OutlineItem]:
-    paths = list(collector.stats)
-    root = paths[0]
-    yield from _emit_path(collector, root)
+    pending = [next(iter(collector.stats))]
+    while pending:
+        path = pending.pop()
+        yield from _emit_path(collector, path)
+        pending.extend(reversed(collector.children.get(path, [])))
 
 
 def _emit_path(
@@ -182,9 +196,6 @@ def _emit_path(
         if sample:
             attr_sig = f"{attr_sig} -- {sample}"
         yield OutlineItem(locator=_attr_locator(path, attr), signature=attr_sig)
-
-    for child in collector.children.get(path, []):
-        yield from _emit_path(collector, child)
 
 
 def _kind(stats: PathStats) -> str:
