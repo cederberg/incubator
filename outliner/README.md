@@ -67,9 +67,9 @@ uv run pytest
 
 ## Supported Languages
 
-AsciiDoc, C/C++, C#, Clojure, Go, HTML, Java, JavaScript/TypeScript,
-JSON/NDJSON, Markdown, Org-mode, Perl, PHP, Python, reStructuredText, Ruby,
-Rust, Scala, Shell, Swift, XML, and Zig.
+AsciiDoc, C/C++, C#, Clojure, Go, HTML, Java, JavaScript/TypeScript (incl.
+Svelte, Vue, and Astro components), JSON/NDJSON, Markdown, Org-mode, Perl, PHP,
+Python, reStructuredText, Ruby, Rust, Scala, Shell, Swift, XML, and Zig.
 
 ## Example Use Cases
 
