@@ -46,6 +46,98 @@ def test_detect_extension_cjs():
     assert guess_syntax("file.cjs") == "javascript"
 
 
+def test_detect_extension_svelte():
+    assert guess_syntax("file.svelte") == "javascript"
+
+
+def test_detect_extension_vue():
+    assert guess_syntax("file.vue") == "javascript"
+
+
+def test_detect_extension_ts_variants():
+    assert guess_syntax("file.mts") == "javascript"
+    assert guess_syntax("file.cts") == "javascript"
+
+
+def test_detect_extension_astro():
+    assert guess_syntax("file.astro") == "javascript"
+
+
+def test_astro_frontmatter_script_not_stripped():
+    from outliner.parsers import outline
+
+    text = (
+        "---\n"
+        "interface Props { title: string; }\n"
+        "function formatDate(d: Date): string {\n"
+        "  return d.toISOString();\n"
+        "}\n"
+        "---\n"
+        "<h1>{title}</h1>\n"
+    )
+    items = outline("javascript", text)
+    sigs = [it.signature for it in items]
+    assert "interface Props { title: string; }" in sigs
+    assert "function formatDate(d: Date): string" in sigs
+    assert items[0].start == 2  # line numbers not offset by frontmatter strip
+
+
+def test_vue_options_api_component():
+    text = (
+        "<template>\n"
+        "  <div>{{ label }}</div>\n"
+        "</template>\n"
+        "<script>\n"
+        "export default {\n"
+        "  props: {\n"
+        "    label: { type: String, default: '' },\n"
+        "  },\n"
+        "  data() {\n"
+        "    return { open: false };\n"
+        "  },\n"
+        "  computed: {\n"
+        "    classes() {\n"
+        "      return { open: this.open };\n"
+        "    },\n"
+        "  },\n"
+        "  methods: {\n"
+        "    toggle() {\n"
+        "      this.open = !this.open;\n"
+        "    },\n"
+        "  },\n"
+        "};\n"
+        "</script>\n"
+    )
+    sigs = [it.signature.strip() for it in parse(text)]
+    assert sigs == ["export default", "data()", "classes()", "toggle()"]
+
+
+def test_svelte_component_script_block():
+    text = (
+        '<script lang="ts">\n'
+        "  interface Props {\n"
+        "    title: string;\n"
+        "  }\n"
+        "  let { title }: Props = $props();\n"
+        "  function toggle(): void {\n"
+        "    open = !open;\n"
+        "  }\n"
+        "</script>\n"
+        "\n"
+        "{#if open}\n"
+        "  <div class='body'>{title}</div>\n"
+        "{/if}\n"
+        "\n"
+        "<style>\n"
+        "  .body { color: red; }\n"
+        "</style>\n"
+    )
+    items = parse(text)
+    sigs = [it.signature.strip() for it in items]
+    assert "interface Props" in sigs
+    assert "function toggle(): void" in sigs
+
+
 def test_detect_content_class_and_function():
     assert detect_js([
         "class Animal {",

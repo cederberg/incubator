@@ -7,7 +7,8 @@ from outliner.parsers.util import extract_signature, indent_level, seek_comment_
 from outliner.types import OutlineItem
 
 SYNTAX = "javascript"
-EXTENSIONS = (".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx")
+EXTENSIONS = (".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts", ".svelte", ".vue", ".astro")
+STRIP_FRONTMATTER = False  # Astro delimits its script with --- fences
 
 _FUNC_RE = re.compile(
     r"^\s*(?:(?:export\s+(?:default\s+)?)?(?:declare\s+)?(?:async\s+)?function\s*\*?\s*\w+"
@@ -59,7 +60,8 @@ _CALLABLE_MEMBER_RE = re.compile(
     r"(?:(?:readonly|public|private|protected|static|abstract)\s+)*"
     r"(?:(?:get\s+|set\s+)?[\w$]+\??\s*[(<]|\(|new\s*[(<])"
 )
-_PROTOTYPE_OBJECT_RE = re.compile(r"^\s*(?:(?:[\w$]+\.)*prototype\s*=\s*)+\{")
+_PROTOTYPE_OBJECT_RE = re.compile(r"^\s*(?:(?:[\w$]+\.)*prototype\s*=\s*)+\{|^\s*export\s+default\s+\{")
+_OPTION_GROUP_RE = re.compile(r"^\s*(?:methods|computed|watch)\s*:\s*\{\s*$")
 _PROTOTYPE_MEMBER_RE = re.compile(
     r"^\s+(?:(?:get|set)\s+[\w$]+\s*\(|[\w$]+\s*\(|[\w$]+\s*:\s*(?:async\s+)?"
     r"(?:function\s*\*?\s*(?:[\w$]+\s*)?\(|(?:\([^)]*\)|[\w$]+)\s*=>))"
@@ -390,6 +392,9 @@ def parse(text: str) -> Iterator[OutlineItem]:
         is_typed_member = is_new_signature and start_depth in typed_member_depths and bool(_CALLABLE_MEMBER_RE.match(clean))
         is_prototype_member = is_new_signature and start_depth in prototype_depths and bool(_PROTOTYPE_MEMBER_RE.match(clean))
         allow_depth = start_depth in declaration_depths or is_class_method or is_class_field_fn or is_typed_member or is_prototype_member
+        if is_new_signature and start_depth in prototype_depths and _OPTION_GROUP_RE.match(clean):
+            prototype_depths.add(start_depth + 1)
+            continue
         if not allow_depth:
             continue
         is_namespace = bool(_NS_RE.match(clean) or _MODULE_RE.match(clean) or _GLOBAL_RE.match(clean))

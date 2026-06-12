@@ -57,7 +57,7 @@ def outline(syntax: str, content: str | TextIO) -> list[OutlineItem] | None:
 
 
 def _outline_text(mod, content: str) -> list[OutlineItem]:
-    m = _FRONTMATTER_RE.match(content)
+    m = _FRONTMATTER_RE.match(content) if getattr(mod, "STRIP_FRONTMATTER", True) else None
     if not m:
         return list(mod.parse(content))
     offset = m.group(0).count('\n')
