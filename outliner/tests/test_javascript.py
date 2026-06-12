@@ -920,6 +920,62 @@ def test_nested_template_literal_does_not_extend_arrow_range():
     assert [it.count for it in items] == [3, 1]
 
 
+def test_multiline_template_content_is_not_code():
+    # Unbalanced braces inside a template must not hide later declarations
+    text = (
+        "const QUERY = gql`\n"
+        "  query Foo {\n"
+        "    bar { baz\n"
+        "`;\n"
+        "function after() {}\n"
+    )
+    assert [it.signature for it in parse(text)] == ["function after()"]
+
+
+def test_regex_literal_with_brace_or_quote():
+    text = 'const re = /^{/;\nconst q = /["]/;\nfunction after() {}\n'
+    assert [it.signature for it in parse(text)] == ["function after()"]
+
+
+def test_division_is_not_regex():
+    items = parse("const ratio = total / count;\nfunction after() {}\n")
+    assert [it.signature for it in items] == ["function after()"]
+
+
+def test_no_semicolon_expression_arrows():
+    text = (
+        "const double = (x) => x * 2\n"
+        "const triple = (x) => x * 3\n"
+        "\n"
+        "export function after() {\n"
+        "  return 1\n"
+        "}\n"
+    )
+    items = parse(text)
+    assert [it.signature for it in items] == [
+        "const double = (x) => x * 2",
+        "const triple = (x) => x * 3",
+        "export function after()",
+    ]
+    assert [it.count for it in items] == [1, 1, 3]
+
+
+def test_jsx_paren_return_arrow_signature():
+    text = (
+        "export const Badge = ({ label }) => (\n"
+        '  <span className="badge">{label}</span>\n'
+        ");\n"
+    )
+    items = parse(text)
+    assert [it.signature for it in items] == ["export const Badge = ({ label })"]
+    assert items[0].count == 3
+
+
+def test_export_default_anonymous_class():
+    items = parse("export default class {\n  method() {}\n}\n")
+    assert [it.signature for it in items] == ["export default class", "  method()"]
+
+
 def test_multiline_type_alias_count():
     # Multi-line union type: count covers all lines to semicolon
     text = "export type Status =\n    | Active\n    | Inactive;\n"

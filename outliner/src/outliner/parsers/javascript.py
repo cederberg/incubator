@@ -13,7 +13,10 @@ _FUNC_RE = re.compile(
     r"^\s*(?:(?:export\s+(?:default\s+)?)?(?:declare\s+)?(?:async\s+)?function\s*\*?\s*\w+"
     r"|export\s+default\s+(?:async\s+)?function\s*\*?\s*\()"
 )
-_CLASS_RE = re.compile(r"^\s*(?:export\s+(?:default\s+)?)?(?:declare\s+)?(?:abstract\s+)?class\s+\w+")
+_CLASS_RE = re.compile(
+    r"^\s*(?:(?:export\s+(?:default\s+)?)?(?:declare\s+)?(?:abstract\s+)?class\s+\w+"
+    r"|export\s+default\s+(?:abstract\s+)?class\b)"
+)
 _IFACE_RE = re.compile(r"^\s*(?:export\s+)?(?:declare\s+)?interface\s+\w+")
 _TYPE_RE = re.compile(r"^\s*(?:export\s+)?(?:declare\s+)?type\s+\w+\s*(?:<[^>]*>)?\s*=")
 _ENUM_RE = re.compile(r"^\s*(?:export\s+)?(?:declare\s+)?(?:const\s+)?enum\s+\w+")
@@ -100,9 +103,9 @@ def detect(lines: list[str]) -> bool:
 def _collect_sig(lines: list[str], start: int, is_member: bool = False, is_wrapper: bool = False) -> tuple[str, int, bool]:
     depth, parts, has_body, i = 0, [], False, start
     ind = " " * indent_level(lines[start])
-    in_block_comment = False
+    state = None
     for i in range(start, min(start + 40, len(lines))):
-        raw, in_block_comment = _sanitize(lines[i], in_block_comment, preserve_strings=True)
+        raw, state = _sanitize(lines[i], state, preserve_strings=True)
         if is_member and i > start and depth == 0 and (_MEMBER_BOUNDARY_RE.match(raw) or raw.lstrip().startswith("}")):
             i -= 1
             break
@@ -111,6 +114,9 @@ def _collect_sig(lines: list[str], start: int, is_member: bool = False, is_wrapp
         stripped = raw.rstrip()
         if is_wrapper and i == start and "{" in raw:
             parts[-1], has_body = raw[:raw.find("{")].strip(), True
+            break
+        if depth == 1 and re.search(r"=>\s*\($", stripped):
+            parts[-1], has_body = raw[:raw.rfind("=>")].strip(), True
             break
         if depth > 0:
             continue
@@ -130,6 +136,8 @@ def _collect_sig(lines: list[str], start: int, is_member: bool = False, is_wrapp
             if pos != -1:
                 parts[-1], has_body = raw[:pos].strip(), True
             break
+        if "=>" in stripped and not stripped.endswith(("=>", "(", ",", ":", "=", "&&", "||", "?")):
+            break  # complete expression-bodied arrow (no-semicolon style)
         is_type_continuation = stripped.endswith((":", "|", "&")) or stripped.lstrip().startswith(("|", "&"))
         if is_member and not is_type_continuation:
             break
@@ -168,9 +176,9 @@ def _collect_type_alias_sig(lines: list[str], start: int) -> tuple[str, int, boo
 
 def _collect_multiline_typed_arrow_sig(lines: list[str], start: int) -> tuple[str, int, bool] | None:
     ind, parts = " " * indent_level(lines[start]), []
-    in_block_comment = False
+    state = None
     for i in range(start, min(start + 40, len(lines))):
-        raw, in_block_comment = _sanitize(lines[i], in_block_comment, preserve_strings=True)
+        raw, state = _sanitize(lines[i], state, preserve_strings=True)
         parts.append(raw.strip())
         if not re.search(r"(?<![=>!<])=(?!=)", raw):
             continue
@@ -207,12 +215,12 @@ def _seek_template_expression_end(lines: list[str], start_index: int) -> int:
 def _seek_expression_end(lines: list[str], start_index: int) -> int:
     if _starts_multiline_template_expression(lines[start_index]):
         return _seek_template_expression_end(lines, start_index)
-    depth, paren_depth, block, in_block_comment = 0, 0, False, False
+    depth, paren_depth, block, state = 0, 0, False, None
     for i in range(start_index, len(lines)):
-        clean, in_block_comment = _sanitize(lines[i], in_block_comment)
+        clean, state = _sanitize(lines[i], state)
         if i == start_index and "=>" in clean:
             clean = clean[clean.rfind("=>") + 2:]
-        if "{" in clean:
+        if "{" in clean and paren_depth <= 0:
             block = True
         if block:
             depth += clean.count("{") - clean.count("}")
@@ -281,14 +289,45 @@ def _consume_template(raw: str, start: int) -> int:
     return i
 
 
-def _sanitize(raw: str, in_block_comment: bool, preserve_strings: bool = False) -> tuple[str, bool]:
+_REGEX_PREFIX_RE = re.compile(r"(?:^|[=(,:;!&|?\[]|\breturn|\bcase|\btypeof)\s*$")
+
+
+def _consume_regex(raw: str, start: int) -> int:
+    i, in_class = start + 1, False
+    while i < len(raw):
+        ch = raw[i]
+        if ch == "\\":
+            i += 2
+        elif ch == "[":
+            in_class, i = True, i + 1
+        elif ch == "]":
+            in_class, i = False, i + 1
+        elif ch == "/" and not in_class:
+            return i + 1
+        else:
+            i += 1
+    return i
+
+
+def _template_closed(raw: str, start: int, end: int) -> bool:
+    return end <= len(raw) and end - start >= 2 and raw[end - 1] == "`"
+
+
+def _sanitize(raw: str, state: str | None = None, preserve_strings: bool = False) -> tuple[str, str | None]:
     out, i = [], 0
+    if state == "template":
+        end = _consume_template(raw, -1)
+        if not _template_closed(raw, -1, end):
+            return "", "template"
+        if preserve_strings:
+            out.append(raw[:end])
+        i, state = end, None
     while i < len(raw):
         ch = raw[i]
         nxt = raw[i + 1] if i + 1 < len(raw) else ""
-        if in_block_comment:
+        if state == "comment":
             if ch == "*" and nxt == "/":
-                in_block_comment, i = False, i + 2
+                state, i = None, i + 2
             else:
                 i += 1
             continue
@@ -300,30 +339,38 @@ def _sanitize(raw: str, in_block_comment: bool, preserve_strings: bool = False) 
             continue
         if ch == "`":
             end = _consume_template(raw, i)
+            if not _template_closed(raw, i, end):
+                return "".join(out), "template"
             if preserve_strings:
                 out.append(raw[i:end])
             i = end
             continue
         if ch == "/" and nxt == "*" and not _is_escaped(raw, i):
-            in_block_comment, i = True, i + 2
+            state, i = "comment", i + 2
             continue
         if ch == "/" and nxt == "/" and not _is_escaped(raw, i):
             break
+        if ch == "/" and _REGEX_PREFIX_RE.search("".join(out)):
+            end = _consume_regex(raw, i)
+            if preserve_strings:
+                out.append(raw[i:end])
+            i = end
+            continue
         out.append(ch)
         i += 1
-    return "".join(out), in_block_comment
+    return "".join(out), state
 
 
 def parse(text: str) -> Iterator[OutlineItem]:
     lines = text.splitlines()
     is_walkback = lambda _, sig: sig[:1] in "/*@" or sig.startswith("//")
-    depth, in_block_comment, wrapper_depth, signature_end = 0, False, None, -1
+    depth, state, wrapper_depth, signature_end = 0, None, None, -1
     class_depths: set[int] = set()
     namespace_depths: set[int] = set()
     typed_member_depths: set[int] = set()
     prototype_depths: set[int] = set()
     for i, line in enumerate(lines):
-        clean, in_block_comment = _sanitize(line, in_block_comment)
+        clean, state = _sanitize(line, state)
         start_depth = depth
         class_depths = {body_depth for body_depth in class_depths if start_depth >= body_depth}
         namespace_depths = {body_depth for body_depth in namespace_depths if start_depth >= body_depth}
