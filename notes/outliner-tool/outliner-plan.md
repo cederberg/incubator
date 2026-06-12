@@ -1,7 +1,7 @@
 ---
 drafted: 2026-04-19
-updated: 2026-06-09
-status: active
+updated: 2026-06-13
+status: archived
 ---
 
 # Outliner Tool — Implementation Plan
@@ -98,7 +98,8 @@ extensionless scripts, or `.h` files that could be C or C++).
   `package` and `func`/`type`; Python checks that `def`/`class` lines end with
   `:` (not `{`). When uncertain, prefer false negative (fall through to next
   detector) over false positive (misidentify the file). Markdown's `detect()`
-  always returns True and is registered last as a catch-all fallback.
+  requires a heading marker; files matching no detector get a one-line
+  `unsupported file` summary instead of a fallback outline.
 
 ## Project Layout
 
@@ -210,8 +211,8 @@ from actual node_modules.
 - [x] Do not add YAML structural output. It adds little beyond JSON and XML.
 - [x] Avoid outlining binary files passed explicitly, such as `.gz` or `.bz2`
       files hidden among source files.
-- [ ] Add `--exclude` option to exclude file patterns from directory walk?
-- [ ] Add JSON output mode for programmatic consumption by agents and other
-      tools?
-- [ ] Add end-line display option — show `start-end` instead of (or alongside)
-      `start,count` for easier navigation
+- [x] Add `--exclude` option to exclude file patterns from directory walk?
+- [x] Do not add JSON output mode; the plain format is already trivially
+      parseable.
+- [x] Do not add end-line display; `start,count` matches `Read offset/limit`
+      usage directly.

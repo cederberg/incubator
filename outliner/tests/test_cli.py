@@ -276,6 +276,49 @@ def test_expand_sources_skips_hidden_dirs():
         assert "hook.py" not in sources
 
 
+def test_expand_sources_exclude_by_glob():
+    with tempfile.TemporaryDirectory() as d:
+        _make_pyfile(os.path.join(d, "main.py"))
+        Path(d, "data.yaml").write_text("key: value\n")
+        Path(d, "more.yaml").write_text("key: value\n")
+        sources = {Path(src).name for src in _expand_sources([d], excludes=["*.yaml"])}
+        assert sources == {"main.py"}
+
+
+def test_expand_sources_exclude_dir_pattern():
+    with tempfile.TemporaryDirectory() as d:
+        _make_pyfile(os.path.join(d, "main.py"))
+        _make_pyfile(os.path.join(d, "build", "gen.py"))
+        sources = {Path(src).name for src in _expand_sources([d], excludes=["build/"])}
+        assert sources == {"main.py"}
+
+
+def test_expand_sources_exclude_repeatable():
+    with tempfile.TemporaryDirectory() as d:
+        _make_pyfile(os.path.join(d, "main.py"))
+        Path(d, "a.lock").write_text("x\n")
+        Path(d, "b.tmp").write_text("x\n")
+        sources = {Path(src).name for src in _expand_sources([d], excludes=["*.lock", "*.tmp"])}
+        assert sources == {"main.py"}
+
+
+def test_exclude_does_not_affect_explicit_files():
+    with tempfile.TemporaryDirectory() as d:
+        path = os.path.join(d, "main.py")
+        _make_pyfile(path)
+        assert _expand_sources([path], excludes=["*.py"]) == [path]
+
+
+def test_exclude_option_end_to_end():
+    with tempfile.TemporaryDirectory() as d:
+        _make_pyfile(os.path.join(d, "keep.py"))
+        _make_pyfile(os.path.join(d, "skip.py"))
+        stdout, _, rc = run("-x", "skip.py", d)
+        assert rc == 0
+        assert "keep.py" in stdout or "def foo" in stdout
+        assert "skip.py" not in stdout
+
+
 def test_expand_sources_type_filter_excludes_unknown():
     with tempfile.TemporaryDirectory() as d:
         _make_pyfile(os.path.join(d, "main.py"))

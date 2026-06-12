@@ -57,17 +57,22 @@ def _is_ignored(name: str, root: str, gi: dict[str, list[str]], is_dir: bool) ->
     return False
 
 
-def _expand_sources(sources: list[str], types: set[str] | None = None) -> list[str]:
+def _expand_sources(
+    sources: list[str],
+    types: set[str] | None = None,
+    excludes: list[str] | None = None,
+) -> list[str]:
     result = []
     for src in sources:
         if src == "-" or not os.path.isdir(src):
             result.append(src)
             continue
-        gi: dict[str, list[str]] = {}
+        # CLI excludes behave like a .gitignore in the walk root
+        gi: dict[str, list[str]] = {os.path.normpath(src): list(excludes)} if excludes else {}
         for root, dirs, files in os.walk(src):
             pats = _load_gitignore(root)
             if pats:
-                gi[root] = pats
+                gi[root] = gi.get(root, []) + pats
             dirs[:] = sorted(d for d in dirs
                              if not d.startswith(".") and not _is_ignored(d, root, gi, True))
             for name in sorted(files):
@@ -148,6 +153,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="Only include files of this language or extension (repeatable)")
     ap.add_argument("-w", "--width", metavar="COLS", default="120",
                     help="Truncate output lines to COLS (0=unlimited, auto=terminal width, default=120)")
+    ap.add_argument("-x", "--exclude", action="append", metavar="PATTERN",
+                    help="Exclude matching files from directory walks, like .gitignore (repeatable)")
     args = ap.parse_args(argv)
 
     grep_re: re.Pattern | None = None
@@ -187,7 +194,7 @@ def main(argv: list[str] | None = None) -> int:
     if sources == ["-"] and sys.stdin.isatty():
         ap.print_help()
         return 0
-    sources = _expand_sources(sources, types)
+    sources = _expand_sources(sources, types, args.exclude)
     multi = len(sources) > 1
 
     exit_code = 0

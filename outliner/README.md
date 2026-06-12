@@ -1,6 +1,6 @@
 # outliner
 
-Print the structural outline of source files — useful declarations and callable
+Print the structural outline of source files — declarations and callable
 landmarks with line ranges — so an LLM agent (or human) can navigate a file
 without reading it whole.
 
@@ -10,12 +10,13 @@ without reading it whole.
 outliner-cli [OPTIONS] [FILE...]
 ```
 
-| Option              | Description                                                                   |
-| ------------------- | ----------------------------------------------------------------------------- |
-| `-g, --grep EXPR`   | Only show items whose signature matches EXPR (case-insensitive)               |
-| `-s, --syntax LANG` | Override syntax auto-detection when it is ambiguous                           |
-| `-t, --type LANG`   | Only include files of this language (repeatable, accepts name or extension)   |
-| `-w, --width COLS`  | Truncate output lines to COLS (`0`=unlimited, `auto`=terminal, default=`120`) |
+| Option               | Description                                          |
+| -------------------- | ---------------------------------------------------- |
+| `-g, --grep EXPR`    | Only show items whose signature matches EXPR         |
+| `-s, --syntax LANG`  | Override syntax auto-detection when ambiguous        |
+| `-t, --type LANG`    | Only include files of this language (repeatable)     |
+| `-w, --width COLS`   | Truncate lines (`0`=off, `auto`=fit, default `120`)  |
+| `-x, --exclude GLOB` | Exclude files from directory walks (gitignore-style) |
 
 Pass a file, a directory (walked recursively), or omit arguments to read stdin.
 Use `-` to read stdin explicitly. Directory walks honor `.gitignore` and skip
@@ -36,7 +37,7 @@ Each line: `<start>,<count>  <signature>`
 
 - `start` — 1-based line number, right-aligned
 - `count` — number of lines covered by the item (including doc-comments above)
-- `signature` — first non-comment line of the declaration; multi-line signatures
+- `signature` — first non-comment line of a declaration; multi-line signatures
   are merged into one line; lines longer than the output width are truncated
   with `...`
 
@@ -75,7 +76,7 @@ Python, reStructuredText, Ruby, Rust, Scala, Shell, Swift, XML, and Zig.
 
 ## Example Use Cases
 
-**Structural overview** — Run on a directory to see all declarations across many
+**Structural overview** — Run on a directory to see declarations across all
 files before reading anything:
 
 ```
@@ -148,6 +149,6 @@ $ uvx outliner-cli pubmed26n0001.xml
     <MedlineCitation>            elem
       @Status                    attr -- "MEDLINE"
       <Article>                  elem
-        <ArticleTitle>           text -- "Formate assay in body fluids: applica..."
+        <ArticleTitle>           text -- "Formate assay in body fluids..."
         <Abstract>               elem?
 ```

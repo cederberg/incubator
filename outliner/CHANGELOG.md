@@ -4,6 +4,7 @@
 
 - Added Svelte, Vue, and Astro component outlines (and more file extensions)
 - Added all files to directory walks, with `unsupported file` summaries
+- Added `--exclude` / `-x` option to filter files from directory walks
 - Added sampling estimates to XML outlines ("sampled 1.0K of ~100K elems")
 - Fixed crashes, empty outlines, and memory use in JSON, XML, and JavaScript
 - Fixed Markdown headings inside fenced code blocks
