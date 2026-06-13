@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.4 - 2026-06-13
 
 - Added Svelte, Vue, and Astro component outlines (and more file extensions)
 - Added all files to directory walks, with `unsupported file` summaries
@@ -8,9 +8,9 @@
 - Added sampling estimates to XML outlines ("sampled 1.0K of ~100K elems")
 - Fixed crashes, empty outlines, and memory use in JSON, XML, and JavaScript
 - Fixed Markdown headings inside fenced code blocks
-- [Commit list](https://github.com/cederberg/incubator/compare/outliner-v0.3...HEAD)
+- [Commit list](https://github.com/cederberg/incubator/compare/outliner-v0.3...outliner-v0.4)
 
-## v0.3.0 - 2026-06-10
+## v0.3 - 2026-06-10
 
 - Added JSON and NDJSON schema outlines
 - Added XML structural outlines
