@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "outliner-cli"
-version = "0.3.0"
+version = "0.4.0"
 description = "Print the structural outline of source files for LLM navigation"
 authors = [{name = "Per Cederberg"}]
 license = "MIT"
