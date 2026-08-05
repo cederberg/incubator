@@ -1,13 +1,23 @@
 ---
 name: bump-deps
 description: Update each outdated dependency in a separate, minimal commit.
-allowed-tools: Read, Write, Edit, Glob, Bash
+argument-hint: "[preview]"
+allowed-tools: Read, Write, Edit, Glob, Bash, Agent
 ---
 
 ## Goal
 
 Update each outdated dependency in a separate commit. Enables clean rollback of
-individual updates when issues surface later.
+individual updates if issues would surface later.
+
+## Mode
+
+If the user asks for a preview, dry-run, changelog or similar we are in
+changelog mode:
+
+- Skip Steps 1, 5, 6, 7.
+- Follow Steps 2–4 to identify and plan.
+- Report with changelog bullets instead of committing.
 
 ## Step 1: Clean Worktree
 
@@ -36,6 +46,10 @@ version.
 
 Update only patch and minor versions by default. Defer major updates until the
 user explicitly approves each one.
+
+If in changelog mode, delegate to a sub-agent to fetch the changelog between
+current and target versions. Return terse bullets prioritizing changes relevant
+to this project. If unavailable, return "unavailable".
 
 ## Step 4: Update
 
@@ -72,3 +86,9 @@ artefacts.
 ## Step 8: Repeat
 
 If more outdated deps remain, go back to Step 1.
+
+## Step 9: Report
+
+Output one section per package. Include old version, new version, action
+(update, skip, ignore) and rationale. Add changelog bullets if relevant. No
+tables.
