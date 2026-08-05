@@ -1,7 +1,6 @@
 ---
 name: bump-deps
 description: Update each outdated dependency in a separate, minimal commit.
-disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Bash
 ---
 

@@ -3,7 +3,6 @@ name: review-doc
 description: >
   Review a document for internal consistency, brevity, clarity, and usefulness.
 argument-hint: "<file(s)> [additional instructions]"
-disable-model-invocation: true
 allowed-tools: Agent, Read
 ---
 

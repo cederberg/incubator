@@ -26,7 +26,6 @@ prettier -w --prose-wrap always <file> # format markdown file (post-edit)
 ## Skill Instructions
 
 - Edit at `skills/{{name}}/` (project root), ignore global location for edits
-- Set `disable-model-invocation: true` to prevent automatic triggering
 - Only add instructions where agents will err without them
 - Confirm skill edits with user before applying
 - After edit, remind user to run /review-instructions

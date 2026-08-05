@@ -6,7 +6,6 @@ description: >
   format, redundancy), and precision (ambiguity, assumptions, coverage,
   omissions). Sub-agent isolates review from conversation context.
 argument-hint: "<file(s)> [additional instructions]"
-disable-model-invocation: true
 allowed-tools: Agent, Read
 ---
 

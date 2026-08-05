@@ -3,7 +3,6 @@ name: technical-writer
 description: >
   Write or review technical documents, including READMEs, system overviews, and
   skill files.
-disable-model-invocation: true
 allowed-tools: Agent, Read, Write, Bash, Glob
 ---
 
