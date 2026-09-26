@@ -55,8 +55,19 @@ If you find no issues, output `No issues found` and nothing else.
 - Assumptions: flag unstated prerequisites or context.
 - Coverage: flag unaddressed branches or cases within described logic.
 - Omissions: flag absent sections, steps, or topics the instructions require.
+- Prohibitions: flag a "never/no X" rule that does not name the permitted
+  alternative.
+- Sibling Shape: when reviewing a prompt file, compare against sibling files in
+  the same directory (bullet length, voice, term reuse) and flag deviations.
+- Unverifiable Claims: flag facts the agent cannot act on or that are not
+  verifiable from the repo.
 
 ## Input Style Checklist
+
+Style rules are defined in the
+[technical-writer style guide](skills/technical-writer/references/rules/style-guide.md).
+Refer to it for hedging, filler, sentence length, bold usage, and other
+formatting rules. This checklist only adds rules specific to instruction files.
 
 - Headings: noun phrases only. Single nouns are acceptable.
 - Sentences: 20 words max.
