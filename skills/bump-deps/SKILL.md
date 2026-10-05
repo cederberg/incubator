@@ -13,10 +13,9 @@ individual updates if issues would surface later.
 ## Mode
 
 If the user asks for a preview, dry-run, changelog or similar we are in
-changelog mode:
+preview mode:
 
-- Skip Steps 1, 5, 6, 7.
-- Follow Steps 2–4 to identify and plan.
+- Follow only steps 2 and 3 to identify and plan.
 - Report with changelog bullets instead of committing.
 
 ## Step 1: Clean Worktree

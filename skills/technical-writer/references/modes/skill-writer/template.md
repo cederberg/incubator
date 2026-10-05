@@ -21,9 +21,6 @@ for core fields (`name`, `description`, `allowed-tools`, `license`,
 `argument-hint`, `hooks`, string substitutions), see the
 [Claude Code skills reference](https://docs.anthropic.com/en/docs/claude-code/skills).
 
-Note that Gemini CLI and OpenAI Codex only read `name` and `description`; Claude
-Code-specific fields are inert but harmless in other agents.
-
 **`name`** — kebab-case, max 64 characters.
 
 **`description`** — what the skill does and the conditions that trigger it. Max

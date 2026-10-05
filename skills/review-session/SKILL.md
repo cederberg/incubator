@@ -61,11 +61,12 @@ the filtered list:
 >   - **Tool errors** — more than one failure on a tool
 >   - **Reflection signals** — user asks to remember or note something
 > - Use `$TOOL <session-id>` to fetch a session summary
-> - Stop after 3 interesting candidates
+> - Stop after 3 interesting candidates (enough to surface patterns without overloading)
 > - Return session ID and one line of quoted evidence per candidate
 
-Present a table of at most 10 sessions (by timestamp) — session ID, date & time,
-duration, turn count, and notes. For the 3 interesting sessions use the
+Present a table of at most 10 sessions (by timestamp — enough to
+surface trends without overwhelming; cap prevents information loss
+from too many rows). For the 3 interesting sessions use the
 sub-agent's quoted evidence as the note; for the rest use the first prompt from
 the tool output. Mark the 3 interesting session IDs in bold. Ask the user which
 to review — or whether to search a different directory.

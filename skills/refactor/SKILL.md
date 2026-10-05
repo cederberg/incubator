@@ -59,7 +59,7 @@ point, not a waypoint toward a predetermined goal.
 
 ## Process
 
-The process is a loop, not a pipeline. After each step, genuinely pause and
+The process is a loop, not a pipeline. After each step, genuinely step back and
 re-read the code as if seeing it for the first time. Don't rush to the next
 transformation.
 

@@ -7,7 +7,7 @@ description: >
   omissions). Sub-agent isolates review from conversation context. Covers prompt
   files and tool descriptions.
 argument-hint: "<file(s)> [additional instructions]"
-allowed-tools: Agent, Read, Write
+allowed-tools: Agent, Read, Write, Edit
 ---
 
 If no file is provided, ask for it.
