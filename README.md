@@ -31,6 +31,14 @@ npx skills@latest add -g cederberg/incubator/skills --skill '*'
   npx skills@latest add -g cederberg/incubator/skills/brainstorm
   ```
 
+- **design-session** — Lead a design discussion from principles to details while
+  a background designer researches and drafts. Use to design a feature or
+  system, or resume a session from its ledger.
+
+  ```
+  npx skills@latest add -g cederberg/incubator/skills/design-session
+  ```
+
 - **discuss** — Facilitate a focused, structured discussion on a topic. Useful
   to crystallize thoughts, develop ideas, or explore a problem.
 
